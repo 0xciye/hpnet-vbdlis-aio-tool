@@ -1,0 +1,30 @@
+{
+  "Mặc định": {
+    "profile_name": "Mặc định",
+    "commune_code": "",
+    "address": "",
+    "prefix": "CHUACOGIAY",
+    "entity_type": "Hộ gia đình",
+    "owner_value": "Chủ hộ",
+    "member_value": "Thành viên hộ gia đình",
+    "document_type": "Loại 5",
+    "item_2_template": "{PREFIX}_{MA_XA}_{SO_TO}_{SO_THUA}",
+    "item_49_template": "{PREFIX}_{MA_XA}_{SO_TO}_{SO_THUA}-TBXN.pdf, {PREFIX}_{MA_XA}_{SO_TO}_{SO_THUA}-DDK.pdf",
+    "location_fallback": "address",
+    "location_fallback_value": "",
+    "gcn_mode": "auto",
+    "invalid_cccd_action": "keep",
+    "normalize_names": true,
+    "normalize_cccd": true,
+    "gender_mode": "cccd",
+    "household_mode": true,
+    "source_mapping": {},
+    "field_rules": {},
+    "output_folder": "",
+    "output_filename": "VBDLIS_Output.xlsx",
+    "export_audit_report": true,
+    "keep_reference_sheets": false,
+    "last_sheet": "",
+    "header_row": 1
+  }
+}

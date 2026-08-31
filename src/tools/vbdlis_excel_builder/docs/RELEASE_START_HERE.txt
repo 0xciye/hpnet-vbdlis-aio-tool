@@ -1,0 +1,36 @@
+VBDLIS EXCEL BUILDER - BẮT ĐẦU TẠI ĐÂY
+====================================
+
+CÁCH MỞ
+1. Giải nén toàn bộ ZIP vào một thư mục riêng.
+2. Đọc HƯỚNG DẪN SỬ DỤNG.pdf trong thư mục vừa giải nén.
+3. Nhấp đúp VBDLIS Excel Builder.exe. Không cần cài Python.
+4. Giữ nguyên thư mục _internal bên cạnh EXE: thư mục này chứa thư viện,
+   biểu mẫu, cấu hình mặc định và icon cần thiết.
+
+QUY TRÌNH
+1. Dữ liệu: chọn file Excel nguồn, trang tính và dòng tiêu đề.
+2. Ánh xạ cột: kiểm tra STT hộ, Họ tên, CCCD, Số tờ, Số thửa, Diện tích.
+3. Cấu hình VBDLIS: nhập Mã xã, Địa chỉ; kiểm tra Mục 2 và Mục 49.
+4. Quy tắc nâng cao: thông thường giữ nguyên; mở phần giải thích khi cần.
+5. Kiểm tra và Xuất: sửa hết LỖI, rà soát CẢNH BÁO rồi tạo file VBDLIS.
+
+GIỚI TÍNH TỰ ĐỘNG (MỤC 10)
+- CCCD sau chuẩn hóa phải gồm đúng 12 chữ số.
+- Đếm từ trái sang phải: số thứ 4 là 0 thì Nam, 1 thì Nữ.
+- Các trường hợp khác để trống, không áp dụng quy tắc chẵn/lẻ.
+- Áp dụng cho cả chủ hộ và thành viên. Không lấy giới tính từ cột nguồn
+  hoặc giá trị cố định trong cấu hình cũ.
+
+LƯU Ý
+- Không chạy EXE trực tiếp trong ZIP, không gửi riêng EXE.
+- Không đổi tên, di chuyển hay xóa thư mục _internal.
+- File nguồn không bị chỉnh sửa; ứng dụng không tự tải dữ liệu lên VBDLIS.
+- Mở và kiểm tra file kết quả trước khi tải lên thủ công.
+- Giữ báo cáo kiểm tra cùng đợt dữ liệu.
+- Gói chung không chứa dữ liệu cá nhân hay cấu hình riêng của đơn vị.
+- Nếu đã ghim bản cũ trên taskbar, bỏ ghim rồi ghim EXE mới để Windows
+  không tiếp tục hiển thị icon đã lưu của bản cũ.
+
+CHI TIẾT BẢN MỚI
+Xem GHI CHÚ PHÁT HÀNH.txt và HƯỚNG DẪN SỬ DỤNG.pdf.

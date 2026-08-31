@@ -1,0 +1,97 @@
+# Python environments and generated caches
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage*
+htmlcov/
+*.egg-info/
+
+# Build products (publish the ZIP as a GitHub Release asset instead)
+build/
+dist/
+release/
+*.exe
+*.dll
+*.pyd
+*.zip
+*.7z
+*.rar
+# PyInstaller .spec files are SOURCE: intentionally not ignored.
+
+# Portable HPNet dependencies: restore from the matching clean release.
+/src/nodes_tools/**/runtime/
+node_modules/
+
+# Local configuration, authentication and processing history
+.env
+.env.*
+!.env.example
+*.pfx
+*.p12
+*.key
+/src/nodes_tools/**/cau_hinh.json
+/src/nodes_tools/**/profiles.json
+settings.json
+/src/tools/signed_pdf_cleaner/config.json
+du_lieu_dang_nhap_vneid/
+nhat_ky/
+logs/
+*.log
+trang_thai_da_up.json
+ket_qua_quet_moi_nhat.json
+cookies.json
+storage-state.json
+storage_state.json
+Login Data*
+Cookies*
+
+# Personal workbooks, generated documents, previews and scratch data
+*.xlsx
+*.xls
+*.xlsm
+*.csv
+*.docx
+*.doc
+*.pdf
+!src/tools/vbdlis_excel_builder/resources/BieuMauThuThapThongTinGiayChungNhan.xlsx
+!src/tools/notice_builder/template/WORD_MAU_THONG_BAO_CHUACOGIAY_PLACEHOLDER.docx
+!src/tools/notice_builder/template/MAU_22_THONG_BAO_XAC_NHAN_KET_QUA_DANG_KY_DAT_DAI.docx
+tmp/
+temp/
+output/
+outputs/
+Xem_truoc/
+~$*
+*.tmp
+*.bak
+*.part
+*.crdownload
+
+# Local design/research/audit notes, not runtime source
+/.agents/
+/review/
+/research/*
+!/research/notice_template22/
+/research/notice_template22/*
+!/research/notice_template22/MAU_22_THONG_BAO_XAC_NHAN_KET_QUA_DANG_KY_DAT_DAI.docx
+!/research/notice_template22/template-evidence.json
+/RESEARCH_REPORT.md
+/docs/*
+!/docs/REQUIREMENTS.txt
+!/docs/REQUIREMENTS_BUILD.txt
+!/docs/HUONG_DAN_BAN_SUA.txt
+!/docs/GITHUB_PREP.md
+!/docs/PDF_DOWNLOADER_PLAN.md
+/src/tools/vbdlis_excel_builder/docs/verification-report.md
+/tools/cleanup_approved_launcher.ps1
+
+# Editor/OS metadata
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+Desktop.ini

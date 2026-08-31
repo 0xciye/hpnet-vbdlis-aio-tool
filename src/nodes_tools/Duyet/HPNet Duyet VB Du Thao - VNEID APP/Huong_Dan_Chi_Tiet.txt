@@ -1,0 +1,14 @@
+HƯỚNG DẪN SỬ DỤNG CHI TIẾT - HPNET DUYỆT VĂN BẢN DỰ THẢO
+Dành cho người dùng không có chuyên môn tin học.
+
+1. GIỚI THIỆU:
+Dành cho các ban bệ/cán bộ. Ai đó vừa gửi cho bạn 50 hồ sơ nằm trên cổng web, nếu duyệt bằng tay bạn sẽ phải load 50 trang mạng khác nhau. Với phần mềm này, bạn chỉ cần nạp cụm từ "khoá" là gì, phần mềm sẽ xách đúng 50 ông chung một loại hồ sơ đó ra và bấm nút Chấp thuận chuyển duyệt hàng loạt tới sếp trên. 
+
+2. CÁC BƯỚC THỰC HIỆN CƠ BẢN:
+Bước 1: Trình duyệt của bạn phải được đăng nhập phiên sẵn tài khoản của bạn trên trang nội bộ.
+Bước 2: Mở phần mềm Duyệt văn bản này lên.
+Bước 3: Gõ từ khoá "Trích yếu" chung của lô hồ sơ mà mọi người gửi lên. (Ví dụ: Từ khóa là "Dự Thảo 89").
+- Máy tính sẽ lên mạng, tự chạy bóc hết tất cả các Văn bản nào có dính chữ "Dự Thảo 89" đang nằm chờ xử lý mang về đây đếm thử cho bạn xem là có tổng cộng 50 cái.
+Bước 4: Bạn được quyền kéo thả chọn tên tài khoản Lãnh đạo cấp cao hơn (người nhận tiếp theo) để chuyển duyệt lên.
+Bước 5: Nhấp "Tiến hành Duyệt Tự Động".
+- Màn hình sẽ tự động bấm nhấp chuột liên thanh giải quyết lần lượt hồ sơ trong ít phút. Xử lý xong đâu đó sẽ hiện chữ màu xanh ra báo hiệu. Bạn có thể mở một file báo cáo cuối cùng (.CSV hoặc TXT) để xem hồ sơ nào bị lỗi hay 100% trơn tru.

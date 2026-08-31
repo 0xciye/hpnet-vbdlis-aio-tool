@@ -1,0 +1,15 @@
+HƯỚNG DẪN SỬ DỤNG CHI TIẾT - HPNET UPLOAD VĂN BẢN DỰ THẢO
+Dành cho người dùng không có chuyên môn tin học.
+
+1. GIỚI THIỆU:
+Bạn vừa viết 50 tờ thông báo bằng MS Word (.docx), giờ để gửi trình sếp xem duyệt trên cổng số HPNet: Bạn phải bấm 50 lần nút tải lên trang web. Công cụ Tự Động Upload sẽ làm thay thao tác nhập liệu chuột phím này trong khi bạn đi uống nước. 
+
+2. CÁC BƯỚC THỰC HIỆN CƠ BẢN:
+Bước 1: Bật ứng dụng trình duyệt (Google Chrome/Edge) trên máy tính và đăng nhập vào web cổng thông tin nội bộ chứa chức năng Văn bản dự thảo.
+Bước 2: Mở phầm mềm HPNet Upload lên.
+Bước 3: Nhấp vào dòng chọn Thư mục. Đưa máy tính duyệt đến trỏ đúng cái folder vàng vàng đang chứa 50 tờ MS Word kia của bạn.
+Bước 4: Thiết lập 2 dòng chung của bộ 50 hồ sơ này:
+- Trích yếu: (Ví dụ: "Hồ sơ dự thảo của đội A"). 
+- Người duyệt: Trỏ chuột chọn đúng tên lãnh đạo mà bạn muốn nộp duyệt cho họ từ danh sách thả xuống.
+Bước 5: Khuyên dùng chế độ "Test Mode" (Chạy mô phỏng trước). Nếu không chọn, hãy bấm nút "Chạy Thật Ngay". 
+Bước 6: Khi bấm Bắt đầu, bàn phím và chuột sẽ bị phần mềm mượn đi, màn hình sẽ tự động múa các thao tác mở trang, điền chữ, tải file, lưu lại y như ma làm. Bạn cứ để nó chạy, khi nào hết số file trong thư mục nó sẽ tự ngưng và trả lại máy. Rất nhàn nhã!

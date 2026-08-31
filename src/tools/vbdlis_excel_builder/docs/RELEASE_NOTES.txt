@@ -1,0 +1,59 @@
+VBDLIS EXCEL BUILDER - WINDOWS X64 - 31/08/2026
+Bản cập nhật báo cáo lỗi đầy đủ và tự động bỏ qua dữ liệu thiếu/sai
+============================================
+
+BỔ SUNG LOGS
+- Tự lưu HTML/TXT sau mỗi lần kiểm tra, kể cả chưa xuất được; có nút mở tại Tab 5.
+- Báo cáo tiếng Việt: chỉ rõ file, trang tính, dòng/ô, giá trị, ảnh hưởng, cách sửa.
+- Không cắt bớt lỗi lặp; phân biệt dòng người, dòng thửa và STT kết quả.
+- Mặc định bỏ cả hộ thiếu dữ liệu bắt buộc, bỏ riêng người có CCCD sai 12 số;
+  ghi rõ đối tượng bị bỏ. Không sửa nguồn hoặc tự thay người mang vai trò Chủ hộ.
+- Báo cáo khi không đọc/ghi được file; hiển thị rõ nếu không lưu được chính log.
+- Báo cáo Excel có thêm ảnh hưởng, cách xử lý, vị trí ô; xuống dòng để đọc đầy đủ.
+- Bổ sung HƯỚNG DẪN ĐỌC BÁO CÁO.txt; tên gói mới: 2026.08.31-logs.
+
+GIỮ CÁC SỬA ĐỔI SUMMARYFIX
+- Bỏ qua dòng Tổng DT/Tổng diện tích/Tổng cộng khi nhận diện người và thửa.
+- Chỉ nhận diện nhãn tổng hợp đầy đủ trong cột tên hoặc STT, không lọc theo
+  từ nằm trong tên người; giữ dòng có CCCD/ngày sinh để kiểm tra bình thường.
+- Hiển thị số dòng tổng hợp đã bỏ qua; ghi số dòng nguồn trong báo cáo kiểm tra.
+- File có tiêu đề nhiều hàng: chọn hàng tiêu đề cuối và ánh xạ theo chữ cột
+  nếu ô tiêu đề bị gộp. Không tự sửa dữ liệu nguồn hoặc bỏ người thiếu CCCD.
+
+GIỮ CÁC SỬA ĐỔI ICONFIX
+- Icon cỡ nhỏ dùng bitmap Windows 32-bit kèm mặt nạ trong suốt, cỡ 256px
+  dùng PNG; nhóm icon đầu tiên trong EXE trỏ đúng đủ 9 kích thước.
+- Kiểm tra cả icon mà Windows Shell trả về ở 16px và 32px sau giải nén.
+- Một số trình xem ZIP dùng biểu tượng chung cho file EXE trong danh sách.
+  Hãy giải nén toàn bộ gói rồi xem/chạy EXE trong thư mục mới.
+
+THAY ĐỔI
+- Đồng nhất giao diện sáng, khắc phục popup nền đen và viền đen ở ô cấu hình.
+- Bảng quy tắc: tăng chiều cao hàng, chỉnh kích thước ô nhập, bổ sung mũi tên
+  dropdown và dấu tích; không còn ô nhập chồng lên hàng kế tiếp.
+- Mở rộng cột Nguồn, thêm chú thích tên trường và phần trợ giúp thu gọn.
+- Mục 10 tự nhận giới tính theo số thứ 4 của CCCD đủ 12 chữ số:
+  0 = Nam, 1 = Nữ, còn lại để trống. Cấu hình cũ không ghi đè quy tắc này.
+- Icon bảng tính/dấu tích mới: nhúng 9 kích thước vào EXE, sử dụng cùng icon
+  cho cửa sổ và taskbar; đặt mã nhận diện ứng dụng riêng trên Windows.
+- Hướng dẫn PDF 15 trang: ảnh giao diện mới, quy tắc CCCD và bảng Tab 4 đã sửa.
+
+KIỂM TRA
+- Python 3.14.7, PyInstaller 6.22.2, PySide6 6.11.2.
+- 46 bài kiểm thử đạt; bộ kiểm thử GOLDEN được bỏ qua do thiếu file tham chiếu.
+- Đã kiểm thử log đầy đủ trên 500 lỗi, nội dung HTML an toàn, thiếu quyền ghi,
+  lỗi đọc/xuất file, nút mở báo cáo, chính sách bỏ người/hộ và giữ dòng nối tiếp.
+- Kiểm tra các biến thể dòng tổng hợp, bảo toàn tên người và ranh giới hộ.
+- Kiểm thử xuất Excel và báo cáo: không có người giả từ dòng tổng hợp,
+  đồng thời ghi đúng số dòng nguồn và số lượng dòng tổng hợp đã bỏ qua.
+- Kiểm tra 646 kích thước ô nhập ở cửa sổ rộng 1100 và 1450 pixel.
+- Kiểm tra các chữ số giới tính 0-9, CCCD sai và cấu hình cũ mâu thuẫn.
+- Kiểm tra giới tính trong file Excel thực tế được xuất bởi kiểm thử tích hợp.
+- Mở EXE và kiểm tra dropdown cấu hình, dropdown chế độ, icon góc cửa sổ.
+- Kiểm tra dữ liệu icon nhúng khớp icon ứng dụng ở cả 9 kích thước.
+- Gói ZIP được giải nén thử, đối chiếu toàn bộ file và chạy kiểm tra khởi động.
+
+CHUYỂN SANG BẢN MỚI
+Giải nén vào thư mục mới và chạy đúng EXE bên trong. Cấu hình đã lưu trong
+thư mục dữ liệu ứng dụng của Windows vẫn được dùng. Nếu ghim bản cũ, bỏ ghim
+và ghim EXE mới để tránh Windows hiển thị icon cũ.

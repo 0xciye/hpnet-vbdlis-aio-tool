@@ -1,0 +1,61 @@
+TÀI LIỆU HƯỚNG DẪN SỬ DỤNG - BỘ CÔNG CỤ TỰ ĐỘNG HÓA HPNET & VBDLIS
+
+=======================================================
+HƯỚNG DẪN KHỞI CHẠY HỆ THỐNG
+- Thực hiện giải nén toàn bộ thư mục lưu trữ ZIP vào hệ thống máy tính.
+- Khởi chạy tập tin "HPNET & VBDLIS Tools.exe".
+- Tại màn hình Bảng điều khiển chính (Dashboard), kích chọn tiện ích cần dùng dựa trên hướng dẫn nghiệp vụ tương ứng dưới đây:
+=======================================================
+
+1. HPNet Auto Rename (Tiện ích Nhân bản & Đổi tên tập tin tự động)
+- Chức năng: Đọc, đối soát dữ liệu từ tệp Excel và tự động nhân bản, đổi tên phân loại các tập tin quyết định/chứng nhận (Word/PDF) theo cấu trúc chuẩn: "Mã xã_Số tờ_Số thửa".
+- Thao tác:
+  + Tại Bảng điều khiển, khởi chạy công cụ "Auto Rename".
+  + Tại hạng mục "Dữ liệu Excel", chọn đường dẫn tệp danh sách Excel, cung cấp số thứ tự dòng tiêu đề và chọn lệnh "Đọc dữ liệu".
+  + Tại hạng mục "File Nguồn", điều hướng đến thư mục đang lưu trữ các tài liệu gốc cần xử lý.
+  + Tại hạng mục "Ánh xạ", đối chiếu các trường dữ liệu tương ứng phục vụ phân tích (Họ tên, Số tờ, Số thửa,...). Chọn "Phân tích Match".
+  + Thiết lập "Mã ĐVHC" (Ví dụ: 10930) và cấu hình "Thư mục đích" để tiếp nhận kết quả đầu ra.
+  + Nhấp "Tạo File". Hệ thống sẽ trích xuất và kết tạo danh sách các tập tin đã được chuẩn hóa vào thư mục đích, bảo đảm tính toàn vẹn 100% đối với dữ liệu gốc ban đầu.
+
+2. HPNet PDF Cleaner (Tiện ích Làm sạch và hệ thống hóa tập tin sau ký số)
+- Chức năng: Rà soát, thanh lọc tự động các phiên bản PDF lưu trữ lỗi, chưa được ký số thành công. Đồng thời tiến hành đổi tên hàng loạt cho các tài liệu đã ký số hợp lệ (loại bỏ hậu tố định dạng bổ sung ".signed").
+- Thao tác:
+  + Lựa chọn tiện ích "PDF Cleaner".
+  + Chọn "Chọn..." nhằm trỏ đường dẫn tới thư mục kho chứa văn bản hồ sơ.
+  + Bấm lệnh "Quét / Xem trước". Phần mềm sẽ kiểm đếm và thống kê số lượng hồ sơ hợp lệ.
+  + Bấm lệnh "Thực hiện xử lý". Hệ thống sẽ tự động vô hiệu hóa và luân chuyển các tập tin tài liệu chưa ký vào thư mục Recycle Bin (Thùng rác), hoàn tất quy trình tinh gọn không gian lưu trữ hiệu quả.
+
+3. VBDLIS Excel Builder (Tiện ích Khởi tạo, đối soát Form chuẩn VBDLIS)
+- Chức năng: Chuyển đổi, chuẩn hóa dữ liệu sang cấu trúc bản ghi khắt khe của hệ thống VBDLIS, hỗ trợ định danh tự động vai trò công dân, và kiểm tra tính hợp lệ về logic nhân khẩu (số CCCD, giới tính...).
+- Thao tác:
+  + Chọn khởi chạy tính năng "Excel Builder".
+  + Tại thẻ chức năng "Dữ liệu", nạp danh sách dữ liệu thô của đơn vị lên phần mềm.
+  + Tại thẻ "Ánh xạ", thiếp lập gán cột dữ liệu đối xứng, hoặc sử dụng chức năng "Tự động phân loại".
+  + Tại thẻ "Kiểm tra & Xuất", chọn chức năng "Kiểm tra quy định hệ thống". Báo cáo lỗi sẽ thông báo chính xác số dòng chứa dữ liệu định danh sai lệch yêu cầu để cán bộ kịp thời chỉnh lý tại tệp gốc.
+  + Sau khi mọi thông tin xác thực vượt yêu cầu hợp lệ, sử dụng lệnh "Khởi tạo Excel" để kết xuất biểu mẫu hoàn chỉnh phục vụ tác vụ đẩy thông tin lên Cơ sở dữ liệu VBDLIS.
+
+4. HPNet PDF Downloader (Tiện ích Truy xuất và tải hồ sơ tự động)
+- Chức năng: Tự động tải xuống lưu trữ các báo cáo quyết định/chứng nhận số hóa từ cổng thông tin hệ thống dựa trên danh mục "Số thông báo" đã thu thập.
+- Thao tác:
+  + Mở mục công cụ "PDF Downloader".
+  + Cung cấp Mã số hành chính địa phương vào dòng nhập liệu.
+  + Nhập dãy thông tin đối chiếu của danh sách "Số thông báo" vào khung xử lý bên dưới.
+  + Chọn lệnh "Bắt đầu tải về". Tiến trình xử lý nền (background process) sẽ tiếp quản việc giao tiếp cổng mạng và tự động phân loại lưu trữ các tập tin liên quan thành từng bộ thư mục kết quả.
+
+5. HPNet Upload Văn Bản Dự Thảo
+- Chức năng: Tự động hóa tiến trình đẩy (đăng tải) các tập tin văn bản gốc đã soạn thảo (Word/PDF) vào kho dữ liệu thông tin nội bộ HPNet, cho phép tự động cung cấp thông số Trích yếu và khai báo thông tin chỉ định chuyên viên kiểm duyệt.
+- Thao tác:
+  + Kiểm tra trạng thái phiên làm việc (session login) của quản trị viên trên trình duyệt cơ sở.
+  + Khởi chạy công cụ "Upload Dự Thảo".
+  + Nhập đường dẫn trỏ đến thư mục đang chứa các văn bản chờ phê duyệt.
+  + Cung cấp nội dung "Trích Yếu" của đợt công tác và cấp phân quyền thuộc danh mục "Cán bộ phê duyệt".
+  + Nhấp tiến hành lệnh "Bắt đầu" ở chế độ "Chạy thật". Hệ thống phần mềm tự động thay thế giao diện tương tác thủ công nhằm giảm bớt đáng kể quỹ thời gian.
+
+6. HPNet Duyệt Văn Bản Dự Thảo
+- Chức năng: Tìm kiếm và thu thập, nhóm các hồ sơ/giấy tờ chờ phê duyệt theo mã từ khóa, phục vụ tác vụ luân chuyển và phê duyệt dự thảo số lượng lớn qua hệ thống hạ tầng mạng lưu trữ.
+- Thao tác:
+  + Kiểm tra trạng thái bảo mật của tài khoản ủy quyền trên trình duyệt web.
+  + Khởi chạy ứng dụng "Duyệt Dự Thảo".
+  + Cung cấp Từ khóa "Trích Yếu" của danh mục hồ sơ cần xử lý vào ô truy vấn. Phần mềm sẽ kết nối, tra cứu và trả về tập hợp các văn bản có thuộc tính phù hợp đang nằm chờ.
+  + Đề cử/bầu chọn Cán bộ quản lý sẽ tiếp quản quy trình xử lý kế tiếp.
+  + Nhấp thao tác "Xác nhận & Duyệt tự động". Khi toàn bộ tiến trình xử lý thông tin hoàn tất, log nhật ký quá trình sẽ được truy xuất thành tệp tin (.CSV hoặc .TXT) hỗ trợ công tác hậu kiểm.

@@ -1,0 +1,50 @@
+HƯỚNG DẪN ĐỌC BÁO CÁO VÀ DỮ LIỆU BỊ BỎ QUA
+==========================================
+
+1. Tại Tab 5, bấm Kiểm tra, Xem trước hoặc Tạo file VBDLIS.
+   Ứng dụng tự lưu báo cáo HTML và TXT, kể cả khi chưa xuất được Excel.
+   Không cần bật tùy chọn xuất báo cáo Excel để có hai bản này.
+
+2. Bấm Mở báo cáo lỗi để mở bản dễ đọc trong trình duyệt mặc định.
+   Bấm Thư mục báo cáo để tìm bản TXT (mở bằng Notepad) hoặc báo cáo cũ.
+   Thư mục mặc định: %APPDATA%\VBDLIS Excel Builder\logs\kiem_tra
+   Mỗi lần chạy có tên file theo thời gian riêng, không ghi đè báo cáo trước.
+
+3. Trong báo cáo, đọc trạng thái và số lượng bị bỏ trước. Chọn Lỗi/Cảnh báo/
+   Thông tin hoặc nhập ô, hộ, tên người vào ô tìm kiếm (có thể gõ không dấu).
+   Mỗi mục nêu: Ở đâu, Vấn đề, Ảnh hưởng, Cách xử lý, Giá trị tại ô nguồn.
+   Để tìm ô: mở đúng file và trang tính trong Excel, nhấn Ctrl+G, nhập địa chỉ
+   ví dụ D279 rồi nhấn Enter. Số dòng nguồn khác với STT kết quả VBDLIS.
+
+4. Mặc định tại Tab 3 bật Tự động bỏ qua:
+   - Thiếu họ tên/CCCD của người: bỏ cả hộ.
+   - Thửa thiếu Số tờ/Số thửa/Diện tích hoặc hộ không có thửa: bỏ cả hộ.
+   - CCCD đã có nhưng không đúng 12 chữ số: bỏ riêng người đó; nếu không còn
+     người nào hợp lệ thì bỏ cả hộ. Không tự chỉ định chủ hộ mới nếu chủ hộ bị bỏ.
+   - Ô trống bình thường trên dòng nối tiếp không bị coi là người/thửa thiếu.
+   - Tổng DT/Tổng cộng được bỏ qua riêng, không phải người hoặc thửa.
+   Báo cáo luôn ghi các đối tượng bị bỏ và nguyên nhân. Dữ liệu gốc không sửa.
+   Tắt Tự động bỏ qua nếu muốn kiểm tra theo chế độ dừng khi thiếu dữ liệu.
+
+5. LỖI: phải sửa trước khi xuất. CẢNH BÁO: cần đối chiếu, có thể có hộ/người đã
+   bỏ và không xuất. THÔNG TIN: dòng tổng đã bỏ, địa chỉ đã dùng thay Xứ đồng...
+   Số mục lỗi/cảnh báo không phải số người: một ô có thể ảnh hưởng nhiều dòng.
+   Bảng Tab 5 hiện tối đa 1.000 mục; HTML/TXT và báo cáo Excel giữ đầy đủ.
+
+6. Nếu không đọc được file, không có quyền ghi hoặc có sự cố xử lý, ứng dụng
+   lưu báo cáo sự cố kèm cách xử lý. Nếu chính việc lưu báo cáo thất bại, Tab 5
+   báo rõ; hãy kiểm tra dung lượng/quyền ghi. app.log dành cho người hỗ trợ.
+   Khi xuất thành công, có thêm báo cáo xác nhận đường dẫn file đã được kiểm tra.
+
+7. Sau khi sửa dữ liệu, chạy lại và đọc báo cáo mới. Không lấy báo cáo cũ làm
+   kết luận cho file vừa sửa. Với file có hai dòng tiêu đề, chọn hàng tiêu đề
+   cuối và kiểm tra ánh xạ theo chữ cột.
+
+LƯU Ý BẢO MẬT
+Báo cáo có thể chứa họ tên, CCCD và dữ liệu đất đai. Chỉ chia sẻ cho người có
+thẩm quyền. Không đưa dữ liệu nguồn/kết quả/báo cáo cá nhân vào ZIP phần mềm.
+Ứng dụng không tự kết nối hoặc tải dữ liệu lên VBDLIS. Việc nhập vào VBDLIS
+và kiểm tra dữ liệu nghiệp vụ do người dùng thực hiện.
+
+Tài liệu này bổ sung quy tắc log/bỏ qua của bản 2026.08.31-logs; khi khác với
+phần mô tả dừng do CCCD thiếu trong PDF hướng dẫn cơ bản, dùng quy tắc ở đây.

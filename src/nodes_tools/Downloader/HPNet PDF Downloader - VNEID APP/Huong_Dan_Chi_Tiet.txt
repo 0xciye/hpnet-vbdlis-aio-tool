@@ -1,0 +1,12 @@
+HƯỚNG DẪN SỬ DỤNG CHI TIẾT - HPNET PDF DOWNLOADER (TẢI FILE TỰ ĐỘNG)
+Dành cho người dùng không có chuyên môn tin học.
+
+1. GIỚI THIỆU:
+Nếu bạn phải tải hàng trăm giấy báo/chứng nhận số hóa từ trên hệ thống VNEID/HPNET mà phải click tay từng trang web thì sẽ rất mệt. Công cụ này chỉ cần bạn cho nó 1 danh sách các "Số thông báo", nó sẽ tự chạy tải về cất chung vào 1 cặp hồ sơ cho bạn.
+
+2. CÁC BƯỚC THỰC HIỆN:
+Bước 1: Chạy file phần mềm HPNet PDF Downloader. (Có thể là 1 cửa sổ biểu mẫu nhỏ).
+Bước 2: Hệ thống yêu cầu ô Mã Xã, bạn hãy nhập mã số 5 chữ số nơi quản lý của bạn (VD: 10930).
+Bước 3: Ở ô chữ nhật to bên dưới, bạn hãy dán toàn bộ các đoạn mã "Số thông báo" mà bạn muốn tải hồ sơ về. Các số này có thể phẩy, chấm, hoặc enter xuống hàng để cách nhau đều được. 
+Bước 4: Nhấn nút "Bắt đầu tải".
+Bước 5: Kéo phần mềm xuống khay màn hình, và cứ để nó chạy khoảng 5-10 phút. Không cần phải động tay. Xong xuôi màn hình sẽ báo hiệu, và toàn bộ file văn bản đó sẽ được gom lại tại thư mục kết quả để bạn mang ra sử dụng.

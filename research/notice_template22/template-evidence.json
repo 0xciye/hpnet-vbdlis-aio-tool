@@ -1,0 +1,299 @@
+{
+  "source": "research/notice_template22/MAU_22_THONG_BAO_XAC_NHAN_KET_QUA_DANG_KY_DAT_DAI.docx",
+  "source_sha256": "5780ded0720fb75818bb4955fe2fcd0dab63e861ef52b04f177738edf0c84fda",
+  "target_sha256": "0386b33752c7f03b83b43b43686ac89f71153e706bf993e7f76719ead1305bb9",
+  "inventory": [
+    {
+      "part": "[Content_Types].xml",
+      "size": 1704,
+      "sha256": "dafc409570d23cdedf5ef6323b0ba896119ae9114a1045910a61fafac3c81782",
+      "mode": "preserve-only"
+    },
+    {
+      "part": "_rels/.rels",
+      "size": 590,
+      "sha256": "e19238d7a71fa7a2490776252686f70e2de6238c87cd509b5e3a3cc07c2ea4df",
+      "mode": "preserve-only"
+    },
+    {
+      "part": "word/document.xml",
+      "size": 37850,
+      "sha256": "7a9facdc05e2e453b926a74fc74251be642ee4d2ebce9ab15df39ad86ead4d2b",
+      "mode": "bounded text/alignment patch"
+    },
+    {
+      "part": "word/_rels/document.xml.rels",
+      "size": 1209,
+      "sha256": "b2f2472b62d93b60578ec38d819c18637f51a512ce4c5bb706259d446874d01b",
+      "mode": "preserve-only"
+    },
+    {
+      "part": "word/footnotes.xml",
+      "size": 3056,
+      "sha256": "326008a28f1a31e55e1b17b07f02aecda80b06796b902e815d8a9f23d63970aa",
+      "mode": "preserve-only"
+    },
+    {
+      "part": "word/endnotes.xml",
+      "size": 3050,
+      "sha256": "d14444cb86d567a8422b041e6e4275228cec059e739f70ff3d468676255263dd",
+      "mode": "preserve-only"
+    },
+    {
+      "part": "word/header1.xml",
+      "size": 2982,
+      "sha256": "91c73beaec8650e330eaf005f9f7e4edb115bf774d8dce6d8adf25759e284d90",
+      "mode": "preserve-only"
+    },
+    {
+      "part": "word/theme/theme1.xml",
+      "size": 8393,
+      "sha256": "70a70d84494772c1855ec6c2f9a16e0fc6cc41bdb0ce3743563ed943b63e07b8",
+      "mode": "preserve-only"
+    },
+    {
+      "part": "word/settings.xml",
+      "size": 5423,
+      "sha256": "d71db1c8c846ab8404f78c4327b3b285dd6b2d2d05d6688dce426b2f57ba7087",
+      "mode": "preserve-only"
+    },
+    {
+      "part": "word/styles.xml",
+      "size": 48624,
+      "sha256": "e791555e44e4d12508d6099e955d34d1c8e7468a3a955792e6f7f8665cab03bc",
+      "mode": "preserve-only"
+    },
+    {
+      "part": "word/webSettings.xml",
+      "size": 1069,
+      "sha256": "f2f6fe7679634963bf49bae65f941f41934de42ceeb3a806afac4bab92274853",
+      "mode": "preserve-only"
+    },
+    {
+      "part": "word/fontTable.xml",
+      "size": 1833,
+      "sha256": "b72d9b295372ec9f2d94ccb74aacb77d9b650fbe8e4490e9b5397afda1fe19c0",
+      "mode": "preserve-only"
+    },
+    {
+      "part": "docProps/core.xml",
+      "size": 761,
+      "sha256": "b87263fbb26e181430786e450c4fedb3cab65b7d45315d0511bb60b3f4206c57",
+      "mode": "preserve-only"
+    },
+    {
+      "part": "docProps/app.xml",
+      "size": 719,
+      "sha256": "6455bdf316287e5a2168f57ae4099e999222faa279c926553fc08341c43177ca",
+      "mode": "preserve-only"
+    }
+  ],
+  "slots": [
+    {
+      "part": "word/document.xml",
+      "paragraph": 0,
+      "paraId": "2A0F51C1",
+      "token": "TEN_XA"
+    },
+    {
+      "part": "word/document.xml",
+      "paragraph": 2,
+      "paraId": "6524A6DA",
+      "token": "SO_TB"
+    },
+    {
+      "part": "word/document.xml",
+      "paragraph": 3,
+      "paraId": "4A21DC07",
+      "token": "DIA_DIEM"
+    },
+    {
+      "part": "word/document.xml",
+      "paragraph": 3,
+      "paraId": "4A21DC07",
+      "token": "NGAY"
+    },
+    {
+      "part": "word/document.xml",
+      "paragraph": 3,
+      "paraId": "4A21DC07",
+      "token": "THANG"
+    },
+    {
+      "part": "word/document.xml",
+      "paragraph": 3,
+      "paraId": "4A21DC07",
+      "token": "NAM"
+    },
+    {
+      "part": "word/document.xml",
+      "paragraph": 8,
+      "paraId": "03AF52FF",
+      "token": "HO_TEN"
+    },
+    {
+      "part": "word/document.xml",
+      "paragraph": 9,
+      "paraId": "780FACB1",
+      "token": "GIAY_TO_NHAN_THAN"
+    },
+    {
+      "part": "word/document.xml",
+      "paragraph": 10,
+      "paraId": "0C60FB04",
+      "token": "DIA_CHI_NGUOI_SU_DUNG_DAT"
+    },
+    {
+      "part": "word/document.xml",
+      "paragraph": 12,
+      "paraId": "7C9943F6",
+      "token": "SO_THUA"
+    },
+    {
+      "part": "word/document.xml",
+      "paragraph": 12,
+      "paraId": "7C9943F6",
+      "token": "SO_TO"
+    },
+    {
+      "part": "word/document.xml",
+      "paragraph": 13,
+      "paraId": "1ED125E3",
+      "token": "XU_DONG"
+    },
+    {
+      "part": "word/document.xml",
+      "paragraph": 13,
+      "paraId": "1ED125E3",
+      "token": "TEN_THON"
+    },
+    {
+      "part": "word/document.xml",
+      "paragraph": 13,
+      "paraId": "1ED125E3",
+      "token": "DIA_CHI_HANH_CHINH"
+    },
+    {
+      "part": "word/document.xml",
+      "paragraph": 14,
+      "paraId": "58A73022",
+      "token": "DIEN_TICH"
+    },
+    {
+      "part": "word/document.xml",
+      "paragraph": 14,
+      "paraId": "58A73022",
+      "token": "DIEN_TICH"
+    },
+    {
+      "part": "word/document.xml",
+      "paragraph": 15,
+      "paraId": "16BFFFF9",
+      "token": "SU_DUNG_CHUNG_VO_CHONG"
+    },
+    {
+      "part": "word/document.xml",
+      "paragraph": 16,
+      "paraId": "657FD163",
+      "token": "SU_DUNG_RIENG"
+    },
+    {
+      "part": "word/document.xml",
+      "paragraph": 16,
+      "paraId": "657FD163",
+      "token": "DIEN_TICH"
+    },
+    {
+      "part": "word/document.xml",
+      "paragraph": 17,
+      "paraId": "03B7582C",
+      "token": "THOI_DIEM_SU_DUNG"
+    },
+    {
+      "part": "word/document.xml",
+      "paragraph": 18,
+      "paraId": "70AE63C5",
+      "token": "THOI_HAN_SU_DUNG"
+    },
+    {
+      "part": "word/document.xml",
+      "paragraph": 19,
+      "paraId": "6D3675DF",
+      "token": "NGUON_GOC_SU_DUNG_DAT"
+    },
+    {
+      "part": "word/document.xml",
+      "paragraph": 20,
+      "paraId": "5D54EF36",
+      "token": "THUA_LIEN_KE"
+    },
+    {
+      "part": "word/document.xml",
+      "paragraph": 20,
+      "paraId": "5D54EF36",
+      "token": "TO_LIEN_KE"
+    },
+    {
+      "part": "word/document.xml",
+      "paragraph": 20,
+      "paraId": "5D54EF36",
+      "token": "CHU_SU_HUU_LIEN_KE"
+    },
+    {
+      "part": "word/document.xml",
+      "paragraph": 20,
+      "paraId": "5D54EF36",
+      "token": "NOI_DUNG_QUYEN_LIEN_KE"
+    },
+    {
+      "part": "word/document.xml",
+      "paragraph": 21,
+      "paraId": "1E69C68E",
+      "token": "TAI_SAN_DANG_KY"
+    },
+    {
+      "part": "word/document.xml",
+      "paragraph": 22,
+      "paraId": "5AF30A8E",
+      "token": "GIAY_TO_DA_NOP"
+    },
+    {
+      "part": "word/document.xml",
+      "paragraph": 27,
+      "paraId": "27CDE4C4",
+      "token": "HO_TEN"
+    },
+    {
+      "part": "word/document.xml",
+      "paragraph": 31,
+      "paraId": "03B5F639",
+      "token": "CHI_NHANH_VP_DKDD"
+    },
+    {
+      "part": "word/document.xml",
+      "paragraph": 32,
+      "paraId": "0EAB3EA7",
+      "token": "CO_QUAN_THUE"
+    },
+    {
+      "part": "word/document.xml",
+      "paragraph": 33,
+      "paraId": "140984A1",
+      "token": "DON_VI_LUU"
+    },
+    {
+      "part": "word/document.xml",
+      "paragraph": 40,
+      "paraId": "41747B81",
+      "token": "NGUOI_KY"
+    }
+  ],
+  "changed_paragraphs": [
+    "03B7582C",
+    "16BFFFF9",
+    "58A73022",
+    "5D54EF36",
+    "657FD163",
+    "70AE63C5"
+  ]
+}
