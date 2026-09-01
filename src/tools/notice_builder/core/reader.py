@@ -178,7 +178,6 @@ def inspect_workbook(path, sheet_name, header_row, depth, mapping, *, require_id
                 continue
             marker_issue = problem("household_index", "STT hộ")
             marker = clean(value("household_index"))
-            starts_household = False
             if marker_issue:
                 current_household, household_problem = "", marker_issue
                 current_owner, owner_row, owner_problem = "", number, ""
@@ -192,7 +191,7 @@ def inspect_workbook(path, sheet_name, header_row, depth, mapping, *, require_id
                     current_owner, owner_row, owner_problem = "", number, ""
                     current_identity, identity_row, identity_problem = "", None, ""
                 else:
-                    starts_household = True; household_problem = ""
+                    household_problem = ""
                     issue = problem("owner", "tên hộ")
                     if owner and not has_content(owner) and not issue:
                         issue = f"Dữ liệu tên hộ không hợp lệ tại {mapping.owner}{number}: chỉ có dấu/khoảng trống, chưa có họ tên. Hãy nhập họ tên đúng vào ô nguồn."

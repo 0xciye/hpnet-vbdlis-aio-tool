@@ -244,6 +244,7 @@ def test_bad_mapping(tmp_path):
     with pytest.raises(UserError): ColumnMapping("B","G","H","M","L").validate(12)
     with pytest.raises(UserError): ColumnMapping("B","B","H","K","L").validate(12)
     with pytest.raises(UserError,match="diện tích"): ColumnMapping(area="").validate(12)
+    with pytest.raises(UserError,match="STT hộ"): ColumnMapping(household_index="").validate(12)
 
 
 def test_render_values_layout_parts_and_empty_location(tmp_path,service,config):
