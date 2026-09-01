@@ -61,6 +61,10 @@ try {
     }
     & $python -X utf8 (Join-Path $projectRoot 'run_tests.py')
     if ($LASTEXITCODE -ne 0) { throw 'Python tests failed.' }
+    # Sync mẫu thông báo từ research/ vào src/template/ và cập nhật evidence.
+    # Đây là nguồn thật duy nhất; bản trong src/ luôn được tạo lại khi build.
+    & $python -X utf8 (Join-Path $projectRoot 'tools\sync_notice_template.py')
+    if ($LASTEXITCODE -ne 0) { throw 'Notice template sync failed.' }
     New-Item -ItemType Directory -Path $releaseRoot, $buildRoot | Out-Null
     Set-Location -LiteralPath (Join-Path $projectRoot 'src')
     & $python -X utf8 -m PyInstaller HPNET_VBDLIS_Tools.spec --noconfirm --distpath $releaseRoot --workpath $buildRoot

@@ -1,7 +1,7 @@
 {
   "source": "research/notice_template/MAU_22_THONG_BAO_XAC_NHAN_KET_QUA_DANG_KY_DAT_DAI.docx",
-  "source_original_sha256": "5780ded0720fb75818bb4955fe2fcd0dab63e861ef52b04f177738edf0c84fda",
-  "canonical_sha256": "3007f4616e3267d4ee45a2e97cdaab44246232b328bac99420f56720bef15177",
+  "source_original_sha256": "3007f4616e3267d4ee45a2e97cdaab44246232b328bac99420f56720bef15177",
+  "canonical_sha256": "0864251630fcaf72417125ad654cf188ef4df5acae1604694b89480e5fbfc69a",
   "inventory": [
     {
       "part": "[Content_Types].xml",
@@ -289,14 +289,14 @@
     }
   ],
   "changed_paragraphs": [
-    "7C9943F6",
-    "1ED125E3",
     "03B7582C",
     "16BFFFF9",
+    "1ED125E3",
     "58A73022",
     "5D54EF36",
     "657FD163",
+    "6D3675DF",
     "70AE63C5",
-    "6D3675DF"
+    "7C9943F6"
   ]
 }
