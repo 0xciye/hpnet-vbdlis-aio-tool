@@ -50,6 +50,7 @@ Login Data*
 Cookies*
 
 # Personal workbooks, generated documents, previews and scratch data
+MAU_22_THONG_BAO_XAC_NHAN_KET_QUA_DANG_KY_DAT_DAI.docx
 *.xlsx
 *.xls
 *.xlsm
@@ -59,7 +60,6 @@ Cookies*
 *.pdf
 !src/tools/vbdlis_excel_builder/resources/BieuMauThuThapThongTinGiayChungNhan.xlsx
 !src/tools/notice_builder/template/WORD_MAU_THONG_BAO_CHUACOGIAY_PLACEHOLDER.docx
-!src/tools/notice_builder/template/MAU_22_THONG_BAO_XAC_NHAN_KET_QUA_DANG_KY_DAT_DAI.docx
 tmp/
 temp/
 output/
@@ -77,14 +77,12 @@ Xem_truoc/
 /research/*
 !/research/notice_template22/
 /research/notice_template22/*
-!/research/notice_template22/MAU_22_THONG_BAO_XAC_NHAN_KET_QUA_DANG_KY_DAT_DAI.docx
 !/research/notice_template22/template-evidence.json
 /RESEARCH_REPORT.md
 /docs/*
 !/docs/REQUIREMENTS.txt
 !/docs/REQUIREMENTS_BUILD.txt
 !/docs/HUONG_DAN_BAN_SUA.txt
-!/docs/GITHUB_PREP.md
 !/docs/PDF_DOWNLOADER_PLAN.md
 /src/tools/vbdlis_excel_builder/docs/verification-report.md
 /tools/cleanup_approved_launcher.ps1
