@@ -13,9 +13,9 @@ def run(window):
     with TemporaryDirectory(prefix="notice-smoke-") as temporary:
         root=Path(temporary); source=root/"synthetic.xlsx"
         wb=Workbook(); ws=wb.active; ws.title="Thử"
-        ws.append(["Tên hộ","Tờ BĐ mới","Thửa BĐ mới","Diện tích bản đồ","Giấy tờ nhân thân"])
-        ws.append(["HỘ KIỂM THỬ",72,175,357,"GIẤY TỜ KIỂM THỬ"]); ws.append([None,72,176,200]); wb.save(source); wb.close()
-        data=inspect_workbook(source,"Thử",1,1,ColumnMapping("A","B","C","D","","E"),require_identity=True)
+        ws.append(["Tên hộ","Tờ BĐ mới","Thửa BĐ mới","Diện tích bản đồ","Giấy tờ nhân thân","STT hộ"])
+        ws.append(["HỘ KIỂM THỬ",72,175,357,"GIẤY TỜ KIỂM THỬ",1]); ws.append([None,72,176,200,None,None]); wb.save(source); wb.close()
+        data=inspect_workbook(source,"Thử",1,1,ColumnMapping("A","B","C","D","","E",household_index="F"),require_identity=True)
         config=BatchConfig("12345","Địa chỉ thử","Thôn thử","Xã thử","Địa chỉ thửa thử","Địa danh thử",31,8,2026,start_number=100,template_fields=default_template_fields())
         service=NoticeService(default_template_path(),json.loads(resource("config/legal_defaults.json").read_text(encoding="utf-8")))
         preview=service.preview(data,config,root/"output",0,root/"preview")

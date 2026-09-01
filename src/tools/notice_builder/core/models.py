@@ -19,6 +19,7 @@ class ColumnMapping:
     area: str = "K"
     location: str = "L"
     identity: str = ""
+    household_index: str = "A"
 
     def validate(self, max_columns):
         from openpyxl.utils import column_index_from_string
@@ -29,7 +30,7 @@ class ColumnMapping:
             try:
                 index = column_index_from_string(value)
             except (ValueError, TypeError):
-                label = {"owner":"tên hộ","sheet":"tờ BĐ mới","parcel":"thửa BĐ mới","area":"diện tích","location":"xứ đồng","identity":"giấy tờ nhân thân"}[field_name]
+                label = {"owner":"tên hộ","sheet":"tờ BĐ mới","parcel":"thửa BĐ mới","area":"diện tích","location":"xứ đồng","identity":"giấy tờ nhân thân","household_index":"STT hộ"}[field_name]
                 raise UserError(f"Cột {label} chưa được chọn hợp lệ. Hãy quay lại bước Đối chiếu cột.") from None
             if not 1 <= index <= max_columns:
                 raise UserError(f"Cột {value} không có trong trang tính đang chọn.")
@@ -90,6 +91,7 @@ class NoticeRecord:
     duplicate_rows: list[int] = field(default_factory=list)
     identity: str = ""
     identity_row: int | None = None
+    household_number: str = ""
 
     @property
     def valid(self):

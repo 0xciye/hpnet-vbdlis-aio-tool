@@ -14,7 +14,7 @@ from tools.notice_builder.core import (BatchConfig, ColumnMapping, NoticeService
     UserError, WordTemplate, inspect_workbook, workbook_info)
 from tools.notice_builder.core.models import file_hash
 from tools.notice_builder.core.numbering import parse_numbers
-from tools.notice_builder.core.reader import area_text, identifier
+from tools.notice_builder.core.reader import area_text, identifier, is_summary
 from tools.notice_builder.core.renderer import WORD_NS, paragraph_nodes, node_text
 from tools.notice_builder.core import service as service_module
 
@@ -33,9 +33,12 @@ def service():
 def workbook(path, rows, header=1, other=False):
     wb=Workbook(); ws=wb.active; ws.title="Dữ liệu"
     if other: wb.create_sheet("Không chọn").append(["DỮ LIỆU KHÔNG ĐƯỢC ĐỌC"])
-    for col,title in {2:"Tên hộ",7:"Tờ BĐ mới",8:"Thửa BĐ mới",11:"DT BĐ (m2)",12:"Vị trí/Xứ đồng",13:"Diện tích giao"}.items():
+    for col,title in {1:"STT",2:"Tên hộ",7:"Tờ BĐ mới",8:"Thửa BĐ mới",11:"DT BĐ (m2)",12:"Vị trí/Xứ đồng",13:"Diện tích giao"}.items():
         ws.cell(header,col,title)
+    household_number=0
     for index,row in enumerate(rows,header+1):
+        if row[0] is not None and not is_summary(row[0]):
+            household_number+=1; ws.cell(index,1,household_number)
         for col,value in zip((2,7,8,11,12),row):
             cell=ws.cell(index,col,value)
             if isinstance(value,str) and value.startswith("="): cell.data_type="s"
@@ -171,7 +174,7 @@ def test_headers_grouping_summary_and_other_sheet(tmp_path):
         ("Cộng",1,1,1,None),("HỘ B",None,2,100,None),(None,1,None,100,None),(None,1,2,None,None)],header=6,other=True)
     info=workbook_info(path,"Dữ liệu")
     assert info["header_row"]==6 and len(info["sheets"])==2
-    assert info["suggestions"]=={"owner":"B","sheet":"G","parcel":"H","area":"K","location":"L","identity":""}
+    assert info["suggestions"]=={"household_index":"A","owner":"B","sheet":"G","parcel":"H","area":"K","location":"L","identity":""}
     assert len(data.records)==6 and data.records[0].status=="THIẾU DỮ LIỆU"
     assert data.records[1].owner==data.records[2].owner=="HỘ A"
     assert data.records[1].owner_row==8 and len(data.summary_rows)==3
@@ -184,22 +187,23 @@ def test_changed_mapping_and_two_tier(tmp_path):
     path=tmp_path/"two.xlsx"; wb=Workbook(); ws=wb.active; ws.title="Nguồn"
     ws.append(["Bảng thống kê"]); ws.append(["Tên hộ","Tờ BĐ mới","Thửa BĐ mới","Diện tích bản đồ"])
     for col in "ABC": ws.merge_cells(f"{col}2:{col}3")
-    ws["D3"]="m2"; ws.append(["HỘ KHÁC",43,120,200]); ws.append([None,None,None,None]); ws.append([None,43,121,201])
+    ws["D3"]="m2"; ws["E2"]="STT hộ"; ws.merge_cells("E2:E3")
+    ws.append(["HỘ KHÁC",43,120,200,1]); ws.append([None,None,None,None,None]); ws.append([None,43,121,201,None])
     wb.save(path); wb.close()
     info=workbook_info(path)
     assert info["header_row"]==2 and info["depth"]==2
-    data=inspect_workbook(path,"Nguồn",2,2,ColumnMapping("A","B","C","D",""))
+    data=inspect_workbook(path,"Nguồn",2,2,ColumnMapping("A","B","C","D","",household_index="E"))
     assert len(data.valid_records)==2 and data.blank_rows==[5]
     assert data.records[1].owner=="HỘ KHÁC" and data.records[1].location==""
 
 
 def test_optional_excel_row_range_and_blank_backward_compatibility(tmp_path):
     path=tmp_path/"range.xlsx"; wb=Workbook(); ws=wb.active; ws.title="Nguồn"
-    ws.append(["Tên hộ","Tờ BĐ mới","Thửa BĐ mới","Diện tích bản đồ","Giấy tờ nhân thân"])
-    ws.append(["HỘ CŨ",1,1,100,"GIẤY CŨ"]); ws.append([None,1,2,110,None])
-    ws.append(["HỘ MỚI",2,3,120,"GIẤY MỚI"]); ws.append([None,2,4,130,None])
+    ws.append(["Tên hộ","Tờ BĐ mới","Thửa BĐ mới","Diện tích bản đồ","Giấy tờ nhân thân","STT hộ"])
+    ws.append(["HỘ CŨ",1,1,100,"GIẤY CŨ",1]); ws.append([None,1,2,110,None,None])
+    ws.append(["HỘ MỚI",2,3,120,"GIẤY MỚI",2]); ws.append([None,2,4,130,None,None])
     wb.save(path); wb.close()
-    mapping=ColumnMapping("A","B","C","D","","E")
+    mapping=ColumnMapping("A","B","C","D","","E",household_index="F")
     full=inspect_workbook(path,"Nguồn",1,1,mapping,require_identity=True)
     blank=inspect_workbook(path,"Nguồn",1,1,mapping,require_identity=True,start_row="",end_row="")
     selected=inspect_workbook(path,"Nguồn",1,1,mapping,require_identity=True,start_row=4,end_row=5)
@@ -219,10 +223,10 @@ def test_optional_excel_row_range_and_blank_backward_compatibility(tmp_path):
 ])
 def test_invalid_excel_row_range(tmp_path,start,end,message):
     path=tmp_path/"bad-range.xlsx"; wb=Workbook(); ws=wb.active; ws.title="Nguồn"
-    ws.append(["Tên hộ","Tờ","Thửa","Diện tích","Giấy tờ"]); ws.append(["HỘ A",1,1,100,"GIẤY A"])
+    ws.append(["Tên hộ","Tờ","Thửa","Diện tích","Giấy tờ","STT hộ"]); ws.append(["HỘ A",1,1,100,"GIẤY A",1])
     wb.save(path); wb.close()
     with pytest.raises(UserError,match=message):
-        inspect_workbook(path,"Nguồn",1,1,ColumnMapping("A","B","C","D","","E"),
+        inspect_workbook(path,"Nguồn",1,1,ColumnMapping("A","B","C","D","","E",household_index="F"),
                          require_identity=True,start_row=start,end_row=end)
 
 
@@ -533,14 +537,23 @@ def test_real_workbook_new_identity_requirement():
 
 def edge_workbook(path, rows):
     wb=Workbook(); ws=wb.active; ws.title="Nguồn"
-    ws.append(["Tên hộ","Tờ BĐ mới","Thửa BĐ mới","Diện tích bản đồ","Giấy tờ nhân thân","Xứ đồng"])
-    for row in rows: ws.append(row)
+    ws.append(["Tên hộ","Tờ BĐ mới","Thửa BĐ mới","Diện tích bản đồ","Giấy tờ nhân thân","Xứ đồng","STT hộ"])
+    serial=0
+    for row in rows:
+        values=list(row); explicit_marker=values[6] if len(values)>6 else "AUTO"
+        owner=values[0] if values else None
+        if explicit_marker=="AUTO":
+            if owner is not None and not is_summary(owner): serial+=1; marker=serial
+            else: marker=None
+        else: marker=explicit_marker
+        padded=values[:6]+[None]*(6-len(values[:6]))
+        ws.append(padded+[marker])
     wb.save(path); wb.close()
     return path
 
 
 def inspect_edge(path, strict=True):
-    return inspect_workbook(path,"Nguồn",1,1,ColumnMapping("A","B","C","D","F","E"),require_identity=strict)
+    return inspect_workbook(path,"Nguồn",1,1,ColumnMapping("A","B","C","D","F","E",household_index="G"),require_identity=strict)
 
 
 @pytest.mark.parametrize("bad_name",['="HỘ B"',"#REF!","#VALUE!","#N/A","...."])

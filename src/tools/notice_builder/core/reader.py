@@ -102,7 +102,8 @@ def workbook_info(path, sheet_name=None, header_row=None, depth=2):
             labels = list(dict.fromkeys(header_value(r, col) for r in range(header_row, header_row + depth)))
             headers[get_column_letter(col)] = " / ".join(v for v in labels if v) or "[Không có tiêu đề]"
         suggestions = {}
-        for field_name, aliases in {"owner": ("ten ho", "ho va ten", "ho ten"), "sheet": ("to bd moi", "to ban do moi"),
+        for field_name, aliases in {"household_index": ("stt", "so tt", "stt ho", "so thu tu"),
+                                   "owner": ("ten ho", "ho va ten", "ho ten"), "sheet": ("to bd moi", "to ban do moi"),
                                    "parcel": ("thua bd moi", "thua ban do moi"), "area": ("dt bd", "dien tich ban do"),
                                    "location": ("xu dong", "vi tri",), "identity": ("cccd", "cmnd", "giay to nhan than", "so dinh danh")}.items():
             matches = [col for col, label in headers.items() if any(a in folded(label) for a in aliases)]
@@ -125,6 +126,7 @@ def inspect_workbook(path, sheet_name, header_row, depth, mapping, *, require_id
     mapping.validate(info["columns"])
     records, blanks, summaries, name_only = [], [], [], []
     groups = defaultdict(list)
+    current_household = ""; household_problem = ""
     current_owner = ""; owner_row = None; owner_problem = ""
     current_identity = ""; identity_row = None; identity_problem = ""
     with ExitStack() as stack:
@@ -156,10 +158,14 @@ def inspect_workbook(path, sheet_name, header_row, depth, mapping, *, require_id
                 raise UserError(f"Dòng bắt đầu {requested_start} vượt quá dòng cuối có dữ liệu ({last_data_row}).")
             if requested_end > last_data_row:
                 raise UserError(f"Dòng kết thúc {requested_end} vượt quá dòng cuối có dữ liệu ({last_data_row}).")
-            row_options = {"min_row": requested_start, "max_row": requested_end}
+            # Scan from the first data row to preserve the owning household when a selected
+            # range begins on a parcel/member row. Only selected rows become output records.
+            row_options = {"min_row": first, "max_row": requested_end}
         for number, (cells, source_cells) in enumerate(zip(ws.iter_rows(**row_options), source_ws.iter_rows(**row_options), strict=True), row_options["min_row"]):
+            selected = requested_start is None or number >= requested_start
             if not any(clean(c.value) for c in source_cells):
-                blanks.append(number); continue
+                if selected: blanks.append(number)
+                continue
             def value(key):
                 return cells[indices[key]].value if key in indices else None
             def problem(key, label):
@@ -168,32 +174,57 @@ def inspect_workbook(path, sheet_name, header_row, depth, mapping, *, require_id
                 return cell_problem(source_cells[indices[key]], cells[indices[key]], f"{getattr(mapping,key)}{number}", label)
             owner = clean(value("owner"))
             if is_summary(owner):
-                summaries.append(number); continue
-            issue = problem("owner", "tên hộ")
-            if owner and not has_content(owner) and not issue:
-                issue = f"Dữ liệu tên hộ không hợp lệ tại {mapping.owner}{number}: chỉ có dấu/khoảng trống, chưa có họ tên. Hãy nhập họ tên đúng vào ô nguồn."
-            if issue:
-                # A broken name starts an unknown household boundary. Never reuse the prior owner.
-                current_owner, owner_row, owner_problem = "", number, issue
+                if selected: summaries.append(number)
+                continue
+            marker_issue = problem("household_index", "STT hộ")
+            marker = clean(value("household_index"))
+            starts_household = False
+            if marker_issue:
+                current_household, household_problem = "", marker_issue
+                current_owner, owner_row, owner_problem = "", number, ""
                 current_identity, identity_row, identity_problem = "", None, ""
-            elif owner:
-                current_owner, owner_row, owner_problem = owner, number, ""
-                current_identity, identity_row, identity_problem = "", None, ""
-            identity_issue = problem("identity", "giấy tờ nhân thân")
-            raw_identity = value("identity")
-            if identity_issue:
-                current_identity, identity_row, identity_problem = "", number, identity_issue
-            elif clean(raw_identity) and not owner_problem:
-                # Preserve text and explicit zero-padded Excel formats, never guess missing digits.
-                current_identity = clean(raw_identity)
-                if isinstance(raw_identity, (int, float)) and not isinstance(raw_identity, bool) and raw_identity == int(raw_identity):
-                    current_identity = str(int(raw_identity))
-                    fmt = source_cells[indices["identity"]].number_format
-                    if re.fullmatch(r"0+", fmt): current_identity = current_identity.zfill(len(fmt))
-                identity_row, identity_problem = number, ""
+            elif marker:
+                try:
+                    current_household = identifier(marker)
+                except ValueError:
+                    current_household = ""
+                    household_problem = f"Dữ liệu STT hộ không hợp lệ tại {mapping.household_index}{number}: «{marker}». STT phải là số nguyên dương."
+                    current_owner, owner_row, owner_problem = "", number, ""
+                    current_identity, identity_row, identity_problem = "", None, ""
+                else:
+                    starts_household = True; household_problem = ""
+                    issue = problem("owner", "tên hộ")
+                    if owner and not has_content(owner) and not issue:
+                        issue = f"Dữ liệu tên hộ không hợp lệ tại {mapping.owner}{number}: chỉ có dấu/khoảng trống, chưa có họ tên. Hãy nhập họ tên đúng vào ô nguồn."
+                    if issue:
+                        current_owner, owner_row, owner_problem = "", number, issue
+                    elif not owner:
+                        current_owner, owner_row = "", number
+                        owner_problem = f"Thiếu tên chủ hộ tại {mapping.owner}{number}, cùng dòng với STT hộ {current_household}."
+                    else:
+                        current_owner, owner_row, owner_problem = owner, number, ""
+                    current_identity, identity_row, identity_problem = "", None, ""
+                    identity_issue = problem("identity", "giấy tờ nhân thân")
+                    raw_identity = value("identity")
+                    if identity_issue:
+                        current_identity, identity_row, identity_problem = "", number, identity_issue
+                    elif clean(raw_identity) and not owner_problem:
+                        # Only the identity on the STT row belongs to the household head.
+                        current_identity = clean(raw_identity)
+                        if isinstance(raw_identity, (int, float)) and not isinstance(raw_identity, bool) and raw_identity == int(raw_identity):
+                            current_identity = str(int(raw_identity))
+                            fmt = source_cells[indices["identity"]].number_format
+                            if re.fullmatch(r"0+", fmt): current_identity = current_identity.zfill(len(fmt))
+                        identity_row, identity_problem = number, ""
+            if not selected:
+                continue
             if not any(clean(source_cells[indices[k]].value) for k in ("sheet", "parcel", "area")):
                 name_only.append(number); continue
             errors = []
+            if household_problem:
+                errors.append(household_problem + " Không xác định được chủ hộ; không kế thừa tên của hộ phía trên.")
+            elif not current_household:
+                errors.append(f"Thiếu STT hộ tại {mapping.household_index}{number}; chưa xác định được dòng chủ hộ gần nhất phía trên.")
             if identity_problem:
                 errors.append(identity_problem)
             elif require_identity and not has_content(current_identity):
@@ -220,7 +251,7 @@ def inspect_workbook(path, sheet_name, header_row, depth, mapping, *, require_id
             if location_issue: errors.append(location_issue)
             record = NoticeRecord(number, current_owner, owner_row, normalized["sheet"], normalized["parcel"],
                                   normalized["area"], "" if location_issue else clean(value("location")), errors,
-                                  identity=current_identity, identity_row=identity_row)
+                                  identity=current_identity, identity_row=identity_row, household_number=current_household)
             records.append(record)
             if record.sheet and record.parcel:
                 groups[(record.sheet, record.parcel)].append(record)

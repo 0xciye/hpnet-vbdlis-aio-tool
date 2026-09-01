@@ -137,10 +137,10 @@ class MainWindow(QMainWindow):
     def make_mapping_page(self):
         box=self.page("Đối chiếu cột nguồn", "Với file Cẩm Đông: G/H là tờ/thửa MỚI; K là diện tích bản đồ, không phải diện tích giao ở M. Gợi ý chỉ là hỗ trợ, cần kiểm tra trước khi xuất.")
         form=QFormLayout(); box.addLayout(form); self.mapping={}
-        for key,label in (("owner","Tên hộ *"),("identity","Giấy tờ nhân thân * (CCCD/CMND/khác)"),("sheet","Tờ BĐ mới *"),("parcel","Thửa BĐ mới *"),("area","Diện tích *"),("location","Xứ đồng (có thể trống)")):
+        for key,label in (("household_index","STT hộ * (dòng xác định Chủ hộ)"),("owner","Tên hộ *"),("identity","Giấy tờ nhân thân * (CCCD/CMND/khác)"),("sheet","Tờ BĐ mới *"),("parcel","Thửa BĐ mới *"),("area","Diện tích *"),("location","Xứ đồng (có thể trống)")):
             combo=QComboBox(); combo.addItem("— Chưa chọn —",""); combo.currentIndexChanged.connect(self.invalidate)
             self.mapping[key]=combo; form.addRow(label,combo)
-        note=QLabel("Dòng tổng/trống không tạo thông báo. Dòng thửa trống tên kế thừa tên và giấy tờ trong cùng hộ; không kế thừa qua tên bị lỗi. Giấy tờ được giữ theo nguồn, không đoán thêm số.")
+        note=QLabel("Chỉ dòng có STT hộ mới xác lập Chủ hộ và giấy tờ. Tên/CCCD trên dòng STT trống được coi là thành viên và không thay thế Chủ hộ; các thửa vẫn kế thừa đúng Chủ hộ gần nhất phía trên. Dòng tổng/trống không tạo thông báo.")
         note.setWordWrap(True); box.addWidget(note); box.addStretch()
 
     def make_config_page(self):
@@ -201,10 +201,10 @@ class MainWindow(QMainWindow):
         toolbar=QHBoxLayout(); toolbar.addWidget(self.button("Kiểm tra dữ liệu",self.validate_source,True))
         toolbar.addWidget(self.button("Xuất báo cáo kiểm tra (không tạo Word)",self.export_validation)); box.addLayout(toolbar)
         self.summary=QLabel("Chưa kiểm tra."); self.summary.setWordWrap(True); box.addWidget(self.summary)
-        self.table=QTableWidget(0,9); self.table.setHorizontalHeaderLabels(["Dòng Excel","Tên hộ","Tờ mới","Thửa mới","Diện tích","Tên từ dòng","Trạng thái","Giấy tờ nhân thân","Chi tiết"])
+        self.table=QTableWidget(0,10); self.table.setHorizontalHeaderLabels(["Dòng Excel","STT hộ","Chủ hộ","Tờ mới","Thửa mới","Diện tích","Tên từ dòng","Trạng thái","Giấy tờ nhân thân","Chi tiết"])
         self.table.setEditTriggers(QAbstractItemView.NoEditTriggers); self.table.setAlternatingRowColors(True); self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive); self.table.horizontalHeader().setStretchLastSection(True)
-        self.table.setColumnWidth(1,185); self.table.setColumnWidth(6,155); self.table.cellDoubleClicked.connect(self.show_record_detail); box.addWidget(self.table,1)
+        self.table.setColumnWidth(2,185); self.table.setColumnWidth(7,155); self.table.cellDoubleClicked.connect(self.show_record_detail); box.addWidget(self.table,1)
 
     def make_preview_page(self):
         box=self.page("Xem một thông báo trước khi tạo", "Mở bản Word và kiểm tra cả số lẫn ngày thông báo. Ngày được lấy theo nhóm của chính số dự kiến; nếu file trước đó lỗi, đợt tạo sẽ dùng lại số và ngày gắn với số đó.")
@@ -340,7 +340,7 @@ class MainWindow(QMainWindow):
         self.table.setRowCount(len(result.records)); self.preview_choice.clear()
         for index,r in enumerate(result.records):
             detail=" ".join(r.errors) or ("Trùng các dòng: "+", ".join(map(str,r.duplicate_rows)) if r.duplicate_rows else "Đủ dữ liệu; chưa cấp số")
-            for col,value in enumerate([r.source_row,r.owner,r.sheet,r.parcel,r.area,r.owner_row or "",r.status,r.identity,detail]):
+            for col,value in enumerate([r.source_row,r.household_number,r.owner,r.sheet,r.parcel,r.area,r.owner_row or "",r.status,r.identity,detail]):
                 item=QTableWidgetItem(str(value)); item.setToolTip(str(value))
                 if not r.valid: item.setBackground(QColor("#fff3df")); item.setForeground(QColor("#783e13"))
                 self.table.setItem(index,col,item)
@@ -350,7 +350,7 @@ class MainWindow(QMainWindow):
     def show_record_detail(self,row,_):
         if not self.inspection: return
         r=self.inspection.records[row]
-        QMessageBox.information(self,"Chi tiết dòng nguồn",f"Trang tính: {self.inspection.sheet_name}\nDòng: {r.source_row}\nTên hộ lấy từ dòng: {r.owner_row}\n"
+        QMessageBox.information(self,"Chi tiết dòng nguồn",f"Trang tính: {self.inspection.sheet_name}\nDòng: {r.source_row}\nSTT hộ: {r.household_number or '[CHƯA XÁC ĐỊNH]'}\nChủ hộ lấy từ dòng: {r.owner_row}\n"
             +("\n".join(r.errors) or "Đủ các trường bắt buộc.")+("\nTrùng tại các dòng: "+", ".join(map(str,r.duplicate_rows)) if r.duplicate_rows else ""))
 
     def export_validation(self):
