@@ -7,6 +7,12 @@ HƯỚNG DẪN KHỞI CHẠY HỆ THỐNG
 - Tại màn hình Bảng điều khiển chính (Dashboard), kích chọn tiện ích cần dùng dựa trên hướng dẫn nghiệp vụ tương ứng dưới đây:
 =======================================================
 
+0. TẠO THÔNG BÁO ĐẤT ĐAI TỪ EXCEL
+- Ở bước “Chọn file”, chọn Excel và mẫu Word. Phần dưới trang có ảnh tham khảo hai trang chứa placeholder; bấm “Mở ảnh mẫu để xem rõ” để biết dữ liệu nào lấy từ Excel và dữ liệu nào phải nhập ở bước Thông tin thông báo.
+- Mẫu chuẩn đã được sửa khoảng cách từ tại các dòng placeholder nhưng giữ nguyên font, cỡ chữ, bảng, lề, header/footer và nội dung pháp lý.
+- Đi đủ quy trình: chọn trang tính/tiêu đề, đối chiếu cột, nhập thông tin, kiểm tra dữ liệu, tạo một bản xem trước, xác nhận rồi mới tạo hàng loạt.
+- Ảnh placeholder chỉ dùng để hướng dẫn vị trí. Bản Word xem trước ở bước 6 mới là file cần kiểm tra nội dung thực tế trước khi xác nhận.
+
 1. HPNet Auto Rename (Tiện ích Nhân bản & Đổi tên tập tin tự động)
 - Chức năng: Đọc, đối soát dữ liệu từ tệp Excel và tự động nhân bản, đổi tên phân loại các tập tin quyết định/chứng nhận (Word/PDF) theo cấu trúc chuẩn: "Mã xã_Số tờ_Số thửa".
 - Thao tác:
@@ -35,12 +41,15 @@ HƯỚNG DẪN KHỞI CHẠY HỆ THỐNG
   + Sau khi mọi thông tin xác thực vượt yêu cầu hợp lệ, sử dụng lệnh "Khởi tạo Excel" để kết xuất biểu mẫu hoàn chỉnh phục vụ tác vụ đẩy thông tin lên Cơ sở dữ liệu VBDLIS.
 
 4. HPNet PDF Downloader (Tiện ích Truy xuất và tải hồ sơ tự động)
-- Chức năng: Tự động tải xuống lưu trữ các báo cáo quyết định/chứng nhận số hóa từ cổng thông tin hệ thống dựa trên danh mục "Số thông báo" đã thu thập.
+- Chức năng: Quét Văn bản đi tài khoản được quyền xem, lọc văn bản và tải các PDF khớp quy tắc tên; xuất nhật ký TXT/CSV và bảng đối soát đầy đủ.
 - Thao tác:
   + Mở mục công cụ "PDF Downloader".
-  + Cung cấp Mã số hành chính địa phương vào dòng nhập liệu.
-  + Nhập dãy thông tin đối chiếu của danh sách "Số thông báo" vào khung xử lý bên dưới.
-  + Chọn lệnh "Bắt đầu tải về". Tiến trình xử lý nền (background process) sẽ tiếp quản việc giao tiếp cổng mạng và tự động phân loại lưu trữ các tập tin liên quan thành từng bộ thư mục kết quả.
+  + Chọn phạm vi "Theo bộ lọc" để dùng trích yếu, số thông báo, ký hiệu, ngày và trạng thái xem. Các nhóm bật kết hợp theo AND; nhiều giá trị trong một nhóm kết hợp theo OR.
+  + Nếu cần xét mọi Văn bản đi được quyền xem, chủ động chọn "Toàn bộ Văn bản đi được quyền xem". Phạm vi này bỏ qua cả trạng thái xem nhưng không mở rộng quyền tài khoản.
+  + Chọn "Mẫu hồ sơ CHUACOGIAY" để dùng mã xã và ngoại lệ tên thiếu mã xã như bản cũ; hoặc chọn "Theo hậu tố tên file" để tải tên bất kỳ kết thúc bằng hậu tố như .signed ngay trước .pdf.
+  + Có thể chọn đồng thời .signed, .ldsigned, .lsigned và nhập hậu tố khác. Ví dụ hợp lệ với .signed: "Kế Hoạch.signed.pdf". Đây là lọc tên, không xác thực chữ ký số.
+  + Chọn thư mục lưu, bấm "BẮT ĐẦU QUÉT VÀ TẢI", đọc kỹ hộp xác nhận rồi đăng nhập VNeID trong Edge.
+  + Khi hoàn tất, kiểm tra cả file PDF, nhật ký tải và CSV đối soát. File không khớp hoặc tên không an toàn được bỏ qua và ghi rõ lý do.
 
 5. HPNet Upload Văn Bản Dự Thảo
 - Chức năng: Tự động hóa tiến trình đẩy (đăng tải) các tập tin văn bản gốc đã soạn thảo (Word/PDF) vào kho dữ liệu thông tin nội bộ HPNet, cho phép tự động cung cấp thông số Trích yếu và khai báo thông tin chỉ định chuyên viên kiểm duyệt.
@@ -59,3 +68,7 @@ HƯỚNG DẪN KHỞI CHẠY HỆ THỐNG
   + Cung cấp Từ khóa "Trích Yếu" của danh mục hồ sơ cần xử lý vào ô truy vấn. Phần mềm sẽ kết nối, tra cứu và trả về tập hợp các văn bản có thuộc tính phù hợp đang nằm chờ.
   + Đề cử/bầu chọn Cán bộ quản lý sẽ tiếp quản quy trình xử lý kế tiếp.
   + Nhấp thao tác "Xác nhận & Duyệt tự động". Khi toàn bộ tiến trình xử lý thông tin hoàn tất, log nhật ký quá trình sẽ được truy xuất thành tệp tin (.CSV hoặc .TXT) hỗ trợ công tác hậu kiểm.
+
+7. NHẬT KÝ TIẾNG VIỆT CỦA CÁC CÔNG CỤ HPNET
+- Khung “Nhật ký hoạt động” trong PDF Downloader, Upload Dự Thảo và Duyệt Dự Thảo dùng UTF-8 để hiển thị tiếng Việt sau khi tác vụ kết thúc.
+- File nhật ký TXT/CSV cũng được ghi UTF-8 có dấu nhận diện dành cho Windows. Nếu vẫn thấy ký tự lạ, không sửa file; hãy kiểm tra đúng bản release mới và mở lại bằng Notepad/Excel.

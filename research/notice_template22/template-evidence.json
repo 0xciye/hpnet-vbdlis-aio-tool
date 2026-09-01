@@ -1,7 +1,7 @@
 {
   "source": "research/notice_template22/MAU_22_THONG_BAO_XAC_NHAN_KET_QUA_DANG_KY_DAT_DAI.docx",
-  "source_sha256": "5780ded0720fb75818bb4955fe2fcd0dab63e861ef52b04f177738edf0c84fda",
-  "target_sha256": "0386b33752c7f03b83b43b43686ac89f71153e706bf993e7f76719ead1305bb9",
+  "source_original_sha256": "5780ded0720fb75818bb4955fe2fcd0dab63e861ef52b04f177738edf0c84fda",
+  "canonical_sha256": "12084608849cac5073241f9a02fd684df261146ad508e6cfdccf36a04895f8c0",
   "inventory": [
     {
       "part": "[Content_Types].xml",
@@ -17,8 +17,8 @@
     },
     {
       "part": "word/document.xml",
-      "size": 37850,
-      "sha256": "7a9facdc05e2e453b926a74fc74251be642ee4d2ebce9ab15df39ad86ead4d2b",
+      "size": 37823,
+      "sha256": "4ea5ab0fb1b440c3e7e7be78e2e51b27dab52013c5899bf46d5951abf94c0258",
       "mode": "bounded text/alignment patch"
     },
     {
@@ -289,11 +289,14 @@
     }
   ],
   "changed_paragraphs": [
+    "7C9943F6",
+    "1ED125E3",
     "03B7582C",
     "16BFFFF9",
     "58A73022",
     "5D54EF36",
     "657FD163",
-    "70AE63C5"
+    "70AE63C5",
+    "6D3675DF"
   ]
 }

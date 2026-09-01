@@ -41,7 +41,18 @@ def verify(folder, archive=None):
                 assert "NODE_SELF_TEST_OK" in result.stdout, result.stdout
                 print(worker.name + ": " + result.stdout.strip())
     assert len(list(packaged_nodes.glob("*/*/*.cjs"))) == 3
+    downloader = packaged_nodes / "Downloader/HPNet PDF Downloader - VNEID APP"
+    downloader_ui = downloader / "HPNet-PDF-Downloader.ps1"
+    for flag, marker in (("-SelfTest", '"SuffixParser"'), ("-UiSelfTest", "UI_SELF_TEST_OK")):
+        result = subprocess.run(
+            ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(downloader_ui), flag],
+            cwd=downloader, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        )
+        assert result.returncode == 0 and marker in result.stdout, result.stdout + result.stderr
+        print(f"HPNet-PDF-Downloader.ps1 {flag}: PASS")
     for relative in ('template/MAU_22_THONG_BAO_XAC_NHAN_KET_QUA_DANG_KY_DAT_DAI.docx','config/legal_defaults.json','assets/app_icon.ico',
+                     'assets/template_placeholder_preview.png',
                      'assets/ui-chevron-down.svg','assets/ui-chevron-up.svg','assets/ui-check.svg'):
         assert digest(ROOT/'src/tools/notice_builder'/relative)==digest(folder/'_internal/tools/notice_builder'/relative), f'Notice resource mismatch: {relative}'
     for original in (ROOT/'docs/HUONG_DAN_BAN_SUA.txt',ROOT/'Huong_dan_su_dung_chi_tiet.txt',ROOT/'README.txt'):
@@ -56,7 +67,7 @@ def verify(folder, archive=None):
                 and path.as_posix().endswith('/runtime/node_modules/playwright/lib/mcp/test')):
             continue
         assert path.name.lower() not in forbidden, f"User/cache file in release: {path}"
-    result = {"status": "PASS", "hpnet_files_identical": len(originals), "node_workers": 3, "exe_icon": True, "embedded_guides":3,"clean_runtime_only":True}
+    result = {"status": "PASS", "hpnet_files_identical": len(originals), "node_workers": 3, "pdf_downloader_powershell_tests": 2, "exe_icon": True, "embedded_guides":3,"clean_runtime_only":True}
     if archive:
         expected = {folder.name + "/" + p.relative_to(folder).as_posix(): p for p in folder.rglob("*") if p.is_file()}
         with ZipFile(archive) as zf:

@@ -12,3 +12,7 @@ Bước 3: Gõ từ khoá "Trích yếu" chung của lô hồ sơ mà mọi ngư
 Bước 4: Bạn được quyền kéo thả chọn tên tài khoản Lãnh đạo cấp cao hơn (người nhận tiếp theo) để chuyển duyệt lên.
 Bước 5: Nhấp "Tiến hành Duyệt Tự Động".
 - Màn hình sẽ tự động bấm nhấp chuột liên thanh giải quyết lần lượt hồ sơ trong ít phút. Xử lý xong đâu đó sẽ hiện chữ màu xanh ra báo hiệu. Bạn có thể mở một file báo cáo cuối cùng (.CSV hoặc TXT) để xem hồ sơ nào bị lỗi hay 100% trơn tru.
+
+3. NHẬT KÝ
+- Sau khi quét hoặc duyệt xong, khung Nhật ký hoạt động hiển thị đầu ra bằng UTF-8 để tiếng Việt không bị biến thành ký tự lạ.
+- File TXT/CSV trong thư mục nhat_ky cũng dùng UTF-8 tương thích Notepad và Excel trên Windows.

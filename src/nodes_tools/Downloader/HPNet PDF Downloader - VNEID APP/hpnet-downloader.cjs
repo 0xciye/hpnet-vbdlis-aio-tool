@@ -54,6 +54,105 @@ function buildValidPdfNamePattern(communeCode, allowMissingCommuneCode = true) {
   return new RegExp(`^CHUACOGIAY_${prefix}([0-9]+(?:\\.[0-9]+)*)_([0-9]+(?:\\.[0-9]+)*)-TBXN\\.(signed|ldsigned|lsigned)\\.pdf$`, "i");
 }
 
+function normalizeDocumentScope(value) {
+  const scope = String(value ?? "filtered").normalize("NFC").trim().toLowerCase();
+  if (!["filtered", "all_visible"].includes(scope)) {
+    throw new Error("Phạm vi văn bản không hợp lệ. Hãy chọn Theo bộ lọc hoặc Toàn bộ Văn bản đi được quyền xem.");
+  }
+  return scope;
+}
+
+function parseFileSuffixes(value) {
+  const source = Array.isArray(value) ? value : String(value ?? "").split(/[,;\r\n]+/u);
+  const suffixes = [];
+  const seen = new Set();
+  for (const rawValue of source) {
+    let suffix = String(rawValue ?? "").normalize("NFC").trim();
+    if (!suffix) continue;
+    if (/\.pdf$/iu.test(suffix)) suffix = suffix.slice(0, -4).trim();
+    if (!suffix.startsWith(".")) suffix = `.${suffix}`;
+    if (/^[\s.]*$/u.test(suffix)) throw new Error("Hậu tố tên file không được để trống hoặc chỉ gồm dấu chấm.");
+    if (/[\u0000-\u001F\u007F<>:"/\\|?*\[\]{}()+^$]/u.test(suffix)) {
+      throw new Error(`Hậu tố không hợp lệ: ${rawValue}. Không dùng đường dẫn, wildcard hoặc ký tự regex.`);
+    }
+    if (/[. ]$/u.test(suffix)) throw new Error(`Hậu tố không hợp lệ: ${rawValue}. Không được kết thúc bằng dấu chấm hoặc khoảng trắng.`);
+    const key = suffix.toLocaleLowerCase("vi-VN");
+    if (!seen.has(key)) {
+      seen.add(key);
+      suffixes.push(suffix);
+    }
+  }
+  if (!suffixes.length) throw new Error("Hãy chọn hoặc nhập ít nhất một hậu tố tên file, ví dụ: .signed");
+  return suffixes;
+}
+
+function buildFileNamePolicy(config = {}) {
+  const mode = String(config.fileNameMode ?? "legacy").normalize("NFC").trim().toLowerCase();
+  if (mode === "legacy") {
+    const communeCode = normalizeCommuneCode(config.communeCode ?? "10930");
+    const allowMissingCommuneCode = config.allowMissingCommuneCode !== false;
+    return {
+      mode, communeCode, allowMissingCommuneCode,
+      pattern: buildValidPdfNamePattern(communeCode, allowMissingCommuneCode),
+      strictPattern: buildValidPdfNamePattern(communeCode, false),
+      description: `Mẫu CHUACOGIAY; mã xã ${communeCode}; thiếu mã xã: ${allowMissingCommuneCode ? "cho phép" : "không cho phép"}`,
+    };
+  }
+  if (mode === "suffix") {
+    const suffixes = parseFileSuffixes(config.fileSuffixes ?? [".signed"]);
+    return { mode, suffixes, description: `Hậu tố ngay trước .pdf: ${suffixes.join(", ")}` };
+  }
+  throw new Error("Chế độ tên file không hợp lệ. Hãy chọn Mẫu hồ sơ CHUACOGIAY hoặc Theo hậu tố tên file.");
+}
+
+function validateWindowsFileName(value) {
+  const name = String(value ?? "").normalize("NFC");
+  if (!name) return { valid: false, reason: "Tên file trống" };
+  if (name !== name.trim()) return { valid: false, reason: "Tên file có khoảng trắng ở đầu hoặc cuối" };
+  if (/[\u0000-\u001F\u007F<>:"/\\|?*]/u.test(name)) return { valid: false, reason: "Tên file chứa ký tự không an toàn trên Windows" };
+  if (/[. ]$/u.test(name)) return { valid: false, reason: "Tên file kết thúc bằng dấu chấm hoặc khoảng trắng" };
+  const deviceStem = name.split(".", 1)[0].replace(/[. ]+$/u, "").toUpperCase();
+  if (/^(?:CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/u.test(deviceStem)) return { valid: false, reason: "Tên file trùng tên thiết bị dành riêng của Windows" };
+  return { valid: true, safeName: name };
+}
+
+function matchPdfFileName(fileName, policy) {
+  const checked = validateWindowsFileName(fileName);
+  if (!checked.valid) return { matched: false, code: "unsafe_name", reason: checked.reason, safeName: "" };
+  const name = checked.safeName;
+  if (!/\.pdf$/iu.test(name)) return { matched: false, code: "not_pdf", reason: "Không phải tên file PDF", safeName: name };
+  if (policy.mode === "legacy") {
+    return policy.pattern.test(name)
+      ? { matched: true, code: "matched", reason: "Đúng mẫu hồ sơ CHUACOGIAY", safeName: name }
+      : { matched: false, code: "legacy_mismatch", reason: "Không đúng mẫu tên CHUACOGIAY/TBXN đã chọn", safeName: name };
+  }
+  const foldedName = name.toLocaleLowerCase("vi-VN");
+  for (const suffix of policy.suffixes) {
+    const ending = `${suffix}.pdf`.toLocaleLowerCase("vi-VN");
+    if (!foldedName.endsWith(ending)) continue;
+    const documentName = name.slice(0, name.length - ending.length).trim();
+    if (!documentName) return { matched: false, code: "missing_stem", reason: "Thiếu tên văn bản trước hậu tố", safeName: name };
+    return { matched: true, code: "matched", reason: `Khớp hậu tố ${suffix}`, safeName: name, suffix };
+  }
+  return { matched: false, code: "suffix_mismatch", reason: `Không khớp hậu tố đã chọn (${policy.suffixes.join(", ")})`, safeName: name };
+}
+
+function deduplicateCandidates(candidates, policy) {
+  const byUrl = new Map();
+  for (const rawCandidate of candidates) {
+    const absolute = absoluteHpnetUrl(rawCandidate.url);
+    if (!absolute) continue;
+    const candidate = { ...rawCandidate, url: absolute };
+    candidate.nameMatch = matchPdfFileName(candidate.name, policy);
+    const previous = byUrl.get(absolute);
+    const shouldReplace = !previous
+      || (candidate.explicitName && !previous.explicitName)
+      || (candidate.explicitName === previous.explicitName && candidate.nameMatch.matched && !previous.nameMatch.matched);
+    if (shouldReplace) byUrl.set(absolute, candidate);
+  }
+  return [...byUrl.values()];
+}
+
 function parseNotificationNumbers(value, { maxRangeSize = 10000 } = {}) {
   const input = String(value ?? "").normalize("NFC").trim();
   if (!input) throw new Error("Vui lòng nhập ít nhất một số thông báo.");
@@ -188,6 +287,13 @@ function parseConfigDate(value, label) {
 }
 
 function buildFilters(config) {
+  const documentScope = normalizeDocumentScope(config.documentScope);
+  if (documentScope === "all_visible") {
+    return {
+      documentScope, titleEnabled: false, titles: new Set(), notificationEnabled: false, numberList: [], numbers: new Set(),
+      symbolEnabled: false, symbols: new Set(), dateEnabled: false, dateMode: "none", startDate: null, endDate: null, readFilter: "all",
+    };
+  }
   const hasNewFlags = ["titleFilterEnabled", "notificationFilterEnabled", "symbolFilterEnabled", "dateFilterEnabled"].some((key) => Object.prototype.hasOwnProperty.call(config, key));
   const legacyMode = String(config.downloadMode ?? "titles").toLowerCase();
   const titleEnabled = hasNewFlags ? Boolean(config.titleFilterEnabled) : legacyMode !== "numbers";
@@ -212,6 +318,7 @@ function buildFilters(config) {
   }
   if (![titleEnabled, notificationEnabled, symbolEnabled, dateEnabled].some(Boolean)) throw new Error("Hãy bật ít nhất một bộ lọc: trích yếu, số thông báo, ký hiệu VB hoặc ngày văn bản.");
   return {
+    documentScope,
     titleEnabled, titles: new Set(titles), notificationEnabled, numberList, numbers: new Set(numberList),
     symbolEnabled, symbols: new Set(symbols), dateEnabled, dateMode, startDate, endDate, readFilter,
   };
@@ -314,7 +421,7 @@ function auditRows(entries, filters) {
     ...entries.map((entry) => {
       const reasons = entry.filterReasons ?? recordFilterReasons(entry, filters);
       const outcomes = entry.outcomes || [];
-      const status = entry.duplicate ? "DÒNG LẶP" : reasons.length ? "BỊ LỌC" : outcomes.length ? "ĐÃ XỬ LÝ" : "KHỚP BỘ LỌC - CHƯA TẢI";
+      const status = entry.duplicate ? "DÒNG LẶP" : reasons.length ? "BỊ LỌC" : outcomes.length ? "ĐÃ XỬ LÝ" : "THUỘC PHẠM VI - CHƯA TẢI";
       return [entry.pageNumber, entry.documentId, entry.notificationNumber ?? "", entry.symbol.raw, entry.title,
         entry.date.iso ?? "", entry.date.field, entry.date.raw, entry.isUnread ? "Chưa xem" : "Đã xem", status,
         entry.duplicate ? "Cùng mã nội bộ đã xuất hiện ở dòng trước; không tính thêm văn bản." : [...reasons, ...outcomes].join(" | ")];
@@ -360,25 +467,46 @@ function buildDuplicateFileName(fileName, index) {
   return `${baseName}_${index}${extension}`;
 }
 
+function safeOutputPath(outputDir, fileName) {
+  const checked = validateWindowsFileName(fileName);
+  if (!checked.valid) throw new Error(checked.reason);
+  const root = path.resolve(outputDir);
+  const destination = path.resolve(root, checked.safeName);
+  const relative = path.relative(root, destination);
+  if (!relative || relative.startsWith("..") || path.isAbsolute(relative)) throw new Error("Tên file có thể thoát khỏi thư mục lưu đã chọn.");
+  return destination;
+}
+
+async function writePdfAtomic(destination, buffer) {
+  const tempPath = `${destination}.part`;
+  let tempCreated = false;
+  try {
+    const handle = await fsp.open(tempPath, "wx");
+    tempCreated = true;
+    try { await handle.writeFile(buffer); } finally { await handle.close(); }
+    if (fs.existsSync(destination)) throw new Error(`${path.basename(destination)} đã xuất hiện trong lúc tải; không ghi đè.`);
+    await fsp.rename(tempPath, destination);
+    tempCreated = false;
+    const saved = await fsp.stat(destination);
+    if (saved.size <= 0 || path.extname(destination).toLowerCase() !== ".pdf") throw new Error(`${path.basename(destination)} không vượt qua kiểm tra file sau khi tải.`);
+  } finally {
+    if (tempCreated) await fsp.rm(tempPath, { force: true }).catch(() => {});
+  }
+}
+
 async function saveNameCollision(outputDir, fileName, buffer) {
-  const duplicateDir = path.join(outputDir, "Trùng");
+  const duplicateDir = path.resolve(outputDir, "Trùng");
   await fsp.mkdir(duplicateDir, { recursive: true });
   const incomingHash = sha256(buffer);
   for (let index = 2; index <= 999999; index += 1) {
     const duplicateName = buildDuplicateFileName(fileName, index);
-    const destination = path.join(duplicateDir, duplicateName);
+    const destination = safeOutputPath(duplicateDir, duplicateName);
     if (fs.existsSync(destination)) {
       const existing = await fsp.readFile(destination);
       if (sha256(existing) === incomingHash) return { status: "exists", duplicateName, destination, index };
       continue;
     }
-    const tempPath = `${destination}.part`;
-    await fsp.writeFile(tempPath, buffer);
-    await fsp.rename(tempPath, destination);
-    const saved = await fsp.stat(destination);
-    if (saved.size <= 0 || path.extname(destination).toLowerCase() !== ".pdf" || fs.existsSync(tempPath)) {
-      throw new Error(`${duplicateName} không vượt qua kiểm tra file sau khi tải.`);
-    }
+    await writePdfAtomic(destination, buffer);
     return { status: "saved", duplicateName, destination, index };
   }
   throw new Error(`Có quá nhiều file trùng tên ${path.basename(fileName)} trong thư mục Trùng.`);
@@ -462,6 +590,38 @@ async function runSelfTest() {
   assert(getRecordDocumentDate({ NgayBanhanh: "22/08/2026" }).iso === "2026-08-22" && getRecordDocumentSymbol({ Name: "TB-ĐKĐĐ" }).normalized === "TB-ĐKĐĐ", "15b đúng trường HPNet thực tế");
   const legacy = buildFilters({ downloadMode: "numbers", notificationNumbers: "1712", readFilter: "all" });
   assert(legacy.notificationEnabled && !legacy.titleEnabled && !legacy.dateEnabled && !legacy.symbolEnabled, "16 tương thích cấu hình cũ");
+  const allVisible = buildFilters({ documentScope: "all_visible", readFilter: "invalid-but-ignored", exactDate: "invalid" });
+  assert(allVisible.documentScope === "all_visible" && allVisible.readFilter === "all" && !allVisible.titleEnabled && !allVisible.dateEnabled, "16b toàn bộ văn bản bỏ qua mọi bộ lọc");
+  assert(String((() => { try { buildFilters({ documentScope: "unknown" }); } catch (error) { return error.message; } return ""; })()).includes("Phạm vi"), "16c chặn phạm vi lạ");
+
+  const parsedSuffixes = parseFileSuffixes(["signed", " .SIGNED.pdf ", ".ldsigned", "lsigned.pdf"]);
+  assert(parsedSuffixes.join("|") === ".signed|.ldsigned|.lsigned", "16d chuẩn hóa và loại hậu tố trùng");
+  for (const invalidSuffix of ["", ".pdf", "../signed", "*.signed", "[signed]", "signed?"]) {
+    assert(String((() => { try { parseFileSuffixes(invalidSuffix); } catch (error) { return error.message; } return ""; })()).length > 0, `16e chặn hậu tố nguy hiểm ${invalidSuffix || "rỗng"}`);
+  }
+  const suffixPolicy = buildFileNamePolicy({ fileNameMode: "suffix", fileSuffixes: [".signed"] });
+  const suffixAccepted = ["Kế Hoạch.signed.pdf", "Thông báo 01.SIGNED.PDF", "CHUACOGIAY_10930_10_20-TBXN.signed.pdf"];
+  const suffixRejected = ["Kế Hoạch.pdf", "Kế Hoạch.ldsigned.pdf", "Kế Hoạch.signed.bak.pdf", "Kế Hoạch.signed.pdf.docx", "signed.pdf", ".signed.pdf"];
+  assert(suffixAccepted.every((name) => matchPdfFileName(name, suffixPolicy).matched), "16f nhận đúng tên theo hậu tố");
+  assert(suffixRejected.every((name) => !matchPdfFileName(name, suffixPolicy).matched), "16g loại đúng tên không khớp hậu tố");
+  assert(matchPdfFileName("Kế Hoạch.signed.pdf", suffixPolicy).matched, "16h hỗ trợ Unicode tổ hợp");
+  for (const unsafeName of ["../Kế Hoạch.signed.pdf", "CON.signed.pdf", "A?.signed.pdf", "A.signed.pdf "]) {
+    assert(matchPdfFileName(unsafeName, suffixPolicy).code === "unsafe_name", `16i chặn tên Windows nguy hiểm ${unsafeName}`);
+  }
+  const legacyPolicy = buildFileNamePolicy({ communeCode: "10930", allowMissingCommuneCode: true });
+  assert(matchPdfFileName("CHUACOGIAY_10930_10_20-TBXN.signed.pdf", legacyPolicy).matched, "16j cấu hình v3 mặc định legacy");
+  assert(String((() => { try { buildFileNamePolicy({ fileNameMode: "other" }); } catch (error) { return error.message; } return ""; })()).includes("Chế độ tên file"), "16k chặn chế độ tên lạ");
+  const sameUrl = deduplicateCandidates([
+    { url: "/files/generated.signed.pdf", name: "generated.signed.pdf", explicitName: false },
+    { url: "/files/generated.signed.pdf", name: "Tên thật.pdf", explicitName: true },
+  ], suffixPolicy);
+  assert(sameUrl.length === 1 && sameUrl[0].name === "Tên thật.pdf" && !sameUrl[0].nameMatch.matched, "16l ưu tiên tên đính kèm thật dù URL có vẻ khớp");
+
+  const syntheticRecords = Array.from({ length: 1001 }, (_, index) => ({ VanbanDiId: index + 1 }));
+  const syntheticScan = await scanDocumentPages(async (start, pageSize) => ({
+    Result: "OK", TotalRecordCount: syntheticRecords.length, Records: syntheticRecords.slice(start, start + pageSize),
+  }), { pageSize: 100 });
+  assert(syntheticScan.unique === 1001 && syntheticScan.pages === 11, "16m quét đủ hơn 1.000 văn bản và trang cuối rỗng");
   assert(buildDuplicateFileName("van-ban.pdf", 2) === "van-ban_2.pdf" && buildDuplicateFileName("van-ban.signed.pdf", 12) === "van-ban.signed_12.pdf", "17 tạo hậu tố file trùng");
   const os = require("node:os");
   const duplicateTestRoot = await fsp.mkdtemp(path.join(os.tmpdir(), "hpnet-duplicate-test-"));
@@ -475,7 +635,7 @@ async function runSelfTest() {
   } finally {
     await fsp.rm(duplicateTestRoot, { recursive: true, force: true });
   }
-  console.log("NODE_SELF_TEST_OK: 20/20 tình huống bộ lọc, trường HPNet và xử lý file trùng tên");
+  console.log("NODE_SELF_TEST_OK: bộ lọc, phạm vi, hậu tố, Unicode, an toàn tên file, hơn 1.000 văn bản và xử lý trùng tên");
 }
 
 async function ensureLoggedIn(page, context, log) {
@@ -515,13 +675,14 @@ async function main({ configPath = process.argv[2], chromium: suppliedChromium }
   }
   if (!configPath) throw new Error("Thiếu tệp cấu hình.");
   const config = JSON.parse(cleanJsonText(await fsp.readFile(configPath, "utf8")));
-  const communeCode = normalizeCommuneCode(config.communeCode ?? "10930");
-  const allowMissingCommuneCode = config.allowMissingCommuneCode !== false;
+  const fileNamePolicy = buildFileNamePolicy(config);
   const filters = buildFilters(config);
+  const documentScope = filters.documentScope;
   const targetNumberList = filters.numberList;
   const readFilter = filters.readFilter;
 
-  const outputDir = path.resolve(String(config.outputDir ?? ""));
+  if (!String(config.outputDir ?? "").trim()) throw new Error("Thiếu thư mục lưu PDF.");
+  const outputDir = path.resolve(String(config.outputDir).trim());
   await fsp.mkdir(outputDir, { recursive: true });
   const runStamp = `${timestamp()}_${crypto.randomBytes(3).toString("hex")}`;
   const logPath = path.join(outputDir, `NHAT_KY_TAI_PDF_${runStamp}.txt`);
@@ -567,11 +728,15 @@ async function main({ configPath = process.argv[2], chromium: suppliedChromium }
     log("Đăng nhập VNeID/HPNet thành công.");
 
     const pageSize = Math.floor(Math.max(10, Math.min(100, Number(config.listPageSize) || 100)));
-    log("Cách kết hợp bộ lọc: AND giữa các nhóm đã bật; OR giữa nhiều giá trị trong cùng một nhóm.");
-    log("Phạm vi: danh sách VĂN BẢN ĐI tài khoản được xem (all=false, status=0); không phải danh sách đã upload/dự thảo. Không tự đổi phạm vi hoặc quyền xem.");
-    log(`Mã xã dùng để kiểm tra tên PDF: ${communeCode}`);
-    log(`Nhận tên thiếu mã xã: ${allowMissingCommuneCode ? "CÓ; giữ nguyên tên, không tự thêm mã xã" : "KHÔNG"}.`);
-    log(`Bộ lọc chữ đậm: ${readFilter === "unread" ? "CHỈ CHỮ ĐẬM" : readFilter === "read" ? "CHỈ KHÔNG ĐẬM" : "TẤT CẢ"}`);
+    log("Phạm vi kỹ thuật: danh sách VĂN BẢN ĐI tài khoản được xem (all=false, status=0); không phải danh sách đã upload/dự thảo. Không tự đổi endpoint hoặc quyền xem.");
+    log(`Phạm vi người dùng chọn: ${documentScope === "all_visible" ? "TOÀN BỘ VĂN BẢN ĐI ĐƯỢC QUYỀN XEM; bỏ qua các bộ lọc và trạng thái xem" : "THEO BỘ LỌC"}.`);
+    log(`Chế độ tên file: ${fileNamePolicy.description}. Đây là lọc tên, không xác thực chữ ký số.`);
+    if (documentScope === "filtered") log("Cách kết hợp bộ lọc: AND giữa các nhóm đã bật; OR giữa nhiều giá trị trong cùng một nhóm.");
+    if (fileNamePolicy.mode === "legacy") {
+      log(`Mã xã dùng để kiểm tra tên PDF: ${fileNamePolicy.communeCode}`);
+      log(`Nhận tên thiếu mã xã: ${fileNamePolicy.allowMissingCommuneCode ? "CÓ; giữ nguyên tên, không tự thêm mã xã" : "KHÔNG"}.`);
+    }
+    if (documentScope === "filtered") log(`Bộ lọc chữ đậm: ${readFilter === "unread" ? "CHỈ CHỮ ĐẬM" : readFilter === "read" ? "CHỈ KHÔNG ĐẬM" : "TẤT CẢ"}`);
     if (filters.titleEnabled) log(`Trích yếu chứa một trong ${filters.titles.size} nội dung: ${[...filters.titles].join(" | ")}`);
     if (filters.notificationEnabled) log(`Số thông báo yêu cầu (${targetNumberList.length}): ${targetNumberList.join(", ")}`);
     if (filters.symbolEnabled) log(`Ký hiệu VB chính xác (${filters.symbols.size}): ${[...filters.symbols].join(", ")}`);
@@ -615,8 +780,6 @@ async function main({ configPath = process.argv[2], chromium: suppliedChromium }
     log(`Có ${uniqueEntries.length} văn bản khớp bộ lọc.`);
     if (filters.notificationEnabled && notFoundNumbers.length) log(`[KHÔNG TÌM THẤY SAU KHI ÁP DỤNG TOÀN BỘ BỘ LỌC] ${notFoundNumbers.join(", ")}`);
 
-    const validNamePattern = buildValidPdfNamePattern(communeCode, allowMissingCommuneCode);
-    const strictNamePattern = buildValidPdfNamePattern(communeCode, false);
     const seenUrls = new Set();
     let downloaded = 0;
     let existed = 0;
@@ -654,23 +817,15 @@ async function main({ configPath = process.argv[2], chromium: suppliedChromium }
         if (!detail || typeof detail !== "object") throw new Error("Phản hồi chi tiết không hợp lệ; không thể xác định file đính kèm.");
         if (detail.Result && String(detail.Result).toUpperCase() !== "OK") throw new Error(detail.Message || "HPNet trả lỗi khi đọc file đính kèm.");
         const candidates = [];
-        if (detail.file) candidates.push({ url: detail.file, name: fileNameFromUrl(detail.file) });
+        if (detail.file) candidates.push({ url: detail.file, name: fileNameFromUrl(detail.file), explicitName: false });
         for (const item of Array.isArray(detail.files) ? detail.files : []) {
           const fileUrl = item.FilePath || item.filePath || item.Path || item.path;
-          const fileName = item.FileName || item.fileName || fileNameFromUrl(fileUrl);
-          if (fileUrl) candidates.push({ url: fileUrl, name: fileName });
+          const explicitFileName = item.FileName || item.fileName;
+          const fileName = explicitFileName || fileNameFromUrl(fileUrl);
+          if (fileUrl) candidates.push({ url: fileUrl, name: fileName, explicitName: Boolean(explicitFileName) });
         }
 
-        const candidatesByUrl = new Map();
-        for (const candidate of candidates) {
-          const absolute = absoluteHpnetUrl(candidate.url);
-          if (!absolute) continue;
-          candidate.url = absolute;
-          // A URL may use a generated name; prefer the explicit attachment name.
-          const previous = candidatesByUrl.get(absolute);
-          if (!previous || (!validNamePattern.test(previous.name) && validNamePattern.test(candidate.name))) candidatesByUrl.set(absolute, candidate);
-        }
-        const uniqueCandidates = [...candidatesByUrl.values()];
+        const uniqueCandidates = deduplicateCandidates(candidates, fileNamePolicy);
         if (!uniqueCandidates.length) {
           noFiles += 1;
           if (notificationNumber !== null) errorNumbers.add(notificationNumber);
@@ -679,29 +834,33 @@ async function main({ configPath = process.argv[2], chromium: suppliedChromium }
           continue;
         }
 
-        const validCandidates = uniqueCandidates.filter((candidate) => validNamePattern.test(candidate.name));
+        const validCandidates = uniqueCandidates.filter((candidate) => candidate.nameMatch.matched);
+        const invalidCandidates = uniqueCandidates.filter((candidate) => !candidate.nameMatch.matched);
+        for (const candidate of invalidCandidates) {
+          const displayName = candidate.name || "không có tên file";
+          const status = candidate.nameMatch.code === "suffix_mismatch" ? "KHÔNG KHỚP HẬU TỐ" : candidate.nameMatch.code === "unsafe_name" ? "TÊN FILE KHÔNG AN TOÀN" : "FILE KHÔNG KHỚP MẪU";
+          addResult([notificationNumber ?? "", label, entry.pageNumber, displayName, "", status, candidate.nameMatch.reason]);
+          log(`[${status}] ${label} / ${displayName}: ${candidate.nameMatch.reason}.`);
+        }
         if (!validCandidates.length) {
           badFormat += 1;
           const names = uniqueCandidates.map((item) => item.name).filter(Boolean).join(", ") || "không có file";
-          log(`[SAI MẪU TÊN] ${label}: ${names}`);
+          log(`[KHÔNG CÓ FILE KHỚP QUY TẮC TÊN] ${label}: ${names}`);
           if (notificationNumber !== null) errorNumbers.add(notificationNumber);
-          addResult([notificationNumber ?? "", label, entry.pageNumber, names, "", "SAI MẪU TÊN", "Không có PDF đúng mẫu tên cho phép"]);
           continue;
         }
 
-        const invalidNames = uniqueCandidates.filter((candidate) => !validNamePattern.test(candidate.name)).map((candidate) => candidate.name);
-        if (invalidNames.length) addResult([notificationNumber ?? "", label, entry.pageNumber, invalidNames.join(", "), "", "FILE KHÔNG KHỚP MẪU", "Văn bản còn file hợp lệ sẽ được xử lý riêng"]);
         if (validCandidates.every((candidate) => seenUrls.has(candidate.url))) sharedFiles += 1;
 
         for (const candidate of validCandidates) {
-          const safeName = path.basename(candidate.name);
-          const destination = path.join(outputDir, safeName);
+          const safeName = candidate.nameMatch.safeName;
+          const destination = safeOutputPath(outputDir, safeName);
           if (seenUrls.has(candidate.url)) {
             addResult([notificationNumber ?? "", label, entry.pageNumber, safeName, "", "BỎ QUA TRÙNG", "Cùng liên kết đã được tải hoặc kiểm tra nội dung thành công trong lần chạy này"]);
             if (notificationNumber !== null) existingNumbers.add(notificationNumber);
             continue;
           }
-          if (!strictNamePattern.test(candidate.name)) log(`[NGOẠI LỆ THIẾU MÃ XÃ] ${safeName}: chấp nhận và giữ nguyên tên.`);
+          if (fileNamePolicy.mode === "legacy" && !fileNamePolicy.strictPattern.test(candidate.name)) log(`[NGOẠI LỆ THIẾU MÃ XÃ] ${safeName}: chấp nhận và giữ nguyên tên.`);
           try {
           const fileResponse = await context.request.get(candidate.url, { timeout: 120000 });
           if (!fileResponse.ok()) throw new Error(`HTTP ${fileResponse.status()} khi tải ${safeName}.`);
@@ -737,13 +896,7 @@ async function main({ configPath = process.argv[2], chromium: suppliedChromium }
             continue;
           }
 
-          const tempPath = `${destination}.part`;
-          await fsp.writeFile(tempPath, buffer);
-          await fsp.rename(tempPath, destination);
-          const saved = await fsp.stat(destination);
-          if (saved.size <= 0 || path.extname(destination).toLowerCase() !== ".pdf" || fs.existsSync(tempPath)) {
-            throw new Error(`${safeName} không vượt qua kiểm tra file sau khi tải.`);
-          }
+          await writePdfAtomic(destination, buffer);
           downloaded += 1;
           if (notificationNumber !== null) downloadedNumbers.add(notificationNumber);
           log(`[ĐÃ TẢI] ${safeName}`);
@@ -769,7 +922,7 @@ async function main({ configPath = process.argv[2], chromium: suppliedChromium }
     log("--- TỔNG KẾT ---");
     log(`Tổng văn bản đã quét: ${recordEntries.length}`);
     log(`Văn bản riêng biệt theo mã HPNet: ${scan.unique}; dòng lặp: ${classified.duplicates}; bị lọc: ${classified.excluded}.`);
-    log(`Văn bản khớp bộ lọc: ${uniqueEntries.length}`);
+    log(`Văn bản thuộc phạm vi xử lý: ${uniqueEntries.length}`);
     if (filters.notificationEnabled) {
       log(`Yêu cầu: ${targetNumberList.length} thông báo`);
       log(`Tìm thấy: ${foundNumbers.size}`);
@@ -781,7 +934,7 @@ async function main({ configPath = process.argv[2], chromium: suppliedChromium }
     log(`PDF tải mới: ${downloaded}`);
     log(`PDF đã tồn tại giống hệt: ${existed}`);
     log(`PDF trùng tên khác nội dung đã lưu vào thư mục Trùng với hậu tố: ${renamedDuplicates}`);
-    log(`Văn bản không có file đúng mẫu: ${badFormat}`);
+    log(`Văn bản không có file khớp quy tắc tên đã chọn: ${badFormat}`);
     log(`Văn bản không có liên kết file: ${noFiles}`);
     log(`Văn bản có toàn bộ file hợp lệ dùng chung liên kết đã xử lý: ${sharedFiles}`);
     log("Số PDF và số văn bản là hai đơn vị khác nhau: một văn bản có thể có nhiều file hoặc dùng chung file.");
@@ -803,7 +956,11 @@ async function main({ configPath = process.argv[2], chromium: suppliedChromium }
   }
 }
 
-module.exports = { buildValidPdfNamePattern, buildFilters, buildDocumentRecord, recordFilterReasons, recordMatchesFilters, scanDocumentPages, classifyEntries, auditRows, csvCell, main };
+module.exports = {
+  buildValidPdfNamePattern, normalizeDocumentScope, parseFileSuffixes, buildFileNamePolicy, validateWindowsFileName,
+  matchPdfFileName, deduplicateCandidates, buildFilters, buildDocumentRecord, recordFilterReasons, recordMatchesFilters,
+  scanDocumentPages, classifyEntries, auditRows, csvCell, safeOutputPath, writePdfAtomic, main,
+};
 
 if (require.main === module) {
   main().catch((error) => {

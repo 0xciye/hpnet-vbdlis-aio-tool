@@ -1,12 +1,47 @@
-HƯỚNG DẪN SỬ DỤNG CHI TIẾT - HPNET PDF DOWNLOADER (TẢI FILE TỰ ĐỘNG)
-Dành cho người dùng không có chuyên môn tin học.
+HƯỚNG DẪN SỬ DỤNG - HPNET PDF DOWNLOADER
+Dành cho người dùng không chuyên kỹ thuật.
 
-1. GIỚI THIỆU:
-Nếu bạn phải tải hàng trăm giấy báo/chứng nhận số hóa từ trên hệ thống VNEID/HPNET mà phải click tay từng trang web thì sẽ rất mệt. Công cụ này chỉ cần bạn cho nó 1 danh sách các "Số thông báo", nó sẽ tự chạy tải về cất chung vào 1 cặp hồ sơ cho bạn.
+1. CÔNG CỤ LÀM GÌ?
+Công cụ quét mục Văn bản đi mà tài khoản hiện tại được quyền xem, tải các PDF khớp điều kiện và tạo nhật ký đối soát. Công cụ không thay đổi quyền tài khoản, không tải dự thảo và không xác thực chữ ký số bên trong PDF.
 
-2. CÁC BƯỚC THỰC HIỆN:
-Bước 1: Chạy file phần mềm HPNet PDF Downloader. (Có thể là 1 cửa sổ biểu mẫu nhỏ).
-Bước 2: Hệ thống yêu cầu ô Mã Xã, bạn hãy nhập mã số 5 chữ số nơi quản lý của bạn (VD: 10930).
-Bước 3: Ở ô chữ nhật to bên dưới, bạn hãy dán toàn bộ các đoạn mã "Số thông báo" mà bạn muốn tải hồ sơ về. Các số này có thể phẩy, chấm, hoặc enter xuống hàng để cách nhau đều được. 
-Bước 4: Nhấn nút "Bắt đầu tải".
-Bước 5: Kéo phần mềm xuống khay màn hình, và cứ để nó chạy khoảng 5-10 phút. Không cần phải động tay. Xong xuôi màn hình sẽ báo hiệu, và toàn bộ file văn bản đó sẽ được gom lại tại thư mục kết quả để bạn mang ra sử dụng.
+2. CHỌN PHẠM VI VĂN BẢN
+- Theo bộ lọc bên dưới: giữ nguyên các bộ lọc trích yếu, số thông báo, ký hiệu văn bản, ngày văn bản và trạng thái đã/chưa xem. Phải bật ít nhất một trong bốn bộ lọc chính. Các nhóm bật kết hợp theo AND; nhiều giá trị trong cùng nhóm kết hợp theo OR.
+- Toàn bộ Văn bản đi được quyền xem: bỏ qua tất cả bộ lọc, kể cả trạng thái đã/chưa xem. Chỉ chọn khi thật sự muốn xét toàn bộ danh sách nhìn thấy bằng tài khoản hiện tại. Phần mềm sẽ hỏi xác nhận trước khi chạy.
+
+3. CHỌN QUY TẮC TÊN FILE
+- Mẫu hồ sơ CHUACOGIAY: dùng mã xã 5 chữ số và mẫu TBXN cũ. Có thể bật nhận thêm tên thiếu mã xã. Đây là chế độ mặc định của cấu hình cũ.
+- Theo hậu tố tên file: không yêu cầu CHUACOGIAY hoặc mã xã. Chọn một hay nhiều hậu tố .signed, .ldsigned, .lsigned; có thể nhập hậu tố khác.
+
+Có thể nhập signed, .signed hoặc .signed.pdf; phần mềm tự chuẩn hóa thành .signed. Ví dụ khi chọn .signed:
+- Kế Hoạch.signed.pdf: nhận.
+- Thông báo 01.SIGNED.PDF: nhận.
+- Kế Hoạch.ldsigned.pdf: không nhận nếu chưa chọn thêm .ldsigned.
+- Kế Hoạch.signed.bak.pdf: không nhận vì .signed không nằm ngay trước .pdf.
+- signed.pdf: không nhận vì thiếu tên văn bản trước hậu tố.
+
+Không nhập đường dẫn, wildcard hoặc regex vào ô hậu tố. Đây chỉ là quy tắc lọc tên, không phải kiểm tra chữ ký số.
+
+4. QUÉT VÀ TẢI
+1) Chọn phạm vi văn bản.
+2) Nếu dùng phạm vi lọc, bật và nhập các bộ lọc cần thiết.
+3) Chọn quy tắc tên file và điền mã xã hoặc hậu tố tương ứng.
+4) Chọn thư mục lưu kết quả.
+5) Bấm BẮT ĐẦU QUÉT VÀ TẢI, đọc phần tóm tắt rồi xác nhận.
+6) Đăng nhập VNeID trong cửa sổ Microsoft Edge. Không đóng Edge khi công cụ đang chạy.
+7) Chờ thông báo hoàn tất hoặc bấm DỪNG AN TOÀN khi cần.
+
+5. KIỂM TRA KẾT QUẢ
+Trong thư mục kết quả có:
+- PDF tải thành công.
+- NHAT_KY_TAI_PDF_*.txt: diễn giải tiến trình bằng văn bản.
+- NHAT_KY_TAI_PDF_*.csv: từng file tải, bỏ qua hoặc lỗi và lý do.
+- DOI_SOAT_TOAN_BO_VAN_BAN_*.csv: mọi văn bản đã quét, gồm cả văn bản bị lọc.
+
+Một văn bản có thể có nhiều file. Công cụ tải từng file khớp và ghi lý do riêng cho từng file bị loại. File trùng tên nhưng khác nội dung được giữ trong thư mục Trùng với hậu tố số; không ghi đè file đã có. Tên file không an toàn trên Windows và dữ liệu không bắt đầu bằng định dạng PDF hợp lệ sẽ bị bỏ qua và ghi lỗi.
+
+6. LƯU Ý
+- “Toàn bộ” vẫn chỉ là Văn bản đi tài khoản hiện tại được quyền xem.
+- Ngày lọc là ngày văn bản trên HPNet, không phải ngày upload.
+- Số văn bản và số PDF là hai đơn vị khác nhau.
+- Nếu nhật ký báo quét chưa đủ, trang lặp, hết phiên hoặc tổng không khớp, không coi kết quả là đầy đủ; hãy đăng nhập lại và quét lại khi danh sách ổn định.
+- Khung Nhật ký hoạt động và các file TXT/CSV dùng UTF-8. Tiếng Việt phải đọc được bình thường trong bản release mới; nếu còn ký tự lạ, kiểm tra lại phiên bản đang chạy.

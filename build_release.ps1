@@ -13,6 +13,24 @@ $originalLocation = Get-Location
 $oldPythonPath = $env:PYTHONPATH
 $oldAppData = $env:APPDATA
 $oldPlatform = $env:QT_QPA_PLATFORM
+function Send-SafeItemToRecycleBin([IO.FileSystemInfo]$Item, [string]$AllowedParent) {
+    $parent = [IO.Path]::GetFullPath($AllowedParent).TrimEnd('\')
+    $target = [IO.Path]::GetFullPath($Item.FullName).TrimEnd('\')
+    if (-not $target.StartsWith($parent + '\', [StringComparison]::OrdinalIgnoreCase) -or
+        ($Item.Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw "Unsafe cleanup target: $target" }
+    Write-Host "RECYCLE_BUILD_ARTIFACT: $target"
+    if ($Item.PSIsContainer) {
+        [Microsoft.VisualBasic.FileIO.FileSystem]::DeleteDirectory($target,
+            [Microsoft.VisualBasic.FileIO.UIOption]::OnlyErrorDialogs,
+            [Microsoft.VisualBasic.FileIO.RecycleOption]::SendToRecycleBin,
+            [Microsoft.VisualBasic.FileIO.UICancelOption]::ThrowException)
+    } else {
+        [Microsoft.VisualBasic.FileIO.FileSystem]::DeleteFile($target,
+            [Microsoft.VisualBasic.FileIO.UIOption]::OnlyErrorDialogs,
+            [Microsoft.VisualBasic.FileIO.RecycleOption]::SendToRecycleBin,
+            [Microsoft.VisualBasic.FileIO.UICancelOption]::ThrowException)
+    }
+}
 try {
     Set-Location -LiteralPath $projectRoot
     $env:PYTHONPATH = Join-Path $projectRoot 'src'
@@ -69,7 +87,19 @@ try {
             [Microsoft.VisualBasic.FileIO.UICancelOption]::ThrowException)
     }
     Move-Item -LiteralPath $zipPath -Destination $publicZip
-    Get-FileHash -LiteralPath $publicZip -Algorithm SHA256
+    $publicHash = Get-FileHash -LiteralPath $publicZip -Algorithm SHA256
+    $buildBase = (Resolve-Path -LiteralPath (Join-Path $projectRoot 'build')).Path
+    foreach ($artifact in @(Get-ChildItem -LiteralPath $buildBase -Force)) {
+        Send-SafeItemToRecycleBin $artifact $buildBase
+    }
+    foreach ($artifact in @(Get-ChildItem -LiteralPath $releaseBase -Directory -Force)) {
+        Send-SafeItemToRecycleBin $artifact $releaseBase
+    }
+    if (@(Get-ChildItem -LiteralPath $buildBase -Force).Count -ne 0) { throw 'Build folder cleanup failed.' }
+    if (@(Get-ChildItem -LiteralPath $releaseBase -Force).Count -ne 1 -or -not (Test-Path -LiteralPath $publicZip)) {
+        throw 'Release folder must contain only the public ZIP.'
+    }
+    $publicHash
     Write-Host "RELEASE_PASS: $publicZip"
 } finally {
     $env:PYTHONPATH = $oldPythonPath

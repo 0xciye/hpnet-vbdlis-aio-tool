@@ -3,13 +3,13 @@ from pathlib import Path
 from unittest.mock import patch
 import os
 import pytest
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QEvent
 from PySide6.QtGui import QPalette, QColor
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QPushButton
 from launcher import ToolLauncher
 from launcher_ui.help_page import guide_sources,guide_html
-from launcher_ui.theme import COLORS
+from launcher_ui.theme import COLORS, STYLE
 
 
 @pytest.fixture(scope="module")
@@ -101,6 +101,48 @@ def test_layout_no_horizontal_scroll_and_buttons_reachable(hub,app,size):
     assert view.help_page.browser.horizontalScrollBar().maximum()==0
 
 
+def test_cards_are_single_click_targets_with_minimal_hover_affordance(hub,app):
+    view=hub.launcher_view; card=view.cards["excel"]
+    assert card.findChildren(QPushButton)==[]
+    assert card.cursor().shape()==Qt.PointingHandCursor
+    assert "Mở công cụ" not in card.text()
+    assert not card.arrow.isVisible()
+    QApplication.sendEvent(card,QEvent(QEvent.Enter)); app.processEvents()
+    assert card.arrow.isVisible() and card.property("hovered") is True
+    QApplication.sendEvent(card,QEvent(QEvent.Leave)); app.processEvents()
+    assert not card.arrow.isVisible()
+
+
+def test_search_width_sidebar_and_help_readability(hub):
+    view=hub.launcher_view
+    assert view.search.maximumWidth()==680
+    assert view.findChild(QPushButton,"openTool") is None
+    assert "line-height:165%" in view.help_page.browsers[0].document().defaultStyleSheet()
+    assert "QFrame#sidebarNote { background: transparent" in STYLE
+
+
+def test_card_loading_prevents_double_click_and_reports_success(hub,app):
+    card=hub.launcher_view.cards["downloader"]
+    with patch.object(hub,"launch_external",return_value=True) as launch:
+        card.click(); card.click()
+        assert card.busy and not card.isEnabled()
+        assert card.status.text()=="Đang mở công cụ…"
+        app.processEvents()
+        assert launch.call_count==1
+    assert card.isEnabled() and not card.busy
+    assert card.property("cardState")=="success"
+    assert hub.launcher_view.toast.isVisible()
+
+
+def test_card_error_feedback_restores_click_target(hub,app):
+    card=hub.launcher_view.cards["downloader"]
+    card.handler=lambda: False
+    card.click(); assert not card.isEnabled()
+    app.processEvents()
+    assert card.isEnabled() and card.property("cardState")=="error"
+    assert "Không thể" in card.status.text()
+
+
 def test_keyboard_search_and_help_never_launch_tools(hub,app):
     view=hub.launcher_view; view.search.setFocus(); app.processEvents()
     QTest.keyClick(view.search,Qt.Key_F1); app.processEvents()
@@ -122,7 +164,7 @@ def test_sections_not_clipped_after_navigation_and_resize(hub,app):
             for key in view.visible_tool_keys:
                 card=view.cards[key]; section=card.parentWidget()
                 assert section.rect().contains(card.geometry()), (size,category,key,section.size(),card.geometry())
-                assert card.rect().contains(card.button.geometry())
+                assert card.rect().contains(card.arrow.geometry())
 
 
 def test_theme_local_and_accessible_text_contrast(hub,app):

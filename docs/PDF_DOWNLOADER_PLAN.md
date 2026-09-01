@@ -1,6 +1,6 @@
 # Kế hoạch: tải PDF theo hậu tố tên file
 
-**Trạng thái:** đề xuất triển khai; chưa thay đổi mã hoặc bản release.
+**Trạng thái:** đã triển khai và kiểm thử ngoại tuyến ngày 01/09/2026; chờ/đã đóng gói theo quy trình release của repository.
 
 ## 1. Mục tiêu và phạm vi
 

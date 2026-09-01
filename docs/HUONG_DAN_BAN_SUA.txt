@@ -19,6 +19,8 @@ Tên lỗi công thức/#REF! không được thay bằng tên hộ trước. B�
 Thửa trùng bị bỏ toàn bộ nhóm. Thiếu dữ liệu/lỗi ghi/file đã có không dùng số; số được giữ cho thửa hợp lệ tiếp theo.
 Có thể xuất báo cáo kiểm tra TXT/XLSX ngay ở bước 5 mà không tạo Word.
 Mẫu 22 mới là mặc định. Bước 1 có nút quay về mẫu chuẩn. Phải mở và kiểm tra mẫu, căn cứ, thời hạn, người ký, nơi nhận trước khi xác nhận. Căn cứ viết sẵn giữ nguyên; các trường nhập được điền theo cấu hình hiện tại.
+Bước 1 hiển thị ảnh tham khảo hai trang của mẫu Word còn nguyên placeholder. Cuộn xuống để xem ảnh thu nhỏ hoặc bấm “Mở ảnh mẫu để xem rõ”; đối chiếu tên placeholder với các ô ở Bước 4 trước khi tạo hàng loạt.
+Khoảng cách từ trong mẫu chuẩn đã được sửa cục bộ tại các dòng placeholder; font, cỡ chữ, bảng, lề, header/footer và nội dung pháp lý không đổi. Bản mẫu trong ứng dụng và bản tại research\notice_template22 được đồng bộ.
 Xem README.md để biết quy tắc, cách cấp số và lưu cấu hình. Không chia sẻ log có tên hộ/thửa cho người không có quyền.
 
 3. EXCEL BUILDER
@@ -40,12 +42,16 @@ PDF Cleaner: chọn thư mục, quét/xem trước rồi mới xử lý. Kiểm 
 Không chạy thử thao tác xóa trên thư mục hồ sơ gốc chưa sao lưu.
 
 5. BA CÔNG CỤ HPNET
-Downloader: tải PDF từ Văn bản đi; vẫn có lọc, quét nhiều trang, đối soát và hỗ trợ tên thiếu mã xã theo bản Cap Nhat.
+Downloader: chọn “Theo bộ lọc” để giữ toàn bộ bộ lọc hiện có, hoặc chủ động chọn “Toàn bộ Văn bản đi được quyền xem” để bỏ qua các bộ lọc và trạng thái xem.
+Quy tắc tên file có hai chế độ: “Mẫu hồ sơ CHUACOGIAY” dùng mã xã/ngoại lệ như trước; “Theo hậu tố tên file” nhận tên bất kỳ kết thúc bằng hậu tố đã chọn ngay trước .pdf, ví dụ Kế Hoạch.signed.pdf.
+Ở chế độ hậu tố có thể chọn .signed, .ldsigned, .lsigned và nhập thêm hậu tố khác. Đây chỉ là lọc tên file, không kiểm tra chữ ký số.
+Trước khi chạy, đọc phần tóm tắt phạm vi và quy tắc tên trong hộp xác nhận. Nhật ký TXT/CSV ghi file tải, file bị loại và lý do; CSV đối soát ghi cả văn bản bị lọc.
 Upload Dự Thảo: tải tệp Word và kiểm tra trùng theo quy trình sẵn có.
 Duyệt Dự Thảo: xem trước, kiểm tra người nhận, rồi xác nhận chuyển duyệt.
 Tự đăng nhập VNeID trong cửa sổ của công cụ. Các bước xác nhận và kiểm tra an toàn không bị loại bỏ.
 Các bộ lọc đang bật được kết hợp; số văn bản tải lên không đồng nghĩa số văn bản khớp loại, tên và ngày lọc.
 Bản sửa đã kiểm thử ngoại tuyến; chưa thao tác tải lên/chuyển duyệt trên tài khoản HPNet thật.
+Khung “Nhật ký hoạt động” của cả Downloader, Upload Dự Thảo và Duyệt Dự Thảo đọc đầu ra Node theo UTF-8 nên tiếng Việt phải hiển thị bình thường sau khi chạy xong. Các file TXT/CSV vẫn có dấu nhận diện UTF-8 để mở đúng bằng Notepad hoặc Excel trên Windows.
 
 5. CẤU HÌNH VÀ NHẬT KÝ
 Excel Builder tiếp tục dùng: %APPDATA%\VBDLIS Excel Builder

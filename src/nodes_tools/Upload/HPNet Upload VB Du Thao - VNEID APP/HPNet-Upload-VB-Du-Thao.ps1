@@ -463,6 +463,9 @@ $startButton.Add_Click({
         $psi.CreateNoWindow = $true
         $psi.RedirectStandardOutput = $true
         $psi.RedirectStandardError = $true
+        $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+        $psi.StandardOutputEncoding = $utf8NoBom
+        $psi.StandardErrorEncoding = $utf8NoBom
         $psi.EnvironmentVariables['HPNET_NODE_MODULES'] = $runtime.NodeModules
         $psi.EnvironmentVariables['HPNET_EDGE_EXE'] = $runtime.EdgeExe
 

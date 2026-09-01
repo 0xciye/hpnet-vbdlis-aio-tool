@@ -22,6 +22,7 @@ QLabel#windowHeading { font-size: 23pt; font-weight: 700; }
 QLabel#hint { color: @muted; background: @tint; border-radius: 7px; padding: 10px 12px; }
 QLabel#sectionHeading { font-size: 10pt; font-weight: 700; color: @primary; padding-top: 14px; padding-bottom: 6px; }
 QLabel#muted, QLabel#stepCounter { color: @muted; }
+QLabel#templatePreview { background: #E8EEF7; border: 1px solid @border; border-radius: 8px; padding: 8px; }
 QLabel#sideTitle { font-size: 9pt; font-weight: 700; color: @muted; padding: 8px 10px; }
 QFrame#stepPanel { background: @surface; border: 1px solid @subtle; border-radius: 10px; }
 QStackedWidget { background: @surface; border: 1px solid @subtle; border-radius: 10px; }

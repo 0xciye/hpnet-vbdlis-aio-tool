@@ -6,7 +6,7 @@ import json
 import os
 import traceback
 from PySide6.QtCore import Qt, QThread, Signal, QUrl
-from PySide6.QtGui import QColor, QDesktopServices, QIcon, QPalette
+from PySide6.QtGui import QColor, QDesktopServices, QIcon, QPalette, QPixmap
 from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QListWidget, QStackedWidget, QLineEdit, QComboBox, QSpinBox, QFormLayout, QFileDialog, QMessageBox,
     QScrollArea, QTableWidget, QTableWidgetItem, QHeaderView, QProgressBar, QCheckBox, QPlainTextEdit,
@@ -102,7 +102,18 @@ class MainWindow(QMainWindow):
             line.addWidget(self.button("Chọn file…",lambda checked=False,f=field,t=filter_text:self.browse_file(f,t))); box.addLayout(line)
             field.textChanged.connect(self.invalidate)
         box.addWidget(self.button("Dùng mẫu 22 chuẩn mới",lambda:self.template.setText(str(default_template_path()))))
-        box.addWidget(self.button("Đọc cấu trúc Excel →",self.read_source,True)); box.addStretch()
+        box.addWidget(self.button("Đọc cấu trúc Excel →",self.read_source,True))
+        preview_path=resource("assets/template_placeholder_preview.png")
+        preview_title=QLabel("Ảnh tham khảo vị trí placeholder trong mẫu Word")
+        preview_title.setObjectName("sectionHeading"); box.addWidget(preview_title)
+        preview_note=QLabel("Dùng ảnh này để biết nội dung nào sẽ được điền từ Excel hoặc từ Bước 4. Bấm mở ảnh để đọc rõ cả hai trang.")
+        preview_note.setObjectName("muted"); preview_note.setWordWrap(True); box.addWidget(preview_note)
+        self.template_preview=QLabel(); self.template_preview.setObjectName("templatePreview")
+        self.template_preview.setAlignment(Qt.AlignCenter); self.template_preview.setAccessibleName("Ảnh xem trước mẫu Word có placeholder")
+        pixmap=QPixmap(str(preview_path))
+        if not pixmap.isNull(): self.template_preview.setPixmap(pixmap.scaled(640,435,Qt.KeepAspectRatio,Qt.SmoothTransformation))
+        box.addWidget(self.template_preview,0,Qt.AlignHCenter)
+        box.addWidget(self.button("Mở ảnh mẫu để xem rõ",lambda:self.open_path(preview_path))); box.addStretch()
 
     def make_sheet_page(self):
         box=self.page("Chọn trang tính và dòng tiêu đề", "Tiêu đề gộp hai tầng: chọn dòng đầu và 2 tầng. Ví dụ dòng 5–6 → dữ liệu bắt đầu dòng 7. Bạn có thể thay đổi theo từng file.")

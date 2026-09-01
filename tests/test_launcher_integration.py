@@ -59,7 +59,7 @@ def test_seven_cards_and_resource_paths_independent_of_cwd(hub):
 def test_notice_builder_reuse_theme_and_offline_service(hub,app):
     from tools.notice_builder.smoke import run
     original=app.palette().color(QPalette.Base)
-    hub.tool_buttons["notice"].click(); window=hub.tool_windows["notice"]
+    hub.tool_buttons["notice"].click(); app.processEvents(); window=hub.tool_windows["notice"]
     window.inputs["village"].setText("Thôn đang nhập")
     hub.launch_notice_builder()
     assert hub.tool_windows["notice"] is window and window.inputs["village"].text()=="Thôn đang nhập"
@@ -71,6 +71,7 @@ def test_notice_builder_reuse_theme_and_offline_service(hub,app):
 def test_excel_direct_from_launcher_has_light_theme_without_changing_app(hub, app):
     original = app.palette().color(QPalette.Base)
     hub.tool_buttons["excel"].click()
+    app.processEvents()
     window = hub.tool_windows["excel"]
     app.processEvents()
     assert app.palette().color(QPalette.Base) == original
@@ -144,10 +145,11 @@ def test_legacy_settings_migration_is_non_destructive(monkeypatch, tmp_path):
     assert old.read_bytes() == snapshot
 
 
-def test_external_tools_route_to_own_exe_and_working_folder_without_running(hub):
+def test_external_tools_route_to_own_exe_and_working_folder_without_running(hub,app):
     with patch("launcher.subprocess.Popen") as popen:
         for key, (folder, executable) in EXTERNAL_TOOLS.items():
             hub.tool_buttons[key].click()
+            app.processEvents()
             args, kwargs = popen.call_args
             target = Path(resource_path(f"nodes_tools/{folder}")) / executable
             assert target.is_file()

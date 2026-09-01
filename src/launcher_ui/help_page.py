@@ -70,7 +70,7 @@ class HelpPage(QWidget):
             title,_=source
             browser=QTextBrowser(); browser.setAccessibleName(f"Nội dung: {title}")
             browser.setOpenExternalLinks(False)
-            browser.document().setDefaultStyleSheet("h1 {font-size:19pt; color:#172B42; margin-top:24px;} h2 {font-size:12pt; color:#2458C5; margin-top:22px; margin-bottom:10px;} p {font-size:11pt; line-height:150%; margin:8px 0;} .note {color:#53657A;}")
+            browser.document().setDefaultStyleSheet("h1 {font-size:19pt; color:#172B42; margin-top:24px;} h2 {font-size:12pt; color:#2458C5; margin-top:22px; margin-bottom:10px;} p {font-size:11pt; line-height:165%; margin:9px 0;} .note {color:#53657A;}")
             html,_,texts=guide_html([source]); browser.setHtml(html)
             self.source_texts.extend(texts); self.browsers.append(browser); self.documents.addWidget(browser)
             self.search_states.append(("",self.default_search_status()))

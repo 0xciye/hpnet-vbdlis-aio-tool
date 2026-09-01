@@ -13,3 +13,7 @@ Bước 4: Thiết lập 2 dòng chung của bộ 50 hồ sơ này:
 - Người duyệt: Trỏ chuột chọn đúng tên lãnh đạo mà bạn muốn nộp duyệt cho họ từ danh sách thả xuống.
 Bước 5: Khuyên dùng chế độ "Test Mode" (Chạy mô phỏng trước). Nếu không chọn, hãy bấm nút "Chạy Thật Ngay". 
 Bước 6: Khi bấm Bắt đầu, bàn phím và chuột sẽ bị phần mềm mượn đi, màn hình sẽ tự động múa các thao tác mở trang, điền chữ, tải file, lưu lại y như ma làm. Bạn cứ để nó chạy, khi nào hết số file trong thư mục nó sẽ tự ngưng và trả lại máy. Rất nhàn nhã!
+
+3. NHẬT KÝ
+- Sau khi chạy xong, khung Nhật ký hoạt động hiển thị đầu ra bằng UTF-8 để tiếng Việt không bị biến thành ký tự lạ.
+- File TXT/CSV trong thư mục nhat_ky cũng dùng UTF-8 tương thích Notepad và Excel trên Windows.

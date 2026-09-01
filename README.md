@@ -8,17 +8,19 @@ Dự án kết hợp các ứng dụng xử lý Excel, Word, PDF và tự độn
 
 | Công cụ | Chức năng chính |
 | --- | --- |
-| Tạo thông báo đất đai | Tạo Word theo Mẫu 22 từ Excel; kiểm tra dữ liệu, xem trước, cấp số thông báo và xuất nhật ký. |
+| Tạo thông báo đất đai | Tạo Word theo Mẫu 22 từ Excel; có ảnh mẫu placeholder, kiểm tra dữ liệu, xem trước, cấp số thông báo và xuất nhật ký. |
 | VBDLIS Excel Builder | Ánh xạ cột, xử lý hộ/người/thửa, cấu hình quy tắc và xuất Excel theo biểu mẫu VBDLIS. |
 | Auto Rename | Đối chiếu dữ liệu Excel để nhân bản và đặt tên PDF/Word theo thông tin thửa đất. |
 | PDF Cleaner | Ghép cặp PDF thường và `.signed.pdf`, dọn bản thường và chuẩn hóa tên file. |
-| HPNet PDF Downloader | Lọc Văn bản đi, quét nhiều trang, tải PDF và ghi báo cáo đối soát. |
+| HPNet PDF Downloader | Lọc hoặc quét toàn bộ Văn bản đi được quyền xem; tải PDF theo mẫu CHUACOGIAY hoặc hậu tố tên tùy chọn và ghi báo cáo đối soát. |
 | HPNet Upload dự thảo | Tải Word lên HPNet, chọn người duyệt và kiểm tra trùng. |
 | HPNet Duyệt dự thảo | Quét, xác nhận danh sách và chuyển duyệt văn bản theo người nhận đã chọn. |
 
 Launcher hỗ trợ tìm kiếm công cụ và đọc hướng dẫn ngay trong ứng dụng. Các công cụ xử lý hồ sơ có bước kiểm tra/xem trước trước khi xuất; thao tác HPNet sử dụng phiên đăng nhập VNeID của người vận hành.
 
-**Phạm vi hiện tại:** PDF Downloader nhận tên theo mẫu CHUACOGIAY và ngoại lệ thiếu mã xã. Chế độ tải theo hậu tố tên file đang ở giai đoạn lập kế hoạch, chưa được triển khai. PDF Cleaner nhận diện theo hậu tố tên, **không xác thực chữ ký số** bên trong tài liệu.
+Mẫu Word mặc định được chuẩn hóa cục bộ ở các dòng placeholder để tránh Word kéo giãn khoảng cách từ, đồng thời giữ nguyên cấu trúc và định dạng pháp lý. Khung nhật ký của ba công cụ HPNet đọc đầu ra Node theo UTF-8; nhật ký TXT/CSV cũng giữ UTF-8 tương thích Windows.
+
+**Phạm vi hiện tại:** PDF Downloader giữ chế độ mẫu CHUACOGIAY tương thích cũ và có thể nhận tên bất kỳ kết thúc bằng các hậu tố đã chọn như `.signed`, `.ldsigned`, `.lsigned` ngay trước `.pdf`. Người dùng có thể giữ bộ lọc hiện có hoặc chủ động chọn toàn bộ Văn bản đi được quyền xem. Việc nhận diện hậu tố của Downloader và PDF Cleaner là lọc tên file, **không xác thực chữ ký số** bên trong tài liệu.
 
 ## Công nghệ
 
@@ -99,7 +101,7 @@ release/
 └── HPNet VBDLIS AIO Tool.zip
 ```
 
-ZIP chỉ chứa ứng dụng và tài nguyên cần chạy; không kèm source test, môi trường phát triển hoặc phiên đăng nhập. ZIP release trước được chuyển vào Thùng rác sau khi gói mới kiểm tra đạt. Thư mục build theo phiên bản được giữ riêng.
+ZIP chỉ chứa ứng dụng và tài nguyên cần chạy; không kèm source test, môi trường phát triển hoặc phiên đăng nhập. Sau khi gói mới kiểm tra đạt, ZIP cũ cùng các thư mục build/release trung gian được chuyển vào Thùng rác; thư mục `release` chỉ giữ ZIP công khai mới.
 
 Có thể chỉ định nhãn thư mục build bằng `-ReleaseId`; tên ZIP công khai vẫn cố định. Các file `.spec`, mẫu Word/Excel và tài nguyên giao diện phải được giữ để build thành công.
 
@@ -114,7 +116,7 @@ src/
   HPNET_VBDLIS_Tools.spec        # Cấu hình PyInstaller
 tests/                          # Kiểm thử tích hợp
 tools/                          # Tiện ích phát triển và phục hồi runtime
-docs/                           # Dependencies, hướng dẫn và kế hoạch phát triển
+docs/                           # Dependencies, hướng dẫn và biên bản kiểm tra
 research/notice_template22/      # Mẫu đối chiếu phục vụ test bảo toàn định dạng
 run_tests.py
 build_release.ps1

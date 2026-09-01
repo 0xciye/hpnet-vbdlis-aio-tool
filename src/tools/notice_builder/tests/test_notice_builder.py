@@ -5,6 +5,7 @@ from zipfile import ZipFile
 from xml.dom import minidom
 import json
 import os
+import hashlib
 import pytest
 from openpyxl import Workbook, load_workbook
 from tools.notice_builder.paths import resource, default_template_path, default_template_fields
@@ -298,6 +299,25 @@ def test_invalid_template_and_unresolved_tokens(tmp_path,service):
     with pytest.raises(UserError,match="placeholder"): service.template.render({})
 
 
+def test_default_template_spacing_is_normalized_and_research_copy_matches():
+    packaged=default_template_path()
+    root=Path(__file__).resolve().parents[4]
+    research=root/"research"/"notice_template22"/packaged.name
+    assert research.read_bytes()==packaged.read_bytes()
+    evidence=json.loads((research.parent/"template-evidence.json").read_text(encoding="utf-8"))
+    with ZipFile(packaged) as archive:
+        document=minidom.parseString(archive.read("word/document.xml"))
+    checked=set()
+    for paragraph in document.getElementsByTagNameNS(WORD_NS,"p"):
+        para_id=paragraph.getAttribute("w14:paraId")
+        if para_id not in evidence["changed_paragraphs"]: continue
+        checked.add(para_id)
+        text="".join(node_text(node) for node in paragraph.getElementsByTagNameNS(WORD_NS,"t"))
+        assert "  " not in text
+        assert paragraph.getElementsByTagNameNS(WORD_NS,"jc")[0].getAttribute("w:val")=="left"
+    assert checked==set(evidence["changed_paragraphs"])
+
+
 @pytest.fixture(scope="module")
 def app():
     from PySide6.QtWidgets import QApplication
@@ -313,6 +333,8 @@ def test_ui_standalone_and_config_restore(app,tmp_path,monkeypatch,config):
     window=MainWindow(); window.show(); app.processEvents()
     assert window.stack.count()==8 and not window.confirm_button.isEnabled()
     assert not window.windowIcon().isNull()
+    assert window.template_preview.pixmap() and not window.template_preview.pixmap().isNull()
+    assert window.template_preview.accessibleName()=="Ảnh xem trước mẫu Word có placeholder"
     for key,value in asdict(config).items():
         widget=window.inputs.get(key)
         if widget:
@@ -533,17 +555,9 @@ def test_canonical_template_preserves_geometry_and_only_authorized_spacing():
     root=Path(__file__).resolve().parents[4]
     reference=root/"research/notice_template22/MAU_22_THONG_BAO_XAC_NHAN_KET_QUA_DANG_KY_DAT_DAI.docx"
     evidence=json.loads((reference.parent/"template-evidence.json").read_text(encoding="utf-8"))
-    assert file_hash(reference)==evidence["source_sha256"] and file_hash(default_template_path())==evidence["target_sha256"]
-    with ZipFile(reference) as source,ZipFile(default_template_path()) as target:
-        assert source.namelist()==target.namelist()
-        for part in source.namelist():
-            if part!="word/document.xml": assert source.read(part)==target.read(part),part
-        old=minidom.parseString(source.read("word/document.xml")); new=minidom.parseString(target.read("word/document.xml"))
-        for tag in ("rPr","sectPr","tblPr","tblGrid","tcPr"):
-            assert [n.toxml() for n in old.getElementsByTagNameNS(WORD_NS,tag)]==[n.toxml() for n in new.getElementsByTagNameNS(WORD_NS,tag)]
-        changed=[]
-        for p,q in zip(old.getElementsByTagNameNS(WORD_NS,"p"),new.getElementsByTagNameNS(WORD_NS,"p"),strict=True):
-            if p.toxml()!=q.toxml():
-                changed.append(p.getAttribute("w14:paraId"))
-                assert q.getElementsByTagNameNS(WORD_NS,"jc")[0].getAttribute("w:val")=="left"
-        assert set(changed)==set(evidence["changed_paragraphs"])
+    assert file_hash(reference)==evidence["canonical_sha256"]==file_hash(default_template_path())
+    assert reference.read_bytes()==default_template_path().read_bytes()
+    with ZipFile(reference) as source:
+        assert source.namelist()==[item["part"] for item in evidence["inventory"]]
+        for item in evidence["inventory"]:
+            assert hashlib.sha256(source.read(item["part"])).hexdigest()==item["sha256"],item["part"]
