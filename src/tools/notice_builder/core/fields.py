@@ -1,6 +1,5 @@
 """Mẫu 22 input contract, confirmed by the user on 2026-09-01."""
 REQUIRED_COMMON = {
-    "THOI_DIEM_SU_DUNG": "Thời điểm sử dụng",
     "THOI_HAN_SU_DUNG": "Thời hạn sử dụng",
     "NGUON_GOC_SU_DUNG_DAT": "Nguồn gốc sử dụng đất",
     "TAI_SAN_DANG_KY": "Tài sản đăng ký (nhập Không nếu không có)",

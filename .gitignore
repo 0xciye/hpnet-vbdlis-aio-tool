@@ -59,7 +59,6 @@ MAU_22_THONG_BAO_XAC_NHAN_KET_QUA_DANG_KY_DAT_DAI.docx
 *.doc
 *.pdf
 !src/tools/vbdlis_excel_builder/resources/BieuMauThuThapThongTinGiayChungNhan.xlsx
-!src/tools/notice_builder/template/WORD_MAU_THONG_BAO_CHUACOGIAY_PLACEHOLDER.docx
 !src/tools/notice_builder/template/MAU_22_THONG_BAO_XAC_NHAN_KET_QUA_DANG_KY_DAT_DAI.docx
 tmp/
 temp/

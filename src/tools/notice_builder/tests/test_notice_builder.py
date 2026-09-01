@@ -542,13 +542,15 @@ def test_ui_mapping_preserved_on_next_and_reset_for_other_workbook(app,tmp_path,
     window.close()
 
 
-def test_template_default_migration_preserves_custom_files(tmp_path):
-    from tools.notice_builder.paths import saved_template_path,LEGACY_TEMPLATE_NAME
-    old=resource("template")/LEGACY_TEMPLATE_NAME
-    assert saved_template_path({"template":str(old)})==default_template_path()
-    custom=tmp_path/LEGACY_TEMPLATE_NAME; custom.write_bytes(old.read_bytes()+b"custom-copy")
-    assert saved_template_path({"template":str(custom)})==custom
-    assert saved_template_path({"template_kind":"default","template":str(tmp_path/"old-release.docx")})==default_template_path()
+def test_saved_template_path_fallbacks(tmp_path):
+    from tools.notice_builder.paths import saved_template_path
+    # template_kind=default always returns the bundled MAU_22
+    assert saved_template_path({"template_kind": "default", "template": str(tmp_path / "old.docx")}) == default_template_path()
+    # missing file falls back to default
+    assert saved_template_path({"template": str(tmp_path / "nonexistent.docx")}) == default_template_path()
+    # existing custom .docx is preserved
+    custom = tmp_path / "custom.docx"; custom.write_bytes(b"PK custom")
+    assert saved_template_path({"template": str(custom)}) == custom
 
 
 def test_canonical_template_preserves_geometry_and_only_authorized_spacing():

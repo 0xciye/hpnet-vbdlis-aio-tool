@@ -1,11 +1,8 @@
 from pathlib import Path
 import os
-import hashlib
 import json
 
 DEFAULT_TEMPLATE_NAME = "MAU_22_THONG_BAO_XAC_NHAN_KET_QUA_DANG_KY_DAT_DAI.docx"
-LEGACY_TEMPLATE_NAME = "WORD_MAU_THONG_BAO_CHUACOGIAY_PLACEHOLDER.docx"
-LEGACY_TEMPLATE_SHA256 = "d61a73ed1e579fdbfb88f4b40054885735631ec90cb88f05ef169f62106f8739"
 
 
 def resource(relative):
@@ -23,14 +20,11 @@ def default_template_fields():
 
 
 def saved_template_path(settings):
-    """Migrate only the bundled default; keep genuinely customized templates."""
+    """Return the saved template path, defaulting to the bundled MAU_22 template."""
     if settings.get("template_kind") == "default":
         return default_template_path()
     path = Path(settings.get("template") or "")
-    if path.is_file():
-        # A copied old default is also migrated; an edited copy remains custom.
-        if hashlib.sha256(path.read_bytes()).hexdigest() == LEGACY_TEMPLATE_SHA256:
-            return default_template_path()
+    if path.is_file() and path.suffix.lower() == ".docx":
         return path
     return default_template_path()
 

@@ -405,7 +405,7 @@ class MainWindow(QMainWindow):
         layout=QVBoxLayout(dialog); text=QPlainTextEdit(); text.setReadOnly(True)
         values=json.loads(resource("config/legal_defaults.json").read_text(encoding="utf-8"))
         values.update({key:widget.text().strip() for key,widget in self.template_inputs.items()})
-        labels={"SU_DUNG_CHUNG_VO_CHONG":"Sử dụng chung vợ chồng","SU_DUNG_RIENG":"Sử dụng riêng","THOI_DIEM_SU_DUNG":"Thời điểm sử dụng",
+        labels={"SU_DUNG_CHUNG_VO_CHONG":"Sử dụng chung vợ chồng","SU_DUNG_RIENG":"Sử dụng riêng",
             "THOI_HAN_SU_DUNG":"Thời hạn sử dụng","NGUON_GOC_SU_DUNG_DAT":"Nguồn gốc sử dụng đất","THUA_LIEN_KE":"Thửa liền kề","TO_LIEN_KE":"Tờ liền kề",
             "CHU_SU_HUU_LIEN_KE":"Chủ sở hữu liền kề","NOI_DUNG_QUYEN_LIEN_KE":"Quyền đối với thửa liền kề","TAI_SAN_DANG_KY":"Tài sản đăng ký",
             "GIAY_TO_DA_NOP":"Giấy tờ đã nộp","XAC_NHAN_NGUON_GOC":"Xác nhận nguồn gốc","KET_LUAN_THUA_DAT":"Kết luận thửa đất",
