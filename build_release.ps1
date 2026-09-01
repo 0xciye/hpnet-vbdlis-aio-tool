@@ -45,6 +45,20 @@ try {
     }
     & (Join-Path $projectRoot 'tools\build_hpnet_launchers.ps1')
     if ($LASTEXITCODE -ne 0) { throw 'HPNet launcher build failed.' }
+    # Dọn sạch các thư mục runtime/ thừa trong từng tool (tàn dư kiến trúc cũ).
+    # Chỉ có 1 runtime dùng chung tại src\nodes_tools\runtime\; các bản khác không được đóng gói.
+    $staleRuntimePaths = @(
+        'src\nodes_tools\Downloader\HPNet PDF Downloader - VNEID APP\runtime',
+        'src\nodes_tools\Upload\HPNet Upload VB Du Thao - VNEID APP\runtime',
+        'src\nodes_tools\Duyet\HPNet Duyet VB Du Thao - VNEID APP\runtime'
+    )
+    foreach ($rel in $staleRuntimePaths) {
+        $stale = Join-Path $projectRoot $rel
+        if (Test-Path -LiteralPath $stale -PathType Container) {
+            Write-Host "REMOVING_STALE_RUNTIME: $stale"
+            Remove-Item -LiteralPath $stale -Recurse -Force
+        }
+    }
     & $python -X utf8 (Join-Path $projectRoot 'run_tests.py')
     if ($LASTEXITCODE -ne 0) { throw 'Python tests failed.' }
     New-Item -ItemType Directory -Path $releaseRoot, $buildRoot | Out-Null

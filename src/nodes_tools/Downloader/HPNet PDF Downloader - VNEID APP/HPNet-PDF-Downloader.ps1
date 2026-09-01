@@ -60,22 +60,15 @@ function Has-ConfigProperty($object, [string]$name) {
 
 function Find-HPNetRuntime {
     param([switch]$SkipBrowserCheck)
-    $portableRoot = @(
-        (Join-Path $toolRoot 'runtime'),
-        (Join-Path (Split-Path -Parent (Split-Path -Parent $toolRoot)) 'runtime')
-    ) | Where-Object {
-        (Test-Path -LiteralPath (Join-Path $_ 'node.exe')) -and
-        (Test-Path -LiteralPath (Join-Path $_ 'node_modules\playwright'))
-    } | Select-Object -First 1
-    if ($portableRoot) {
-        $portableNode = Join-Path $portableRoot 'node.exe'
-        $portableModules = Join-Path $portableRoot 'node_modules'
-        $nodeExe = $portableNode; $nodeModules = $portableModules; $runtimeMode = 'Portable đi kèm công cụ'
+    # Runtime dùng chung tại nodes_tools/runtime/ — duy nhất, không fallback vào runtime riêng từng tool.
+    $sharedRuntime = Join-Path (Split-Path -Parent (Split-Path -Parent $toolRoot)) 'runtime'
+    if ((Test-Path -LiteralPath (Join-Path $sharedRuntime 'node.exe')) -and
+        (Test-Path -LiteralPath (Join-Path $sharedRuntime 'node_modules\playwright'))) {
+        $nodeExe = Join-Path $sharedRuntime 'node.exe'
+        $nodeModules = Join-Path $sharedRuntime 'node_modules'
+        $runtimeMode = 'Portable dùng chung'
     } else {
-        $runtimeRoot = Join-Path $env:USERPROFILE '.cache\codex-runtimes\codex-primary-runtime\dependencies\node'
-        $nodeExe = Join-Path $runtimeRoot 'bin\node.exe'; $nodeModules = Join-Path $runtimeRoot 'node_modules'; $runtimeMode = 'Bộ chạy của Codex trên máy hiện tại'
-        if (-not (Test-Path -LiteralPath $nodeExe)) { throw 'Không tìm thấy bộ chạy. Hãy dùng gói PORTABLE.' }
-        if (-not (Test-Path -LiteralPath (Join-Path $nodeModules 'playwright'))) { throw 'Không tìm thấy Playwright. Hãy dùng gói PORTABLE.' }
+        throw 'Không tìm thấy runtime Node/Playwright dùng chung. Hãy dùng gói PORTABLE đúng phiên bản.'
     }
     $edgeExe = @('C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe','C:\Program Files\Microsoft\Edge\Application\msedge.exe') | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
     if (-not $edgeExe -and -not $SkipBrowserCheck) { throw 'Không tìm thấy Microsoft Edge.' }

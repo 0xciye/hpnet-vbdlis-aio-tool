@@ -5,11 +5,6 @@ $projectRoot = Split-Path -Parent $PSScriptRoot
 $releasePath = (Resolve-Path -LiteralPath $ReleaseFolder).Path
 $sourceRoot = Join-Path $releasePath '_internal\nodes_tools'
 $targetRoot = Join-Path $projectRoot 'src\nodes_tools'
-$tools = @(
-    @{ Folder='Downloader\HPNet PDF Downloader - VNEID APP'; Exe='HPNet PDF Downloader.exe' },
-    @{ Folder='Upload\HPNet Upload VB Du Thao - VNEID APP'; Exe='HPNet Upload VB Du Thao.exe' },
-    @{ Folder='Duyet\HPNet Duyet VB Du Thao - VNEID APP'; Exe='HPNet Duyet VB Du Thao.exe' }
-)
 function Assert-NoLinks([string]$candidate) {
     $cursor = [IO.Path]::GetFullPath($candidate)
     while ($cursor) {
@@ -20,12 +15,11 @@ function Assert-NoLinks([string]$candidate) {
     }
 }
 $copies = @()
+# Single shared runtime layout: nodes_tools/runtime/ only.
 $sharedOrigin = Join-Path $sourceRoot 'runtime'
 if (-not ((Test-Path -LiteralPath (Join-Path $sharedOrigin 'node.exe') -PathType Leaf) -and
           (Test-Path -LiteralPath (Join-Path $sharedOrigin 'node_modules\playwright\package.json') -PathType Leaf))) {
-    # Releases before the shared-runtime layout kept an identical runtime in
-    # every HPNet tool. Use Downloader as the verified migration source.
-    $sharedOrigin = Join-Path $sourceRoot 'Downloader\HPNet PDF Downloader - VNEID APP\runtime'
+    throw "Shared runtime not found in release: $sharedOrigin. Use a release built with the single-runtime layout."
 }
 $sharedDestination = Join-Path $targetRoot 'runtime'
 foreach ($required in @('node.exe', 'node_modules\playwright\package.json')) {
@@ -46,6 +40,12 @@ foreach ($file in @($runtimeItems | Where-Object { -not $_.PSIsContainer })) {
         $copies += [pscustomobject]@{ Source=$file.FullName; Target=$target; Hash=$hash }
     }
 }
+# Restore each tool's .exe launcher (no per-tool runtime needed).
+$tools = @(
+    @{ Folder='Downloader\HPNet PDF Downloader - VNEID APP'; Exe='HPNet PDF Downloader.exe' },
+    @{ Folder='Upload\HPNet Upload VB Du Thao - VNEID APP'; Exe='HPNet Upload VB Du Thao.exe' },
+    @{ Folder='Duyet\HPNet Duyet VB Du Thao - VNEID APP'; Exe='HPNet Duyet VB Du Thao.exe' }
+)
 foreach ($tool in $tools) {
     $origin = Join-Path $sourceRoot $tool.Folder
     $destination = Join-Path $targetRoot $tool.Folder
@@ -75,3 +75,4 @@ foreach ($copy in $copies) {
     if ((Get-FileHash -LiteralPath $copy.Target -Algorithm SHA256).Hash -ne $copy.Hash) { throw "Copy verification failed: $($copy.Target)" }
 }
 Write-Host "RUNTIME_READY: $($copies.Count) files restored; identical existing files kept. No source/config/session/log changes."
+
