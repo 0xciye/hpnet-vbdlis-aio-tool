@@ -1,6 +1,5 @@
 """Mẫu 22 input contract, confirmed by the user on 2026-09-01."""
 REQUIRED_COMMON = {
-    "THOI_HAN_SU_DUNG": "Thời hạn sử dụng",
     "NGUON_GOC_SU_DUNG_DAT": "Nguồn gốc sử dụng đất",
     "TAI_SAN_DANG_KY": "Tài sản đăng ký (nhập Không nếu không có)",
     "GIAY_TO_DA_NOP": "Giấy tờ đã nộp",
@@ -10,7 +9,7 @@ REQUIRED_COMMON = {
     "DON_VI_LUU": "Đơn vị lưu",
 }
 OPTIONAL_COMMON = {
-    "SU_DUNG_CHUNG_VO_CHONG": "Diện tích sử dụng chung vợ chồng",
+    "SU_DUNG_CHUNG": "Diện tích sử dụng chung",
     "SU_DUNG_RIENG": "Diện tích sử dụng riêng",
     "THUA_LIEN_KE": "Thửa liền kề",
     "TO_LIEN_KE": "Tờ bản đồ liền kề",

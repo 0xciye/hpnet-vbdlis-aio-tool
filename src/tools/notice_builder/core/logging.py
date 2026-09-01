@@ -30,8 +30,11 @@ class RunLog:
         self.entries = []
         self.inspection = inspection
         self.handle = self.txt.open("x", encoding="utf-8-sig")
+        selected = (f"Phạm vi xử lý: dòng {inspection.selected_start_row}–{inspection.selected_end_row} (bao gồm hai đầu)\n"
+                    if inspection.selected_start_row is not None else "")
         self.handle.write(f"NHẬT KÝ TẠO THÔNG BÁO ĐẤT ĐAI\nNguồn: {inspection.source}\nTrang tính: {inspection.sheet_name}\n"
                           f"Dòng tiêu đề: {inspection.header_row}; số tầng: {inspection.header_depth}\n"
+                          f"{selected}"
                           f"Dòng thửa: {len(inspection.records)}; hợp lệ: {len(inspection.valid_records)}; "
                           f"dòng tổng bỏ qua: {len(inspection.summary_rows)}; dòng trống: {len(inspection.blank_rows)}\n"
                           "Tìm ô lỗi: mở đúng trang tính Excel, nhấn Ctrl+G rồi nhập địa chỉ ô ghi trong chi tiết.\n"
@@ -67,7 +70,10 @@ class RunLog:
         ws.sheet_view.showGridLines = False
         meta = wb.create_sheet("Đối chiếu nguồn")
         meta.append(["Mục", "Giá trị"])
+        range_text = (f"{self.inspection.selected_start_row}–{self.inspection.selected_end_row}"
+                      if self.inspection.selected_start_row is not None else "Toàn bộ dữ liệu")
         for label, value in [("File",str(self.inspection.source)),("Trang tính",self.inspection.sheet_name),
+                             ("Phạm vi dòng xử lý",range_text),
                              ("SHA-256",self.inspection.source_hash),
                              ("Dòng tổng bỏ qua",", ".join(map(str,self.inspection.summary_rows))),
                              ("Dòng trống bỏ qua",", ".join(map(str,self.inspection.blank_rows))),

@@ -1,4 +1,5 @@
-from dataclasses import replace
+from dataclasses import asdict, replace
+from datetime import date
 from io import BytesIO
 from pathlib import Path
 from zipfile import ZipFile
@@ -77,6 +78,39 @@ def test_peek_commit_and_continuation():
     finite=NumberPool("list",text="1"); finite.commit(1); assert finite.peek() is None
 
 
+def test_number_date_groups_override_default_date(config):
+    cfg=replace(config,number_mode="list",number_list="300-400",number_date_rules=[
+        {"numbers":"300-350","date":"2026-08-25"},
+        {"numbers":"351-400","date":"2026-08-28"},
+    ])
+    pool=NumberPool.from_config(cfg); default=date(2026,8,31)
+    assert pool.date_for(300,default)==pool.date_for(350,default)==date(2026,8,25)
+    assert pool.date_for(351,default)==pool.date_for(400,default)==date(2026,8,28)
+    assert pool.date_for(401,default)==default
+
+
+@pytest.mark.parametrize("rules,message",[
+    ([{"numbers":"300-350","date":"2026-08-25"},{"numbers":"350-360","date":"2026-08-28"}],"nhiều nhóm ngày"),
+    ([{"numbers":"299-300","date":"2026-08-25"}],"không nằm trong Danh sách"),
+    ([{"numbers":"300-350","date":"25/08/2026"}],"không hợp lệ"),
+    ([{"numbers":"","date":"2026-08-25"}],"nhập đủ"),
+])
+def test_invalid_number_date_groups(config,rules,message):
+    cfg=replace(config,number_mode="list",number_list="300-400",number_date_rules=rules)
+    with pytest.raises(UserError,match=message): NumberPool.from_config(cfg)
+
+
+def test_render_uses_date_for_each_notice_number(tmp_path,service,config):
+    record=workbook(tmp_path/"date-rules.xlsx",[("HỘ A",1,1,100,None)]).records[0]
+    cfg=replace(config,number_mode="list",number_list="300,351",number_date_rules=[
+        {"numbers":"300","date":"2026-08-25"},{"numbers":"351","date":"2026-08-28"}])
+    pool=NumberPool.from_config(cfg)
+    first=all_text(service.template.render(service.values(record,cfg,300,pool.date_for(300,date(2026,8,31)))))
+    second=all_text(service.template.render(service.values(record,cfg,351,pool.date_for(351,date(2026,8,31)))))
+    assert "ngày 25 tháng 08 năm 2026" in first
+    assert "ngày 28 tháng 08 năm 2026" in second
+
+
 @pytest.mark.parametrize("value,expected",[(72,"72"),(72.0,"72"),(" 072.00 ","72")])
 def test_identifier(value,expected): assert identifier(value)==expected
 
@@ -124,6 +158,39 @@ def test_changed_mapping_and_two_tier(tmp_path):
     assert data.records[1].owner=="HỘ KHÁC" and data.records[1].location==""
 
 
+def test_optional_excel_row_range_and_blank_backward_compatibility(tmp_path):
+    path=tmp_path/"range.xlsx"; wb=Workbook(); ws=wb.active; ws.title="Nguồn"
+    ws.append(["Tên hộ","Tờ BĐ mới","Thửa BĐ mới","Diện tích bản đồ","Giấy tờ nhân thân"])
+    ws.append(["HỘ CŨ",1,1,100,"GIẤY CŨ"]); ws.append([None,1,2,110,None])
+    ws.append(["HỘ MỚI",2,3,120,"GIẤY MỚI"]); ws.append([None,2,4,130,None])
+    wb.save(path); wb.close()
+    mapping=ColumnMapping("A","B","C","D","","E")
+    full=inspect_workbook(path,"Nguồn",1,1,mapping,require_identity=True)
+    blank=inspect_workbook(path,"Nguồn",1,1,mapping,require_identity=True,start_row="",end_row="")
+    selected=inspect_workbook(path,"Nguồn",1,1,mapping,require_identity=True,start_row=4,end_row=5)
+    assert [asdict(record) for record in blank.records]==[asdict(record) for record in full.records]
+    assert blank.signature()==full.signature() and blank.selected_start_row is None
+    assert [record.source_row for record in selected.records]==[4,5]
+    assert [record.owner for record in selected.records]==["HỘ MỚI","HỘ MỚI"]
+    assert all(record.identity=="GIẤY MỚI" for record in selected.records)
+    assert (selected.selected_start_row,selected.selected_end_row)==(4,5)
+
+
+@pytest.mark.parametrize("start,end,message",[
+    (5,4,"nhỏ hơn hoặc bằng"),
+    (1,2,"sau phần tiêu đề"),
+    (2,None,"nhập đủ cả dòng bắt đầu"),
+    (2,99,"vượt quá dòng cuối có dữ liệu"),
+])
+def test_invalid_excel_row_range(tmp_path,start,end,message):
+    path=tmp_path/"bad-range.xlsx"; wb=Workbook(); ws=wb.active; ws.title="Nguồn"
+    ws.append(["Tên hộ","Tờ","Thửa","Diện tích","Giấy tờ"]); ws.append(["HỘ A",1,1,100,"GIẤY A"])
+    wb.save(path); wb.close()
+    with pytest.raises(UserError,match=message):
+        inspect_workbook(path,"Nguồn",1,1,ColumnMapping("A","B","C","D","","E"),
+                         require_identity=True,start_row=start,end_row=end)
+
+
 @pytest.mark.parametrize("same_owner,count",[(False,2),(False,3),(True,2)])
 def test_all_duplicate_members_blocked(tmp_path,same_owner,count):
     rows=[("HỘ A",72,175,357,None),("HỘ X",72,176,20,None)]
@@ -145,7 +212,7 @@ def test_render_values_layout_parts_and_empty_location(tmp_path,service,config):
     payload=service.template.render(service.values(data.records[0],config,100)); text=all_text(payload)
     assert "{{" not in text and "HỘ A & <B>" in text and "000000000001" in text
     assert "xứ đồng ," not in text and "xứ đồng" not in text.casefold()
-    assert text.count("357.25")==3 and "LUC" in text and "2074" in text
+    assert text.count("357.25")==2 and "LUC" in text and "chưa xác định" in text and "2074" not in text
     with ZipFile(BytesIO(service.template.raw)) as original,ZipFile(BytesIO(payload)) as result:
         assert original.namelist()==result.namelist()
         for name in original.namelist():
@@ -343,7 +410,10 @@ def test_ui_standalone_and_config_restore(app,tmp_path,monkeypatch,config):
     window.source.setText(str(data.source)); window.output.setText(str(tmp_path/"out"))
     info=workbook_info(data.source); window.source_ready(info)
     window.mapping["area"].setCurrentIndex(window.mapping["area"].findData("M"))
-    window.template_inputs["THOI_HAN_SU_DUNG"].setText("Không xác định")
+    window.row_start.setText("7"); window.row_end.setText("7")
+    window.number_mode.setCurrentIndex(window.number_mode.findData("list")); window.number_list.setText("300-400")
+    window.add_number_date_rule("300-350","2026-08-25"); window.add_number_date_rule("351-400","2026-08-28")
+    window.template_inputs["SU_DUNG_CHUNG"].setText("150")
     window.template_inputs["NGUOI_KY"].setText("NGƯỜI KÝ THỬ")
     window.optional_empty.setCurrentIndex(window.optional_empty.findData("dots"))
     window.save_settings(); window.close()
@@ -352,11 +422,14 @@ def test_ui_standalone_and_config_restore(app,tmp_path,monkeypatch,config):
     loop=QEventLoop(); restored.job.finished.connect(loop.quit); QTimer.singleShot(15000,loop.quit); loop.exec(); app.processEvents()
     assert not errors and restored.job is None
     assert restored.header.value()==6 and restored.mapping["area"].currentData()=="M"
+    assert restored.row_start.text()=="7" and restored.row_end.text()=="7"
+    assert restored.number_mode.currentData()=="list" and restored.number_list.text()=="300-400"
+    assert restored.number_date_rules()==[{"numbers":"300-350","date":"2026-08-25"},{"numbers":"351-400","date":"2026-08-28"}]
     restored.navigate(1)
     loop=QEventLoop(); restored.job.finished.connect(loop.quit); QTimer.singleShot(15000,loop.quit); loop.exec(); app.processEvents()
     assert not errors and restored.job is None and restored.steps.currentRow()==2
     assert restored.mapping["area"].currentData()=="M"
-    assert restored.template_inputs["THOI_HAN_SU_DUNG"].text()=="Không xác định"
+    assert restored.template_inputs["SU_DUNG_CHUNG"].text()=="150"
     assert restored.template_inputs["NGUOI_KY"].text()=="NGƯỜI KÝ THỬ"
     assert restored.optional_empty.currentData()=="dots"
     assert restored.inputs["commune_code"].text()=="12345" and not restored.confirm_button.isEnabled()
@@ -515,14 +588,14 @@ def test_config_requires_explicit_common_inputs(config,token):
 
 
 @pytest.mark.parametrize("mode,expected",[("blank",""),("dots","....")])
-def test_optional_slots_and_editable_time_limit(tmp_path,service,config,mode,expected):
+def test_optional_slots_and_editable_common_fields(tmp_path,service,config,mode,expected):
     row=workbook(tmp_path/"src.xlsx",[("HỘ A",1,1,100,None)]).records[0]
-    fields={**config.template_fields,"THOI_HAN_SU_DUNG":"Không xác định","NGUOI_KY":"NGƯỜI KÝ THỬ"}
+    fields={**config.template_fields,"NGUOI_KY":"NGƯỜI KÝ THỬ"}
     cfg=replace(config,template_fields=fields,optional_empty=mode)
     values=service.values(row,cfg,100)
     assert all(values[k]==expected for k in OPTIONAL_COMMON)
     text=all_text(service.template.render(values))
-    assert "Không xác định" in text and "2074" not in text and "NGƯỜI KÝ THỬ" in text and "{{" not in text
+    assert "NGƯỜI KÝ THỬ" in text and "{{" not in text
 
 
 def test_ui_mapping_preserved_on_next_and_reset_for_other_workbook(app,tmp_path,monkeypatch):
@@ -559,6 +632,11 @@ def test_canonical_template_preserves_geometry_and_only_authorized_spacing():
     evidence=json.loads((reference.parent/"template-evidence.json").read_text(encoding="utf-8"))
     assert file_hash(reference)==evidence["canonical_sha256"]==file_hash(default_template_path())
     assert reference.read_bytes()==default_template_path().read_bytes()
+    tokens={slot["token"] for slot in evidence["slots"]}
+    assert len(tokens)==28 and WordTemplate(reference).tokens==tokens
+    assert set(REQUIRED_TOKENS)<=tokens and set(OPTIONAL_COMMON)<=tokens
+    assert "SU_DUNG_CHUNG" in tokens
+    assert {"SU_DUNG_CHUNG_VO_CHONG","THOI_DIEM_SU_DUNG","THOI_HAN_SU_DUNG"}.isdisjoint(tokens)
     with ZipFile(reference) as source:
         assert source.namelist()==[item["part"] for item in evidence["inventory"]]
         for item in evidence["inventory"]:

@@ -54,6 +54,7 @@ class BatchConfig:
     start_number: int = 1
     number_list: str = ""
     continue_number: int | None = None
+    number_date_rules: list[dict[str, str]] = field(default_factory=list)
     template_fields: dict[str, str] = field(default_factory=dict)
     optional_empty: str = "blank"
 
@@ -116,6 +117,8 @@ class Inspection:
     header_row: int
     header_depth: int
     mapping: ColumnMapping
+    selected_start_row: int | None = None
+    selected_end_row: int | None = None
 
     @property
     def valid_records(self):
@@ -124,6 +127,8 @@ class Inspection:
     def signature(self):
         payload = {"source_hash": self.source_hash, "sheet": self.sheet_name, "header": self.header_row,
                    "depth": self.header_depth, "mapping": asdict(self.mapping), "records": [asdict(r) for r in self.records]}
+        if self.selected_start_row is not None:
+            payload["selected_rows"] = [self.selected_start_row, self.selected_end_row]
         return hashlib.sha256(json.dumps(payload, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
 
 

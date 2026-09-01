@@ -5,12 +5,12 @@ from threading import Event
 import json
 import os
 import traceback
-from PySide6.QtCore import Qt, QThread, Signal, QUrl
-from PySide6.QtGui import QColor, QDesktopServices, QIcon, QPalette, QPixmap
+from PySide6.QtCore import QDate, Qt, QThread, Signal, QUrl
+from PySide6.QtGui import QColor, QDesktopServices, QIcon, QIntValidator, QPalette, QPixmap
 from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QListWidget, QStackedWidget, QLineEdit, QComboBox, QSpinBox, QFormLayout, QFileDialog, QMessageBox,
     QScrollArea, QTableWidget, QTableWidgetItem, QHeaderView, QProgressBar, QCheckBox, QPlainTextEdit,
-    QAbstractItemView, QDialog, QDialogButtonBox)
+    QAbstractItemView, QDateEdit, QDialog, QDialogButtonBox)
 from .paths import resource, data_dir, default_template_path, saved_template_path
 from .core import BatchConfig, ColumnMapping, NoticeService, UserError, inspect_workbook, workbook_info
 from .core.fields import REQUIRED_COMMON, OPTIONAL_COMMON
@@ -116,14 +116,22 @@ class MainWindow(QMainWindow):
         box.addWidget(self.button("Mở ảnh mẫu để xem rõ",lambda:self.open_path(preview_path))); box.addStretch()
 
     def make_sheet_page(self):
-        box=self.page("Chọn trang tính và dòng tiêu đề", "Tiêu đề gộp hai tầng: chọn dòng đầu và 2 tầng. Ví dụ dòng 5–6 → dữ liệu bắt đầu dòng 7. Bạn có thể thay đổi theo từng file.")
+        box=self.page("Chọn trang tính, tiêu đề và phạm vi xử lý", "Tiêu đề gộp hai tầng: chọn dòng đầu và 2 tầng. Có thể nhập một khoảng dòng Excel để chỉ xử lý dữ liệu mới; để trống cả hai ô sẽ xử lý toàn bộ như trước.")
         form=QFormLayout(); box.addLayout(form)
         self.sheet=QComboBox(); self.header=QSpinBox(); self.header.setRange(1,1048576)
         self.depth=QComboBox(); self.depth.addItem("1 tầng",1); self.depth.addItem("2 tầng",2)
         form.addRow("Trang tính",self.sheet); form.addRow("Dòng đầu tiêu đề",self.header); form.addRow("Số tầng tiêu đề",self.depth)
+        self.row_start=QLineEdit(); self.row_end=QLineEdit()
+        self.row_start.setPlaceholderText("Để trống nếu xử lý toàn bộ")
+        self.row_end.setPlaceholderText("Để trống nếu xử lý toàn bộ")
+        self.row_start.setValidator(QIntValidator(1,1048576,self.row_start)); self.row_end.setValidator(QIntValidator(1,1048576,self.row_end))
+        form.addRow("Dòng bắt đầu xử lý",self.row_start); form.addRow("Dòng kết thúc xử lý",self.row_end)
+        range_note=QLabel("Số dòng tính theo dòng thực tế hiển thị trong Excel và bao gồm cả hai đầu. Phải nhập đủ cả hai ô; khoảng dòng không được chứa phần tiêu đề hoặc vượt quá dòng cuối có dữ liệu.")
+        range_note.setObjectName("muted"); range_note.setWordWrap(True); box.addWidget(range_note)
         self.sheet_hint=QLabel(); self.sheet_hint.setWordWrap(True); box.addWidget(self.sheet_hint)
         self.sheet.currentTextChanged.connect(self.sheet_changed)
         self.header.valueChanged.connect(self.invalidate); self.depth.currentIndexChanged.connect(self.invalidate)
+        self.row_start.textChanged.connect(self.invalidate); self.row_end.textChanged.connect(self.invalidate)
         box.addWidget(self.button("Cập nhật danh sách cột →",self.update_columns,True)); box.addStretch()
 
     def make_mapping_page(self):
@@ -146,7 +154,7 @@ class MainWindow(QMainWindow):
         for key,label,minimum,maximum,default in (("day","Ngày",1,31,today.day),("month","Tháng",1,12,today.month),("year","Năm",1900,2200,today.year)):
             spin=QSpinBox(); spin.setRange(minimum,maximum); spin.setValue(default); spin.valueChanged.connect(self.invalidate); self.inputs[key]=spin
             dates.addWidget(QLabel(label)); dates.addWidget(spin)
-        form.addRow("Ngày thông báo",date_line)
+        form.addRow("Ngày thông báo mặc định",date_line)
         self.number_mode=QComboBox(); self.number_mode.addItem("Số bắt đầu","start"); self.number_mode.addItem("Danh sách số","list")
         self.start_number=QSpinBox(); self.start_number.setRange(1,2147483647)
         self.number_list=QLineEdit(); self.number_list.setPlaceholderText("Ví dụ: 1,3,5-13")
@@ -154,6 +162,13 @@ class MainWindow(QMainWindow):
         self.continue_number=QSpinBox(); self.continue_number.setRange(1,2147483647); self.continue_number.setValue(15)
         form.addRow("Cách cấp số",self.number_mode); form.addRow("Số bắt đầu",self.start_number); form.addRow("Danh sách số",self.number_list)
         form.addRow(self.continue_check); form.addRow("Số tiếp nối",self.continue_number)
+        self.number_date_rows=[]
+        self.number_date_box=QWidget(); date_box=QVBoxLayout(self.number_date_box); date_box.setContentsMargins(0,0,0,0); date_box.setSpacing(8)
+        date_note=QLabel("Tùy chọn cho chế độ Danh sách số: mỗi nhóm ghi các số hoặc khoảng số và ngày áp dụng. Số không thuộc nhóm nào dùng ngày mặc định ở trên.")
+        date_note.setObjectName("muted"); date_note.setWordWrap(True); date_box.addWidget(date_note)
+        self.number_date_rows_layout=QVBoxLayout(); self.number_date_rows_layout.setContentsMargins(0,0,0,0); self.number_date_rows_layout.setSpacing(6); date_box.addLayout(self.number_date_rows_layout)
+        self.add_number_date_button=self.button("+ Thêm nhóm số và ngày",lambda:self.add_number_date_rule()); date_box.addWidget(self.add_number_date_button)
+        form.addRow("Ngày theo nhóm số",self.number_date_box)
         self.number_mode.currentIndexChanged.connect(self.numbering_changed); self.continue_check.toggled.connect(self.numbering_changed)
         self.start_number.valueChanged.connect(self.invalidate); self.number_list.textChanged.connect(self.invalidate); self.continue_number.valueChanged.connect(self.invalidate)
         self.output=QLineEdit(); self.output.setPlaceholderText("Chọn một thư mục đầu ra riêng…"); self.output.textChanged.connect(self.invalidate)
@@ -183,7 +198,7 @@ class MainWindow(QMainWindow):
         self.table.setColumnWidth(1,185); self.table.setColumnWidth(6,155); self.table.cellDoubleClicked.connect(self.show_record_detail); box.addWidget(self.table,1)
 
     def make_preview_page(self):
-        box=self.page("Xem một thông báo trước khi tạo", "Mở bản Word và kiểm tra nội dung. Số trên bản xem trước là dự kiến; nếu file trước đó lỗi, đợt tạo sẽ dùng lại số chưa sử dụng.")
+        box=self.page("Xem một thông báo trước khi tạo", "Mở bản Word và kiểm tra cả số lẫn ngày thông báo. Ngày được lấy theo nhóm của chính số dự kiến; nếu file trước đó lỗi, đợt tạo sẽ dùng lại số và ngày gắn với số đó.")
         self.preview_choice=QComboBox(); box.addWidget(self.preview_choice)
         box.addWidget(self.button("Tạo file xem trước",self.make_preview,True)); self.preview_label=QLabel("Chưa có bản xem trước."); self.preview_label.setWordWrap(True); box.addWidget(self.preview_label)
         self.open_preview_button=self.button("Mở bản Word xem trước",self.open_preview); self.open_preview_button.setEnabled(False); box.addWidget(self.open_preview_button)
@@ -211,7 +226,28 @@ class MainWindow(QMainWindow):
     def numbering_changed(self, *_):
         listing=self.number_mode.currentData()=="list"
         self.start_number.setEnabled(not listing); self.number_list.setEnabled(listing); self.continue_check.setEnabled(listing)
-        self.continue_number.setEnabled(listing and self.continue_check.isChecked()); self.invalidate()
+        self.continue_number.setEnabled(listing and self.continue_check.isChecked()); self.number_date_box.setEnabled(listing); self.invalidate()
+
+    def add_number_date_rule(self, numbers="", iso_date=""):
+        row=QWidget(); layout=QHBoxLayout(row); layout.setContentsMargins(0,0,0,0); layout.setSpacing(8)
+        specification=QLineEdit(str(numbers)); specification.setPlaceholderText("Ví dụ: 300-350 hoặc 300,305-310")
+        specification.setAccessibleName("Số thông báo hoặc khoảng số của nhóm ngày")
+        rule_date=QDateEdit(); rule_date.setCalendarPopup(True); rule_date.setDisplayFormat("dd/MM/yyyy")
+        parsed=QDate.fromString(str(iso_date),Qt.ISODate) if iso_date else QDate(self.inputs["year"].value(),self.inputs["month"].value(),self.inputs["day"].value())
+        rule_date.setDate(parsed if parsed.isValid() else QDate.currentDate()); rule_date.setAccessibleName("Ngày áp dụng cho nhóm số thông báo")
+        remove=self.button("Xóa",lambda checked=False,w=row:self.remove_number_date_rule(w))
+        layout.addWidget(specification,1); layout.addWidget(rule_date); layout.addWidget(remove)
+        specification.textChanged.connect(self.invalidate); rule_date.dateChanged.connect(self.invalidate)
+        self.number_date_rows_layout.addWidget(row); self.number_date_rows.append((row,specification,rule_date)); self.invalidate()
+
+    def remove_number_date_rule(self, row):
+        for item in list(self.number_date_rows):
+            if item[0] is row:
+                self.number_date_rows.remove(item); self.number_date_rows_layout.removeWidget(row); row.deleteLater(); self.invalidate(); break
+
+    def number_date_rules(self):
+        return [{"numbers":field.text().strip(),"date":date_field.date().toString(Qt.ISODate)}
+                for _,field,date_field in self.number_date_rows]
 
     def browse_file(self, field, filter_text):
         path,_=QFileDialog.getOpenFileName(self,"Chọn file",field.text(),filter_text)
@@ -267,6 +303,7 @@ class MainWindow(QMainWindow):
     def config(self):
         fields={key:(widget.value() if isinstance(widget,QSpinBox) else widget.text().strip()) for key,widget in self.inputs.items()}
         config=BatchConfig(**fields,number_mode=self.number_mode.currentData(),start_number=self.start_number.value(),number_list=self.number_list.text(),
+                           number_date_rules=self.number_date_rules(),
                            template_fields={key:widget.text().strip() for key,widget in self.template_inputs.items()},optional_empty=self.optional_empty.currentData(),
                            continue_number=self.continue_number.value() if self.continue_check.isChecked() and self.number_mode.currentData()=="list" else None)
         config.validate()
@@ -280,13 +317,16 @@ class MainWindow(QMainWindow):
             self.config()
             mapping=ColumnMapping(**{key:combo.currentData() or "" for key,combo in self.mapping.items()})
             source,sheet,header,depth=self.source.text(),self.sheet.currentText(),self.header.value(),self.depth.currentData()
-            self.run_job(lambda job:inspect_workbook(source,sheet,header,depth,mapping,require_identity=True),self.inspection_ready)
+            start,end=self.row_start.text().strip(),self.row_end.text().strip()
+            self.run_job(lambda job:inspect_workbook(source,sheet,header,depth,mapping,require_identity=True,
+                                                      start_row=start,end_row=end),self.inspection_ready)
         except UserError as exc: self.error(str(exc))
 
     def inspection_ready(self, result):
         self.inspection=result; self.preview_result=None; self.confirm_button.setEnabled(False); self.open_preview_button.setEnabled(False)
         duplicates=sum(bool(r.duplicate_rows) for r in result.records); invalid=sum(bool(r.errors) and not r.duplicate_rows for r in result.records)
-        self.summary.setText(f"Tổng dòng Excel: {result.total_rows} | Dòng thửa: {len(result.records)} | Có thể tạo: {len(result.valid_records)} | Trùng: {duplicates} | Thiếu/sai dữ liệu: {invalid}\n"
+        selected=(f" | Phạm vi: dòng {result.selected_start_row}–{result.selected_end_row}" if result.selected_start_row is not None else " | Phạm vi: toàn bộ dữ liệu")
+        self.summary.setText(f"Tổng dòng Excel: {result.total_rows}{selected} | Dòng thửa: {len(result.records)} | Có thể tạo: {len(result.valid_records)} | Trùng: {duplicates} | Thiếu/sai dữ liệu: {invalid}\n"
                              f"Bỏ qua: {len(result.summary_rows)} dòng tổng, {len(result.blank_rows)} dòng trống, {len(result.name_only_rows)} dòng không có thửa. Nhấp đúp dòng để xem chi tiết.")
         self.table.setRowCount(len(result.records)); self.preview_choice.clear()
         for index,r in enumerate(result.records):
@@ -405,10 +445,10 @@ class MainWindow(QMainWindow):
         layout=QVBoxLayout(dialog); text=QPlainTextEdit(); text.setReadOnly(True)
         values=json.loads(resource("config/legal_defaults.json").read_text(encoding="utf-8"))
         values.update({key:widget.text().strip() for key,widget in self.template_inputs.items()})
-        labels={"SU_DUNG_CHUNG_VO_CHONG":"Sử dụng chung vợ chồng","SU_DUNG_RIENG":"Sử dụng riêng",
-            "THOI_HAN_SU_DUNG":"Thời hạn sử dụng","NGUON_GOC_SU_DUNG_DAT":"Nguồn gốc sử dụng đất","THUA_LIEN_KE":"Thửa liền kề","TO_LIEN_KE":"Tờ liền kề",
+        labels={"SU_DUNG_CHUNG":"Sử dụng chung","SU_DUNG_RIENG":"Sử dụng riêng",
+            "NGUON_GOC_SU_DUNG_DAT":"Nguồn gốc sử dụng đất","THUA_LIEN_KE":"Thửa liền kề","TO_LIEN_KE":"Tờ liền kề",
             "CHU_SU_HUU_LIEN_KE":"Chủ sở hữu liền kề","NOI_DUNG_QUYEN_LIEN_KE":"Quyền đối với thửa liền kề","TAI_SAN_DANG_KY":"Tài sản đăng ký",
-            "GIAY_TO_DA_NOP":"Giấy tờ đã nộp","XAC_NHAN_NGUON_GOC":"Xác nhận nguồn gốc","KET_LUAN_THUA_DAT":"Kết luận thửa đất",
+            "GIAY_TO_DA_NOP":"Giấy tờ đã nộp",
             "CHI_NHANH_VP_DKDD":"Chi nhánh Văn phòng đăng ký đất đai","CO_QUAN_THUE":"Cơ quan thuế","DON_VI_LUU":"Đơn vị lưu","NGUOI_KY":"Người ký"}
         text.setPlainText("\n\n".join(f"{labels.get(key,'Nội dung cố định')}:\n{value or '(Để trống theo mẫu)'}" for key,value in values.items())); layout.addWidget(text)
         note=QLabel("Các ô nhập ở bước 4 được điền theo cấu hình hiện tại. Căn cứ và kết luận viết sẵn trong mẫu Word được giữ nguyên; kiểm tra lại bản xem trước trước khi tạo."); note.setWordWrap(True); layout.addWidget(note)
@@ -420,6 +460,7 @@ class MainWindow(QMainWindow):
             data={"config":asdict(config),"source":self.source.text(),"template":self.template.text(),"output":self.output.text(),
                   "template_kind":"default" if Path(self.template.text()).resolve()==default_template_path().resolve() else "custom",
                   "sheet":self.sheet.currentText(),"header":self.header.value(),"depth":self.depth.currentData(),
+                  "row_start":self.row_start.text().strip(),"row_end":self.row_end.text().strip(),
                   "mapping":{key:combo.currentData() for key,combo in self.mapping.items()}}
             temp=self.settings_path.with_suffix(".tmp"); temp.write_text(json.dumps(data,ensure_ascii=False,indent=2),encoding="utf-8"); os.replace(temp,self.settings_path)
             self.saved_source_settings=data
@@ -435,10 +476,13 @@ class MainWindow(QMainWindow):
                     if isinstance(widget,QSpinBox): widget.setValue(int(config[key]))
                     else: widget.setText(str(config[key]))
             self.source.setText(data.get("source","")); self.output.setText(data.get("output",""))
+            self.row_start.setText(str(data.get("row_start","") or "")); self.row_end.setText(str(data.get("row_end","") or ""))
             self.template.setText(str(saved_template_path(data)))
             self.number_mode.setCurrentIndex(max(0,self.number_mode.findData(config.get("number_mode","start"))))
             self.start_number.setValue(int(config.get("start_number",1))); self.number_list.setText(config.get("number_list",""))
             self.continue_check.setChecked(config.get("continue_number") is not None); self.continue_number.setValue(config.get("continue_number") or 15)
+            for rule in config.get("number_date_rules",[]) or []:
+                if isinstance(rule,dict): self.add_number_date_rule(rule.get("numbers",""),rule.get("date",""))
             for key,value in config.get("template_fields",{}).items():
                 if key in self.template_inputs: self.template_inputs[key].setText(str(value))
             self.optional_empty.setCurrentIndex(max(0,self.optional_empty.findData(config.get("optional_empty","blank"))))

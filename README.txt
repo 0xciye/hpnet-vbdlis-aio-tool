@@ -9,3 +9,5 @@ TÀI LIỆU HƯỚNG DẪN CÀI ĐẶT VÀ SỬ DỤNG - BỘ CÔNG CỤ HPNET &
 7. Build bản sửa bằng build_release.ps1. Sau khi bản mới kiểm tra đạt, script chuyển ZIP cũ và các thư mục build/release trung gian vào Thùng rác.
 8. Công cụ Tạo thông báo có ảnh hai trang của mẫu Word chứa placeholder ngay ở bước Chọn file. Bấm “Mở ảnh mẫu để xem rõ” trước khi nhập các trường ở bước Thông tin thông báo.
 9. Khung nhật ký của ba công cụ HPNet và các file TXT/CSV sử dụng UTF-8 để hiển thị đúng tiếng Việt.
+10. Ở bước “Trang tính, tiêu đề và phạm vi xử lý” của công cụ Tạo thông báo, có thể nhập đủ dòng bắt đầu/dòng kết thúc để chỉ xử lý một phần Excel. Để trống cả hai ô sẽ xử lý toàn bộ như trước.
+11. Khi chọn “Danh sách số”, có thể bấm “+ Thêm nhóm số và ngày” để gán ngày riêng cho một số hoặc khoảng số, ví dụ 300-350 → 25/08/2026 và 351-400 → 28/08/2026. Số không có nhóm riêng dùng ngày thông báo mặc định.

@@ -10,10 +10,13 @@ Mỗi công cụ giữ cửa sổ nghiệp vụ riêng. Mở lại một công c
 2. TẠO THÔNG BÁO ĐẤT ĐAI (MỚI)
 Chọn Excel → Trang tính/tiêu đề → Đối chiếu cột → Thông tin thông báo → Kiểm tra → Xem trước → Xác nhận tạo → Nhật ký.
 File Cẩm Đông: tiêu đề 5–6, dữ liệu từ dòng 7; B tên hộ, D giấy tờ nhân thân, G tờ mới, H thửa mới, K diện tích bản đồ, L xứ đồng.
+Nếu chỉ xử lý dữ liệu mới, nhập đủ dòng bắt đầu và dòng kết thúc ở bước 2. Khoảng dòng bao gồm cả hai đầu và phải nằm sau tiêu đề, không vượt quá dòng cuối có dữ liệu. Để trống cả hai ô để xử lý toàn bộ file như trước.
 Không tự lấy diện tích M thay K; không dùng tờ/thửa cũ I/J. Quy tắc mới yêu cầu giấy tờ nhân thân; chọn cột tương ứng ở bước 3.
 Nhập mã xã, thôn/địa chỉ, xã/địa danh, ngày thông báo, số bắt đầu hoặc danh sách số. Số 1 trên bản kiểm tra chỉ là ví dụ.
-Bước 4: kéo xuống nhập các ô *: thời điểm/thời hạn sử dụng, nguồn gốc, tài sản đăng ký, giấy tờ đã nộp, người ký, chi nhánh VPĐKĐĐ, cơ quan thuế, đơn vị lưu. Nội dung điền sẵn có thể sửa; không được chỉ nhập dấu chấm vào ô bắt buộc.
-Muốn đổi thời hạn: nhập “Không xác định” ở ô Thời hạn sử dụng, lưu cấu hình và xem trước lại. Không cần sửa code.
+Khi dùng Danh sách số và có nhiều ngày thông báo, giữ ngày phổ biến tại “Ngày thông báo mặc định”, sau đó bấm “+ Thêm nhóm số và ngày”. Mỗi dòng nhập số/khoảng số và ngày áp dụng; ví dụ 300-350 → 25/08/2026, 351-400 → 28/08/2026. Có thể thêm hoặc xóa nhóm; số không thuộc nhóm dùng ngày mặc định.
+Nhóm ngày không được chứa số ngoài Danh sách số và không được chồng lặp. Ngày gắn với số thông báo, nên file lỗi không làm mất số hoặc làm lệch ngày của các số còn lại.
+Bước 4: kéo xuống nhập các ô *: nguồn gốc sử dụng đất, tài sản đăng ký, giấy tờ đã nộp, người ký, chi nhánh VPĐKĐĐ, cơ quan thuế và đơn vị lưu. Nội dung điền sẵn có thể sửa; không được chỉ nhập dấu chấm vào ô bắt buộc.
+Mẫu mới đã ghi cố định thời hạn “chưa xác định” và dùng ô “Sử dụng chung”; phần mềm không còn yêu cầu nhập thời hạn hoặc ô “Sử dụng chung vợ chồng” của mẫu cũ.
 Các ô không bắt buộc được bỏ trống; chọn cách hiển thị “Để trống” hoặc “Điền ....”.
 Tên lỗi công thức/#REF! không được thay bằng tên hộ trước. Báo cáo nêu ô cần sửa. Dòng “Tổng DT:” cũng được bỏ qua.
 Thửa trùng bị bỏ toàn bộ nhóm. Thiếu dữ liệu/lỗi ghi/file đã có không dùng số; số được giữ cho thửa hợp lệ tiếp theo.

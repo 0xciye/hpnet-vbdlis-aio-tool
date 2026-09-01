@@ -11,6 +11,9 @@ HƯỚNG DẪN KHỞI CHẠY HỆ THỐNG
 - Ở bước “Chọn file”, chọn Excel và mẫu Word. Phần dưới trang có ảnh tham khảo hai trang chứa placeholder; bấm “Mở ảnh mẫu để xem rõ” để biết dữ liệu nào lấy từ Excel và dữ liệu nào phải nhập ở bước Thông tin thông báo.
 - Mẫu chuẩn đã được sửa khoảng cách từ tại các dòng placeholder nhưng giữ nguyên font, cỡ chữ, bảng, lề, header/footer và nội dung pháp lý.
 - Đi đủ quy trình: chọn trang tính/tiêu đề, đối chiếu cột, nhập thông tin, kiểm tra dữ liệu, tạo một bản xem trước, xác nhận rồi mới tạo hàng loạt.
+- Nếu chỉ cần chạy dữ liệu mới bổ sung, nhập đủ “Dòng bắt đầu xử lý” và “Dòng kết thúc xử lý” ở bước 2. Khoảng dòng tính theo số dòng thực tế trong Excel và bao gồm cả hai đầu; để trống cả hai ô để giữ cách xử lý toàn bộ file như trước.
+- Ở bước 4, “Ngày thông báo mặc định” áp dụng cho mọi số chưa có ngày riêng. Khi dùng “Danh sách số”, bấm “+ Thêm nhóm số và ngày”, nhập số/khoảng số ở bên trái và chọn ngày ở bên phải; có thể thêm nhiều nhóm. Các nhóm không được trùng số và chỉ được chứa số có trong Danh sách số.
+- Ví dụ: Danh sách số `300-400`; nhóm `300-350` chọn 25/08/2026, nhóm `351-400` chọn 28/08/2026. Nếu một file lỗi và số chưa được dùng, ngày vẫn đi theo chính số đó khi số được cấp cho file hợp lệ tiếp theo.
 - Ảnh placeholder chỉ dùng để hướng dẫn vị trí. Bản Word xem trước ở bước 6 mới là file cần kiểm tra nội dung thực tế trước khi xác nhận.
 
 1. HPNet Auto Rename (Tiện ích Nhân bản & Đổi tên tập tin tự động)

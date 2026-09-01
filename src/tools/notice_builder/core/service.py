@@ -1,4 +1,5 @@
 from dataclasses import asdict, dataclass
+from datetime import date
 from pathlib import Path
 from tempfile import mkstemp
 import hashlib
@@ -54,18 +55,18 @@ class NoticeService:
         self.legal = dict(legal_values)
         self.approvals = {}
 
-    def values(self, record, config, number):
+    def values(self, record, config, number, notice_date=None):
+        notice_date = notice_date or date(config.year, config.month, config.day)
         values = {key: str(value) for key,value in self.legal.items()}
         # New required fields are explicit inputs, never silently restored from old legal defaults.
         for key in (*REQUIRED_COMMON, *OPTIONAL_COMMON):
             values[key] = str(config.template_fields.get(key, "")).strip()
         values.update({"SO_TB":str(number), "TEN_XA":config.commune_name.strip(), "DIA_DIEM":config.place.strip(),
-                       "NGAY":f"{config.day:02d}","THANG":f"{config.month:02d}","NAM":str(config.year),
+                       "NGAY":f"{notice_date.day:02d}","THANG":f"{notice_date.month:02d}","NAM":str(notice_date.year),
                        "HO_TEN":record.owner, "GIAY_TO_NHAN_THAN":record.identity, "DIA_CHI_NGUOI_SU_DUNG_DAT":config.owner_address.strip(),
                        "SO_TO":record.sheet,"SO_THUA":record.parcel,"DIEN_TICH":record.area,
-                       "XU_DONG":record.location, "TEN_THON":config.village.strip(),
-                       "DIA_CHI_HANH_CHINH":config.administrative_address.strip(),
-                       "KET_LUAN_KHAC":f"Ông/Bà {record.owner} là người đại diện"})
+                        "XU_DONG":record.location, "TEN_THON":config.village.strip(),
+                        "DIA_CHI_HANH_CHINH":config.administrative_address.strip()})
         empty = "...." if config.optional_empty == "dots" else ""
         for key in self.template.tokens - REQUIRED_TOKENS.keys():
             if not values.get(key): values[key] = empty
@@ -86,12 +87,14 @@ class NoticeService:
         records = inspection.valid_records
         if not 0 <= record_index < len(records):
             raise UserError("Hãy chọn một thửa hợp lệ để xem trước.")
-        number = NumberPool.from_config(config).preview_number(record_index)
+        pool = NumberPool.from_config(config)
+        number = pool.preview_number(record_index)
         if number is None:
             raise UserError("Danh sách số chưa đủ cho thửa xem trước. Bổ sung số hoặc đặt số tiếp nối.")
         target = Path(preview_dir) / ("XEM_TRUOC_" + uuid.uuid4().hex[:10] + ".docx")
         target.parent.mkdir(parents=True, exist_ok=True)
-        publish(self.template.render(self.values(records[record_index], config, number)), target)
+        publish(self.template.render(self.values(records[record_index], config, number,
+                                                 pool.date_for(number, date(config.year, config.month, config.day)))), target)
         return Preview(target, self.signature(inspection, config, output), uuid.uuid4().hex, file_hash(target))
 
     def approve(self, preview):
@@ -141,7 +144,8 @@ class NoticeService:
                         detail = "Chưa có số để tạo file. Bổ sung danh sách hoặc số tiếp nối và chạy lại sau khi kiểm tra."
                     else:
                         try:
-                            payload = self.template.render(self.values(record, config, number))
+                            notice_date = pool.date_for(number, date(config.year, config.month, config.day))
+                            payload = self.template.render(self.values(record, config, number, notice_date))
                         except Exception as exc:
                             status = error_type = "LỖI TEMPLATE"
                             detail = f"Không điền được mẫu Word: {exc}. Số {number} chưa dùng, giữ cho thửa tiếp theo."
@@ -160,7 +164,7 @@ class NoticeService:
                                 detail += f" Số {number} chưa dùng, giữ cho thửa tiếp theo."
                             else:
                                 pool.commit(number); success += 1; status = "THÀNH CÔNG"
-                                detail = f"Đã kiểm tra DOCX và sử dụng số {number}. Dữ liệu từ dòng {record.source_row}, tên hộ từ dòng {record.owner_row}."
+                                detail = f"Đã kiểm tra DOCX và sử dụng số {number}, ngày {notice_date:%d/%m/%Y}. Dữ liệu từ dòng {record.source_row}, tên hộ từ dòng {record.owner_row}."
                                 if cleaned: detail += " Đã làm sạch ký tự không hợp lệ trong tên file; nguồn không thay đổi."
                 entry = LogEntry(record.source_row, record.owner, record.sheet, record.parcel, number, status, error_type, detail, filename)
                 try:

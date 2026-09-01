@@ -63,6 +63,15 @@ def area_text(value):
     return format(number, "f").rstrip("0").rstrip(".") if "." in format(number, "f") else format(number, "f")
 
 
+def optional_excel_row(value, label):
+    if value is None or str(value).strip() == "":
+        return None
+    text = str(value).strip()
+    if not re.fullmatch(r"[0-9]+", text) or int(text) < 1:
+        raise UserError(f"{label} phải là số dòng Excel nguyên dương.")
+    return int(text)
+
+
 def workbook_info(path, sheet_name=None, header_row=None, depth=2):
     wb = load_workbook(path, data_only=True, read_only=False)
     try:
@@ -108,7 +117,8 @@ def workbook_info(path, sheet_name=None, header_row=None, depth=2):
         wb.close()
 
 
-def inspect_workbook(path, sheet_name, header_row, depth, mapping, *, require_identity=False):
+def inspect_workbook(path, sheet_name, header_row, depth, mapping, *, require_identity=False,
+                     start_row=None, end_row=None):
     path = Path(path).resolve()
     digest = file_hash(path)
     info = workbook_info(path, sheet_name, header_row, depth)
@@ -123,9 +133,31 @@ def inspect_workbook(path, sheet_name, header_row, depth, mapping, *, require_id
         formulas = load_workbook(path, read_only=True, data_only=False)
         stack.callback(formulas.close)
         ws = wb[sheet_name]
+        source_ws = formulas[sheet_name]
         indices = {k: column_index_from_string(v)-1 for k,v in vars_mapping(mapping).items() if v}
         first = header_row + depth
-        for number, (cells, source_cells) in enumerate(zip(ws.iter_rows(min_row=first), formulas[sheet_name].iter_rows(min_row=first), strict=True), first):
+        requested_start = optional_excel_row(start_row, "Dòng bắt đầu")
+        requested_end = optional_excel_row(end_row, "Dòng kết thúc")
+        if (requested_start is None) != (requested_end is None):
+            raise UserError("Hãy nhập đủ cả dòng bắt đầu và dòng kết thúc, hoặc để trống cả hai để xử lý toàn bộ file.")
+        row_options = {"min_row": first}
+        if requested_start is not None:
+            if requested_start > requested_end:
+                raise UserError("Dòng bắt đầu phải nhỏ hơn hoặc bằng dòng kết thúc.")
+            if requested_start < first:
+                raise UserError(f"Dòng bắt đầu phải từ dòng {first} trở đi, sau phần tiêu đề.")
+            last_data_row = first - 1
+            for number, source_cells in enumerate(source_ws.iter_rows(min_row=first), first):
+                if any(clean(cell.value) for cell in source_cells):
+                    last_data_row = number
+            if last_data_row < first:
+                raise UserError("Trang tính không có dòng dữ liệu nào sau phần tiêu đề.")
+            if requested_start > last_data_row:
+                raise UserError(f"Dòng bắt đầu {requested_start} vượt quá dòng cuối có dữ liệu ({last_data_row}).")
+            if requested_end > last_data_row:
+                raise UserError(f"Dòng kết thúc {requested_end} vượt quá dòng cuối có dữ liệu ({last_data_row}).")
+            row_options = {"min_row": requested_start, "max_row": requested_end}
+        for number, (cells, source_cells) in enumerate(zip(ws.iter_rows(**row_options), source_ws.iter_rows(**row_options), strict=True), row_options["min_row"]):
             if not any(clean(c.value) for c in source_cells):
                 blanks.append(number); continue
             def value(key):
@@ -198,7 +230,8 @@ def inspect_workbook(path, sheet_name, header_row, depth, mapping, *, require_id
                     record.duplicate_rows = [r.source_row for r in group]
     if file_hash(path) != digest:
         raise UserError("File Excel đã thay đổi trong khi đọc. Hãy kiểm tra lại dữ liệu.")
-    return Inspection(path, sheet_name, digest, records, info["rows"], blanks, summaries, name_only, header_row, depth, mapping)
+    return Inspection(path, sheet_name, digest, records, info["rows"], blanks, summaries, name_only,
+                      header_row, depth, mapping, requested_start, requested_end)
 
 
 def vars_mapping(mapping):

@@ -91,6 +91,10 @@ def normalize_package(source_bytes: bytes) -> bytes:
             assert document_xml.count(old) == 1, f"duplicate paragraph XML for {para_id}"
             document_xml = document_xml.replace(old, new, 1)
             changed.add(para_id)
+    document.unlink()
+    if not changed:
+        source.close()
+        return source_bytes
     output = BytesIO()
     with ZipFile(output, "w", ZIP_DEFLATED) as target:
         for info in source.infolist():

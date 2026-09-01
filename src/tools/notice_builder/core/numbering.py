@@ -1,4 +1,5 @@
 import re
+from datetime import date
 from .models import UserError
 
 
@@ -22,6 +23,41 @@ def parse_numbers(text):
     return numbers
 
 
+def compile_number_dates(config):
+    """Validate optional number/date groups and return the date for each explicit number."""
+    rules = config.number_date_rules or []
+    if config.number_mode != "list" or not rules:
+        return {}
+    explicit = set(parse_numbers(config.number_list))
+    compiled = {}
+    for index, rule in enumerate(rules, 1):
+        if not isinstance(rule, dict):
+            raise UserError(f"Nhóm ngày {index} không đúng định dạng cấu hình.")
+        specification = str(rule.get("numbers", "")).strip()
+        raw_date = str(rule.get("date", "")).strip()
+        if not specification or not raw_date:
+            raise UserError(f"Nhóm ngày {index} cần nhập đủ số thông báo và ngày áp dụng.")
+        try:
+            numbers = parse_numbers(specification)
+        except UserError as exc:
+            raise UserError(f"Nhóm ngày {index}: {exc}") from None
+        try:
+            rule_date = date.fromisoformat(raw_date)
+        except ValueError:
+            raise UserError(f"Ngày của nhóm {index} không hợp lệ.") from None
+        outside = [number for number in numbers if number not in explicit]
+        if outside:
+            shown = ", ".join(map(str, outside[:5]))
+            if len(outside) > 5:
+                shown += ", ..."
+            raise UserError(f"Nhóm ngày {index} có số {shown} không nằm trong Danh sách số thông báo.")
+        overlap = [number for number in numbers if number in compiled]
+        if overlap:
+            raise UserError(f"Số {overlap[0]} đang thuộc nhiều nhóm ngày. Mỗi số chỉ được có một ngày thông báo.")
+        compiled.update({number: rule_date for number in numbers})
+    return compiled
+
+
 class NumberPool:
     def __init__(self, mode="start", start=1, text="", continuation=None):
         if mode not in {"start", "list"}:
@@ -33,10 +69,16 @@ class NumberPool:
         if mode == "list" and self.tail is not None and self.tail <= max(self.explicit):
             raise UserError("Số tiếp nối phải lớn hơn mọi số trong danh sách để không cấp trùng.")
         self.index = 0
+        self.number_dates = {}
 
     @classmethod
     def from_config(cls, config):
-        return cls(config.number_mode, config.start_number, config.number_list, config.continue_number)
+        pool = cls(config.number_mode, config.start_number, config.number_list, config.continue_number)
+        pool.number_dates = compile_number_dates(config)
+        return pool
+
+    def date_for(self, number, default):
+        return self.number_dates.get(number, default)
 
     def peek(self):
         if self.index < len(self.explicit):

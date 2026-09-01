@@ -8,7 +8,7 @@ Bộ công cụ desktop dành cho Windows, hợp nhất các quy trình chuẩn 
 
 | Nhóm | Công cụ | Chức năng chính |
 | --- | --- | --- |
-| Hồ sơ đất đai | **Tạo thông báo đất đai** | Đọc Excel, kiểm tra dữ liệu, xem trước và tạo Word theo Mẫu 22; hỗ trợ cấp số thông báo và xuất nhật ký. |
+| Hồ sơ đất đai | **Tạo thông báo đất đai** | Đọc toàn bộ Excel hoặc một khoảng dòng chỉ định, kiểm tra dữ liệu, xem trước và tạo Word theo Mẫu 22; hỗ trợ cấp số, gán ngày theo từng nhóm số thông báo và xuất nhật ký. |
 | Dữ liệu VBDLIS | **VBDLIS Excel Builder** | Ánh xạ cột, xử lý hộ/người/thửa, kiểm tra quy tắc nghiệp vụ và xuất Excel theo biểu mẫu VBDLIS. |
 | Quản lý tệp | **Auto Rename** | Đối chiếu Excel để nhân bản và đặt tên PDF/Word theo thông tin thửa đất. |
 | Quản lý PDF | **PDF Cleaner** | Ghép cặp PDF thường với bản có hậu tố ký, dọn bản thường và chuẩn hóa tên file. |

@@ -2,7 +2,7 @@
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QPalette
 from PySide6.QtWidgets import (
-    QComboBox, QFormLayout, QFrame, QLabel, QLayout, QLineEdit, QListView,
+    QComboBox, QDateEdit, QFormLayout, QFrame, QLabel, QLayout, QLineEdit, QListView,
     QPushButton, QScrollArea, QSizePolicy, QSpinBox, QVBoxLayout, QProxyStyle, QStyle,
 )
 from .paths import resource
@@ -29,13 +29,13 @@ QStackedWidget { background: @surface; border: 1px solid @subtle; border-radius:
 QWidget#noticePage { background: @surface; }
 QScrollArea { background: @surface; border: none; }
 QScrollArea > QWidget > QWidget { background: @surface; }
-QLineEdit, QSpinBox, QComboBox, QPlainTextEdit {
+QLineEdit, QSpinBox, QDateEdit, QComboBox, QPlainTextEdit {
  background: @surface; color: @text; border: 2px solid @border; border-radius: 6px;
  padding: 7px 10px; min-height: 24px; selection-background-color: @primary; selection-color: white;
 }
-QLineEdit:hover, QSpinBox:hover, QComboBox:hover { border-color: #809ABF; }
-QLineEdit:focus, QSpinBox:focus, QComboBox:focus, QPlainTextEdit:focus { border-color: @primary; }
-QLineEdit:disabled, QSpinBox:disabled, QComboBox:disabled { color: #6B7788; background: #EEF2F7; border-color: @subtle; }
+QLineEdit:hover, QSpinBox:hover, QDateEdit:hover, QComboBox:hover { border-color: #809ABF; }
+QLineEdit:focus, QSpinBox:focus, QDateEdit:focus, QComboBox:focus, QPlainTextEdit:focus { border-color: @primary; }
+QLineEdit:disabled, QSpinBox:disabled, QDateEdit:disabled, QComboBox:disabled { color: #6B7788; background: #EEF2F7; border-color: @subtle; }
 QLineEdit:read-only, QPlainTextEdit:read-only { background: #F8FAFD; }
 QComboBox { padding-right: 36px; }
 QComboBox::drop-down { subcontrol-origin: padding; subcontrol-position: top right; width: 30px; border: none; background: transparent; }

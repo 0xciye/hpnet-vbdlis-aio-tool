@@ -1,7 +1,7 @@
 {
   "source": "research/notice_template/MAU_22_THONG_BAO_XAC_NHAN_KET_QUA_DANG_KY_DAT_DAI.docx",
-  "source_original_sha256": "3007f4616e3267d4ee45a2e97cdaab44246232b328bac99420f56720bef15177",
-  "canonical_sha256": "0864251630fcaf72417125ad654cf188ef4df5acae1604694b89480e5fbfc69a",
+  "source_original_sha256": "03149ab92957fd7573f8d688ed81c0e531e7f6dbfb5ce1a095934d4039906b1a",
+  "canonical_sha256": "03149ab92957fd7573f8d688ed81c0e531e7f6dbfb5ce1a095934d4039906b1a",
   "inventory": [
     {
       "part": "[Content_Types].xml",
@@ -17,8 +17,8 @@
     },
     {
       "part": "word/document.xml",
-      "size": 33888,
-      "sha256": "55bc926ea65b5a22259b2436cd1dfdc5ccda76033e882b5f79bbe5d1664cc253",
+      "size": 35969,
+      "sha256": "404ee8f7dcd3358f531174e87ee4b9e83fe2be3742b9b2ddf9e2efd2ae243bdd",
       "mode": "bounded text/alignment patch"
     },
     {
@@ -29,20 +29,20 @@
     },
     {
       "part": "word/footnotes.xml",
-      "size": 2927,
-      "sha256": "80895ffca3eddec44036c4f37027322936a65773f2c9b12a39ce5e45e86e6325",
+      "size": 3018,
+      "sha256": "c81aca541ef5bc2de435391df5ae01484e2248b673e8f9497809c7f473fbd3e9",
       "mode": "preserve-only"
     },
     {
       "part": "word/endnotes.xml",
-      "size": 2921,
-      "sha256": "35584f8af553f7d2ef604197c6ba38eee3d87faca151a748a0b80487f1de313a",
+      "size": 3012,
+      "sha256": "5c6697fe8df3da561f2a85a3b922d93846b21f06d30c6114dfeb88e95b30fd5a",
       "mode": "preserve-only"
     },
     {
       "part": "word/header1.xml",
-      "size": 2896,
-      "sha256": "d81e4af761b0ae0dbff839ece8fb8d000956ebd628bc135333f90bd5a81aaf80",
+      "size": 2942,
+      "sha256": "97f7aa096e7d00cbca542527bc4b502b517abd7a71b87ff758432dd4168f9c04",
       "mode": "preserve-only"
     },
     {
@@ -53,8 +53,8 @@
     },
     {
       "part": "word/settings.xml",
-      "size": 5423,
-      "sha256": "d71db1c8c846ab8404f78c4327b3b285dd6b2d2d05d6688dce426b2f57ba7087",
+      "size": 5632,
+      "sha256": "a4fbc40ffeb73fb30dae1055977807dbf5faf0f89370543fd492f34c0a78c4b6",
       "mode": "preserve-only"
     },
     {
@@ -77,14 +77,14 @@
     },
     {
       "part": "docProps/core.xml",
-      "size": 677,
-      "sha256": "0084e7c84e3d756133b3ed3450466172edfbe2ec1bff1e618d0b55bbdd584f62",
+      "size": 734,
+      "sha256": "b60a396ad035fe4afbdc2f0bb89f2e19ef9e5556e4ea639b79f75f901d6b59d7",
       "mode": "preserve-only"
     },
     {
       "part": "docProps/app.xml",
       "size": 719,
-      "sha256": "6455bdf316287e5a2168f57ae4099e999222faa279c926553fc08341c43177ca",
+      "sha256": "45987555a7b3f830e57a899c79b942b76278bc4d8405a72c6f256931e2f6e0d3",
       "mode": "preserve-only"
     }
   ],
@@ -189,31 +189,13 @@
       "part": "word/document.xml",
       "paragraph": 15,
       "paraId": "16BFFFF9",
-      "token": "SU_DUNG_CHUNG_VO_CHONG"
+      "token": "SU_DUNG_CHUNG"
     },
     {
       "part": "word/document.xml",
       "paragraph": 16,
       "paraId": "657FD163",
       "token": "SU_DUNG_RIENG"
-    },
-    {
-      "part": "word/document.xml",
-      "paragraph": 16,
-      "paraId": "657FD163",
-      "token": "DIEN_TICH"
-    },
-    {
-      "part": "word/document.xml",
-      "paragraph": 17,
-      "paraId": "03B7582C",
-      "token": "THOI_DIEM_SU_DUNG"
-    },
-    {
-      "part": "word/document.xml",
-      "paragraph": 18,
-      "paraId": "70AE63C5",
-      "token": "THOI_HAN_SU_DUNG"
     },
     {
       "part": "word/document.xml",
