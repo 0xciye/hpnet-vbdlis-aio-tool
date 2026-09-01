@@ -26,6 +26,10 @@ Có thể xuất báo cáo kiểm tra TXT/XLSX ngay ở bước 5 mà không t�
 Mẫu 22 mới là mặc định. Bước 1 có nút quay về mẫu chuẩn. Phải mở và kiểm tra mẫu, căn cứ, thời hạn, người ký, nơi nhận trước khi xác nhận. Căn cứ viết sẵn giữ nguyên; các trường nhập được điền theo cấu hình hiện tại.
 Bước 1 hiển thị ảnh tham khảo hai trang của mẫu Word còn nguyên placeholder. Cuộn xuống để xem ảnh thu nhỏ hoặc bấm “Mở ảnh mẫu để xem rõ”; đối chiếu tên placeholder với các ô ở Bước 4 trước khi tạo hàng loạt.
 Khoảng cách từ trong mẫu chuẩn đã được sửa cục bộ tại các dòng placeholder; font, cỡ chữ, bảng, lề, header/footer và nội dung pháp lý không đổi. Bản mẫu trong ứng dụng và bản tại research\notice_template được đồng bộ.
+Tình huống thường gặp: chỉ nhập một đầu khoảng dòng, phạm vi sai, ánh xạ thiếu/trùng cột hoặc Excel/mẫu bị đổi sau khi kiểm tra đều khiến ứng dụng yêu cầu sửa và kiểm tra lại trước khi tạo.
+Dòng trống/Tổng DT/dòng chưa có thửa được bỏ qua. Thiếu hoặc sai họ tên, giấy tờ, tờ, thửa, diện tích; trùng tờ/thửa; trùng tên file đều được ghi rõ dòng và lý do, không dùng số.
+File đích đã có sẽ không bị ghi đè. Lỗi mẫu/lỗi ghi file không làm mất số; hết số thì hồ sơ còn lại ghi “HẾT SỐ THÔNG BÁO”; số dư không bị sử dụng.
+Nếu bấm dừng, phần mềm dừng an toàn và đánh dấu các dòng còn lại “CHƯA XỬ LÝ”. Nhật ký TXT/XLSX trong thư mục Nhat_ky là nơi đối chiếu đầy đủ; xem trang “Hướng dẫn chi tiết” để tra từng tình huống và cách xử lý.
 Xem README.md để biết quy tắc, cách cấp số và lưu cấu hình. Không chia sẻ log có tên hộ/thửa cho người không có quyền.
 
 3. EXCEL BUILDER

@@ -31,6 +31,45 @@ CÁC TRƯỜNG HỢP CẤP SỐ THƯỜNG GẶP
 - Số khai báo nhiều hơn hồ sơ hợp lệ: các số còn thừa không được sử dụng.
 - Luôn xem trước một file và kiểm tra nhật ký sau khi chạy để đối chiếu số, ngày, dòng Excel và lý do bỏ qua.
 
+CÁC TÌNH HUỐNG CÓ THỂ XẢY RA KHI TẠO THÔNG BÁO
+
+A. Chọn file, trang tính và phạm vi dòng
+- Không đọc được Excel hoặc mẫu Word: chọn lại đúng file .xlsx/.docx, đóng file nếu đang bị khóa và kiểm tra quyền truy cập.
+- Chọn sai dòng tiêu đề hoặc số tầng tiêu đề: tên cột sẽ sai hoặc không hiện ở bước Đối chiếu cột; quay lại bước 2 và chọn đúng dòng chứa tên cột.
+- Để trống cả hai ô dòng bắt đầu/kết thúc: ứng dụng xử lý toàn bộ dữ liệu sau tiêu đề như trước.
+- Chỉ nhập một trong hai ô: ứng dụng không chạy và yêu cầu nhập đủ cả hai.
+- Dòng bắt đầu lớn hơn dòng kết thúc, nằm trong phần tiêu đề hoặc vượt dòng cuối có dữ liệu: ứng dụng báo rõ giới hạn cần sửa.
+- Excel hoặc mẫu Word bị thay đổi sau khi kiểm tra/xem trước: ứng dụng yêu cầu kiểm tra và xem trước lại để tránh tạo theo dữ liệu cũ.
+
+B. Đối chiếu cột và dữ liệu nguồn
+- Cột bắt buộc chưa chọn, cột không tồn tại hoặc một cột bị gán cho nhiều trường: ứng dụng dừng ở bước kiểm tra; quay lại bước 3 để đối chiếu lại.
+- Dòng trống, dòng “Tổng DT” hoặc dòng chỉ có tên nhưng chưa có thông tin thửa: được bỏ qua, không tạo Word và không dùng số.
+- Dòng thửa để trống tên hộ có thể dùng tên và giấy tờ của hộ gần nhất phía trên. Nếu ô tên phía trên bị lỗi công thức/#REF! hoặc chưa có tên hợp lệ thì không được kế thừa.
+- Thiếu họ tên, giấy tờ nhân thân, số tờ, số thửa hoặc diện tích: thửa bị bỏ qua; báo cáo ghi đúng dòng/ô cần sửa và không dùng số.
+- Số tờ, số thửa hoặc diện tích không hợp lệ: thửa bị ghi “LỖI DỮ LIỆU”; không tự lấy giá trị từ dòng khác.
+- Hai hay nhiều dòng trùng cùng tờ/thửa: toàn bộ nhóm trùng bị bỏ qua để tránh tạo lặp; nhật ký liệt kê các dòng liên quan.
+- Hai thửa tạo ra cùng tên file sau khi làm sạch ký tự: cả trường hợp xung đột được ghi “TRÙNG TÊN FILE”; không tạo file và không dùng số.
+
+C. Thông tin thông báo và mẫu Word
+- Ô có dấu * bị bỏ trống hoặc chỉ có dấu chấm: ứng dụng báo “Cần nhập” và chưa cho tạo.
+- Ô không bắt buộc để trống: Word để trống hoặc điền “....” theo lựa chọn ở bước 4.
+- Diện tích sử dụng chung luôn bằng diện tích của chính thửa đang xử lý. Không cần nhập và cấu hình cũ của trường này không được dùng.
+- Mẫu thiếu placeholder bắt buộc, còn placeholder chưa điền hoặc không phải DOCX hợp lệ: ứng dụng dừng và báo lỗi mẫu; chọn lại mẫu chuẩn rồi xem trước lại.
+
+D. Xem trước, tạo hàng loạt và dừng tác vụ
+- Sau khi đã xem trước mà thay đổi file, ánh xạ, thông tin hoặc cách cấp số: bản xác nhận cũ mất hiệu lực; phải tạo và xác nhận bản xem trước mới.
+- File đích đã tồn tại: ứng dụng không ghi đè; số và ngày chưa dùng được giữ cho hồ sơ hợp lệ tiếp theo.
+- Word không ghi được do thiếu quyền, hết dung lượng, đường dẫn lỗi hoặc file đang mở: nhật ký ghi “LỖI GHI FILE”; số chưa bị dùng và ứng dụng tiếp tục nếu có thể.
+- Không còn số nhưng vẫn còn hồ sơ hợp lệ: các hồ sơ còn lại ghi “HẾT SỐ THÔNG BÁO”; bổ sung số rồi chạy lại sau khi kiểm tra.
+- Số nhiều hơn số hồ sơ hợp lệ: ứng dụng tự kết thúc khi đã duyệt hết dữ liệu; các số dư không được ghi nhận là đã sử dụng.
+- Bấm dừng: ứng dụng dừng an toàn sau phần đang xử lý; các dòng còn lại được ghi “CHƯA XỬ LÝ/ĐÃ DỪNG”, file đã tạo vẫn được giữ.
+
+E. Đọc kết quả và nhật ký
+- “THÀNH CÔNG” nghĩa là DOCX đã được kiểm tra và số/ngày đã được sử dụng cho đúng dòng nguồn.
+- Nhật ký TXT và XLSX nằm trong thư mục “Nhat_ky” ở thư mục đầu ra. Tra theo dòng Excel, hộ, tờ/thửa, số thông báo, trạng thái, loại lỗi và chi tiết.
+- Nếu không xuất được XLSX nhật ký, đọc file TXT và kiểm tra quyền ghi/dung lượng. Nếu không thể ghi tiếp nhật ký, ứng dụng dừng để tránh mất dấu vết.
+- Không gửi nhật ký cho người không có quyền vì nhật ký có thể chứa tên hộ, giấy tờ và thông tin thửa đất.
+
 1. HPNet Auto Rename (Tiện ích Nhân bản & Đổi tên tập tin tự động)
 - Chức năng: Đọc, đối soát dữ liệu từ tệp Excel và tự động nhân bản, đổi tên phân loại các tập tin quyết định/chứng nhận (Word/PDF) theo cấu trúc chuẩn: "Mã xã_Số tờ_Số thửa".
 - Thao tác:
