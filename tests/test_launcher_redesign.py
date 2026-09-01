@@ -183,3 +183,13 @@ def test_help_escapes_text_not_html(tmp_path):
     guide=tmp_path/'guide.txt'; guide.write_text('1. Section\n<script>not executable</script>',encoding='utf-8')
     html,_,_=guide_html([('Test',guide)])
     assert '<script>' not in html and '&lt;script&gt;' in html
+
+
+def test_help_highlights_operational_labels_and_warnings(tmp_path):
+    guide=tmp_path/'guide.txt'
+    guide.write_text('MỤC ĐÍCH: Tạo file\nQUY TRÌNH: Chọn → Kiểm tra\nLƯU Ý: Không ghi đè',encoding='utf-8')
+    html,_,_=guide_html([('Test',guide)])
+    assert '<strong>MỤC ĐÍCH:</strong> Tạo file' in html
+    assert '<strong>QUY TRÌNH:</strong> Chọn → Kiểm tra' in html
+    assert 'class="guide-label warning"' in html
+    assert '<strong>LƯU Ý:</strong> Không ghi đè' in html

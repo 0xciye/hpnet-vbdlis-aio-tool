@@ -34,7 +34,11 @@ def guide_html(sources):
             stripped=line.strip()
             if not stripped: continue
             if set(stripped)<={"=","-"}: continue  # Decorative separators become section spacing.
-            if re.match(r"^\d+\.\s",stripped) or (stripped.isupper() and len(stripped)<100):
+            label=re.match(r"^(MỤC ĐÍCH|QUY TRÌNH|KẾT QUẢ|LƯU Ý):\s*(.*)$",stripped)
+            if label:
+                kind=" warning" if label.group(1)=="LƯU Ý" else ""
+                parts.append(f'<p class="guide-label{kind}"><strong>{escape(label.group(1))}:</strong> {escape(label.group(2))}</p>')
+            elif re.match(r"^\d+\.\s",stripped) or (stripped.isupper() and len(stripped)<100):
                 anchor=f"guide-{document}-{number}"
                 parts.append(f'<h2><a name="{anchor}"></a>{escape(stripped)}</h2>')
             else: parts.append(f'<p>{escape(stripped)}</p>')
@@ -68,7 +72,7 @@ class HelpPage(QWidget):
             title,_=source
             browser=QTextBrowser(); browser.setAccessibleName(f"Nội dung: {title}")
             browser.setOpenExternalLinks(False)
-            browser.document().setDefaultStyleSheet("h1 {font-size:19pt; color:#172B42; margin-top:24px;} h2 {font-size:12pt; color:#2458C5; margin-top:22px; margin-bottom:10px;} p {font-size:11pt; line-height:165%; margin:9px 0;} .note {color:#53657A;}")
+            browser.document().setDefaultStyleSheet("h1 {font-size:19pt; color:#172B42; margin-top:24px;} h2 {font-size:12pt; font-weight:700; color:#2458C5; margin-top:22px; margin-bottom:10px;} p {font-size:11pt; line-height:165%; margin:9px 0;} .guide-label {margin-top:13px; color:#173B6C;} .guide-label strong {font-weight:700; color:#174EA6;} .guide-label.warning {color:#7A4512; background-color:#FFF6E5;} .guide-label.warning strong {color:#A45100;} .note {color:#53657A;}")
             html,_,texts=guide_html([source]); browser.setHtml(html)
             self.source_texts.extend(texts); self.browsers.append(browser); self.documents.addWidget(browser)
             self.search_states.append(("",self.default_search_status()))

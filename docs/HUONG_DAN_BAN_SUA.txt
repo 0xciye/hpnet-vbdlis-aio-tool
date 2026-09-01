@@ -1,77 +1,85 @@
-HPNET & VBDLIS TOOLS — MẪU 22 VÀ QUY TẮC NHẬP 01/09/2026
+HPNET & VBDLIS AIO TOOL — QUY TRÌNH VẬN HÀNH
 
-1. MỞ PHẦN MỀM
-Giải nén toàn bộ gói ZIP vào thư mục bạn có quyền ghi. Chạy HPNET & VBDLIS Tools.exe.
-Luôn giữ thư mục _internal cạnh EXE. Không chạy trực tiếp trong ZIP.
-Có thể tạo shortcut đến EXE; không di chuyển riêng EXE ra Desktop.
-Launcher chia 7 công cụ thành hai nhóm: chuẩn bị dữ liệu/tệp và thao tác HPNet.
-Mỗi công cụ giữ cửa sổ nghiệp vụ riêng. Mở lại một công cụ Python sẽ quay về cửa sổ đang có, không làm mất phần đang nhập.
+1. KHỞI CHẠY LAUNCHER
+Giải nén toàn bộ gói ZIP vào thư mục có quyền ghi, sau đó chạy HPNET & VBDLIS Tools.exe.
+LƯU Ý: Luôn giữ thư mục _internal nằm cạnh file EXE. Không chạy phần mềm trực tiếp trong ZIP và không di chuyển riêng file EXE ra Desktop.
+Nếu cần mở nhanh từ Desktop, hãy tạo shortcut đến file EXE trong thư mục đã giải nén.
+Launcher hiện có 7 công cụ đang hoạt động. Chọn thẻ công cụ phù hợp với công việc cần thực hiện.
+Mỗi công cụ mở trong cửa sổ nghiệp vụ riêng. Mở lại một công cụ Python đang chạy sẽ đưa cửa sổ đó lên trước và giữ nguyên nội dung đang nhập.
 
-2. TẠO THÔNG BÁO ĐẤT ĐAI (MỚI)
-Chọn Excel → Trang tính/tiêu đề → Đối chiếu cột → Thông tin thông báo → Kiểm tra → Xem trước → Xác nhận tạo → Nhật ký.
-File Cẩm Đông: tiêu đề 5–6, dữ liệu từ dòng 7; B tên hộ, D giấy tờ nhân thân, G tờ mới, H thửa mới, K diện tích bản đồ, L xứ đồng.
-Nếu chỉ xử lý dữ liệu mới, nhập đủ dòng bắt đầu và dòng kết thúc ở bước 2. Khoảng dòng bao gồm cả hai đầu và phải nằm sau tiêu đề, không vượt quá dòng cuối có dữ liệu. Để trống cả hai ô để xử lý toàn bộ file như trước.
-Không tự lấy diện tích M thay K; không dùng tờ/thửa cũ I/J. Quy tắc mới yêu cầu giấy tờ nhân thân; chọn cột tương ứng ở bước 3.
-Nhập mã xã, thôn/địa chỉ, xã/địa danh, ngày thông báo, số bắt đầu hoặc danh sách số. Số 1 trên bản kiểm tra chỉ là ví dụ.
-Khi cần chạy các số còn thiếu có ngày khác nhau, chọn Danh sách số, để trống ô Danh sách số rồi bấm “+ Thêm số hoặc khoảng số”. Mỗi dòng nhập các số/khoảng số và ngày áp dụng; ví dụ 397-398,401-410 → 22/08/2026 và 543,735,777-778,799 → 25/08/2026. Các nhóm trở thành danh sách chạy theo thứ tự từ trên xuống.
-Các nhóm không được chồng lặp. Nếu vẫn nhập ô Danh sách số theo cách cũ, nhóm ngày chỉ được chứa số có trong danh sách và số không thuộc nhóm dùng ngày mặc định. Ngày gắn với số thông báo, nên file lỗi không làm mất số hoặc làm lệch ngày của các số còn lại.
-Các trường hợp nhanh: số liên tục dùng “Số bắt đầu”; số thiếu cùng ngày nhập “Danh sách số”; số thiếu khác ngày để trống danh sách và thêm từng nhóm; số trùng/chồng nhóm sẽ bị báo lỗi; hết danh sách thì hồ sơ còn lại được ghi “HẾT SỐ THÔNG BÁO”; số dư không bị sử dụng. Chỉ bật “Tiếp tục” khi muốn cấp tiếp và đặt số tiếp nối lớn hơn mọi số đã khai báo.
-Bước 4: kéo xuống nhập các ô *: nguồn gốc sử dụng đất, tài sản đăng ký, giấy tờ đã nộp, người ký, chi nhánh VPĐKĐĐ, cơ quan thuế và đơn vị lưu. Nội dung điền sẵn có thể sửa; không được chỉ nhập dấu chấm vào ô bắt buộc.
-Mẫu mới đã ghi cố định thời hạn “chưa xác định”. Diện tích sử dụng chung được tự động lấy bằng Diện tích của từng thửa trong Excel và không còn ô nhập thủ công; diện tích sử dụng riêng vẫn có thể để trống.
-Nếu diện tích nguồn trống hoặc sai, thửa không được tạo và nhật ký chỉ rõ dòng/ô lỗi. Cấu hình cũ từng lưu diện tích sử dụng chung bị bỏ qua; tùy chọn điền dấu chấm không ghi đè giá trị tự động này.
-Các ô không bắt buộc được bỏ trống; chọn cách hiển thị “Để trống” hoặc “Điền ....”.
-Tên lỗi công thức/#REF! không được thay bằng tên hộ trước. Báo cáo nêu ô cần sửa. Dòng “Tổng DT:” cũng được bỏ qua.
-Thửa trùng bị bỏ toàn bộ nhóm. Thiếu dữ liệu/lỗi ghi/file đã có không dùng số; số được giữ cho thửa hợp lệ tiếp theo.
-Có thể xuất báo cáo kiểm tra TXT/XLSX ngay ở bước 5 mà không tạo Word.
-Mẫu 22 mới là mặc định. Bước 1 có nút quay về mẫu chuẩn. Phải mở và kiểm tra mẫu, căn cứ, thời hạn, người ký, nơi nhận trước khi xác nhận. Căn cứ viết sẵn giữ nguyên; các trường nhập được điền theo cấu hình hiện tại.
-Bước 1 hiển thị ảnh tham khảo hai trang của mẫu Word còn nguyên placeholder. Cuộn xuống để xem ảnh thu nhỏ hoặc bấm “Mở ảnh mẫu để xem rõ”; đối chiếu tên placeholder với các ô ở Bước 4 trước khi tạo hàng loạt.
-Khoảng cách từ trong mẫu chuẩn đã được sửa cục bộ tại các dòng placeholder; font, cỡ chữ, bảng, lề, header/footer và nội dung pháp lý không đổi. Bản mẫu trong ứng dụng và bản tại research\notice_template được đồng bộ.
-Tình huống thường gặp: chỉ nhập một đầu khoảng dòng, phạm vi sai, ánh xạ thiếu/trùng cột hoặc Excel/mẫu bị đổi sau khi kiểm tra đều khiến ứng dụng yêu cầu sửa và kiểm tra lại trước khi tạo.
-Dòng trống/Tổng DT/dòng chưa có thửa được bỏ qua. Thiếu hoặc sai họ tên, giấy tờ, tờ, thửa, diện tích; trùng tờ/thửa; trùng tên file đều được ghi rõ dòng và lý do, không dùng số.
-File đích đã có sẽ không bị ghi đè. Lỗi mẫu/lỗi ghi file không làm mất số; hết số thì hồ sơ còn lại ghi “HẾT SỐ THÔNG BÁO”; số dư không bị sử dụng.
-Nếu bấm dừng, phần mềm dừng an toàn và đánh dấu các dòng còn lại “CHƯA XỬ LÝ”. Nhật ký TXT/XLSX trong thư mục Nhat_ky là nơi đối chiếu đầy đủ; xem trang “Hướng dẫn chi tiết” để tra từng tình huống và cách xử lý.
-Xem README.md để biết quy tắc, cách cấp số và lưu cấu hình. Không chia sẻ log có tên hộ/thửa cho người không có quyền.
+2. TẠO THÔNG BÁO ĐẤT ĐAI
+MỤC ĐÍCH: Đọc dữ liệu thửa đất từ Excel và tạo hàng loạt thông báo Word theo Mẫu 22.
+QUY TRÌNH: Chọn file → Trang tính, tiêu đề và phạm vi dòng → Đối chiếu cột → Thông tin thông báo → Kiểm tra dữ liệu → Xem trước và xác nhận → Tạo hàng loạt → Xem kết quả và nhật ký.
+Ở bước Chọn file, chọn Excel nguồn và mẫu Word. Có thể dùng nút trở về mẫu chuẩn. Ảnh tham khảo hai trang giúp đối chiếu vị trí placeholder; file Word xem trước mới là nội dung thực tế cần xác nhận.
+Với file Cẩm Đông: tiêu đề ở dòng 5–6, dữ liệu từ dòng 7; B là tên hộ, D là giấy tờ nhân thân, G là tờ bản đồ mới, H là thửa mới, K là diện tích bản đồ và L là xứ đồng.
+Nếu chỉ xử lý dữ liệu mới bổ sung, nhập đủ dòng bắt đầu và dòng kết thúc. Khoảng dòng bao gồm cả hai đầu, phải nằm sau tiêu đề và không vượt dòng cuối có dữ liệu. Để trống cả hai ô để xử lý toàn bộ dữ liệu.
+Ở bước Đối chiếu cột, chọn đúng cột họ tên, giấy tờ nhân thân, tờ mới, thửa mới, diện tích và các trường cần dùng. Không lấy diện tích M thay K và không dùng tờ/thửa cũ I/J cho cấu trúc file Cẩm Đông.
+LƯU Ý: Ở bước Thông tin thông báo, nhập đủ các ô có dấu *: mã xã, địa danh, số/ngày thông báo, nguồn gốc sử dụng đất, tài sản đăng ký, giấy tờ đã nộp, người ký, chi nhánh VPĐKĐĐ, cơ quan thuế và đơn vị lưu. Ô bắt buộc không được để trống hoặc chỉ nhập dấu chấm.
+Thời hạn sử dụng trong mẫu là “chưa xác định”. Diện tích sử dụng chung tự động bằng diện tích của từng thửa trong Excel; không cần nhập lại. Diện tích sử dụng riêng là nội dung không bắt buộc.
 
-3. EXCEL BUILDER
-Đi lần lượt: 1. Dữ liệu → 2. Ánh xạ cột → 3. Cấu hình VBDLIS → 4. Quy tắc nâng cao (khi cần) → 5. Kiểm tra và Xuất.
-Dòng tiêu đề là số dòng trong Excel chứa tên các cột; không phải số dòng bắt đầu dữ liệu.
-Kiểm tra lại gợi ý ánh xạ trước khi xuất. File nguồn chỉ đọc, không bị sửa.
-Muốn thay Mục 29: vào tab 4, tìm “29” hoặc “thoi han su dung”, chọn “Giá trị cố định”, nhập “Không xác định” ở cột “Mặc định”.
-Lưu cấu hình nếu muốn dùng lại; quay tab 5 kiểm tra và xuất file mới. Thao tác này không sửa file đã xuất trước đó.
-Các trường khác dùng tương tự nếu chế độ của trường cho phép thay đổi. Khi tìm kiếm, quy tắc các dòng đang ẩn vẫn được giữ nguyên.
-Giới tính vẫn theo quy tắc đã có: CCCD đủ 12 chữ số, số thứ 4 là 0 → Nam, 1 → Nữ, trường hợp khác để trống.
-Dòng Tổng DT là dòng tổng hợp, không tạo thành người.
-Khi bật tự động bỏ qua: hộ thiếu dữ liệu bắt buộc hoặc người có CCCD sai được xử lý theo chính sách hiện có; xem báo cáo để biết dòng/ô nguồn và lý do bỏ qua.
-Tab 5 có nút xem báo cáo chi tiết và mở thư mục báo cáo. Kiểm tra cả cảnh báo trước khi sử dụng file kết quả.
+CÁCH CẤP SỐ THÔNG BÁO
+Số liên tục: chọn “Số bắt đầu”; phần mềm tăng số sau mỗi file được tạo thành công.
+Số thiếu rời rạc cùng ngày: chọn “Danh sách số”, nhập ví dụ 397-398,401-410 và dùng ngày thông báo mặc định.
+Số thiếu rời rạc khác ngày: chọn “Danh sách số”, để trống ô Danh sách số rồi bấm “+ Thêm số hoặc khoảng số”. Mỗi dòng nhập nhóm số và ngày áp dụng; các nhóm chạy từ trên xuống.
+Nếu vừa nhập Danh sách số vừa thêm nhóm ngày, số trong nhóm phải thuộc Danh sách số; số không thuộc nhóm dùng ngày mặc định.
+Các số và nhóm không được trùng hoặc chồng lặp. Chỉ bật “Tiếp tục sau khi hết danh sách” khi thật sự cần cấp tiếp và số tiếp nối phải lớn hơn mọi số đã khai báo.
+LƯU Ý: Ngày luôn gắn với số thông báo. Hồ sơ lỗi, file đã tồn tại hoặc lỗi ghi Word không làm mất số và không làm lệch ngày của số tiếp theo.
 
-4. AUTO RENAME VÀ PDF CLEANER
-Auto Rename: chọn bảng Excel, cột tương ứng, thư mục nguồn và đầu ra; kiểm tra danh sách dự kiến trước khi tạo bản sao.
-Giữ nguyên cách xử lý tên trùng và thư mục xung đột của bản riêng lẻ.
-PDF Cleaner: chọn thư mục, quét/xem trước rồi mới xử lý. Kiểm tra tùy chọn Thùng rác/xóa vĩnh viễn trước khi xác nhận.
-Không chạy thử thao tác xóa trên thư mục hồ sơ gốc chưa sao lưu.
+KIỂM TRA KẾT QUẢ TẠO THÔNG BÁO
+Dòng trống, dòng “Tổng DT” và dòng chỉ có tên nhưng chưa có thửa được bỏ qua.
+Hồ sơ thiếu hoặc sai họ tên, giấy tờ nhân thân, số tờ, số thửa hoặc diện tích không được tạo; nhật ký ghi rõ dòng và ô cần sửa.
+Các dòng trùng tờ/thửa bị bỏ toàn bộ nhóm để tránh tạo lặp. File đích đã có không bị ghi đè.
+Nếu hết số, hồ sơ còn lại được ghi “HẾT SỐ THÔNG BÁO”. Nếu số nhiều hơn hồ sơ hợp lệ, phần mềm kết thúc sau khi duyệt hết dữ liệu và không sử dụng các số dư.
+Có thể xuất báo cáo kiểm tra TXT/XLSX ở bước Kiểm tra dữ liệu mà chưa cần tạo Word.
+KẾT QUẢ: Sau khi tạo, mở thư mục Nhat_ky trong thư mục đầu ra để đối chiếu dòng Excel, hộ, tờ/thửa, số, ngày, trạng thái và lý do bỏ qua.
+Nếu thay đổi Excel, mẫu Word, ánh xạ, nội dung hoặc cách cấp số sau khi xem trước, hãy kiểm tra và xác nhận bản xem trước mới.
 
-5. BA CÔNG CỤ HPNET
-Downloader: chọn “Theo bộ lọc” để giữ toàn bộ bộ lọc hiện có, hoặc chủ động chọn “Toàn bộ Văn bản đi được quyền xem” để bỏ qua các bộ lọc và trạng thái xem.
-Quy tắc tên file có hai chế độ: “Mẫu hồ sơ CHUACOGIAY” dùng mã xã/ngoại lệ như trước; “Theo hậu tố tên file” nhận tên bất kỳ kết thúc bằng hậu tố đã chọn ngay trước .pdf, ví dụ Kế Hoạch.signed.pdf.
-Ở chế độ hậu tố có thể chọn .signed, .ldsigned, .lsigned và nhập thêm hậu tố khác. Đây chỉ là lọc tên file, không kiểm tra chữ ký số.
-Trước khi chạy, đọc phần tóm tắt phạm vi và quy tắc tên trong hộp xác nhận. Nhật ký TXT/CSV ghi file tải, file bị loại và lý do; CSV đối soát ghi cả văn bản bị lọc.
-Upload Dự Thảo: tải tệp Word và kiểm tra trùng theo quy trình sẵn có.
-Duyệt Dự Thảo: xem trước, kiểm tra người nhận, rồi xác nhận chuyển duyệt.
-Tự đăng nhập VNeID trong cửa sổ của công cụ. Các bước xác nhận và kiểm tra an toàn không bị loại bỏ.
-Các bộ lọc đang bật được kết hợp; số văn bản tải lên không đồng nghĩa số văn bản khớp loại, tên và ngày lọc.
-Bản sửa đã kiểm thử ngoại tuyến; chưa thao tác tải lên/chuyển duyệt trên tài khoản HPNet thật.
-Khung “Nhật ký hoạt động” của cả Downloader, Upload Dự Thảo và Duyệt Dự Thảo đọc đầu ra Node theo UTF-8 nên tiếng Việt phải hiển thị bình thường sau khi chạy xong. Các file TXT/CSV vẫn có dấu nhận diện UTF-8 để mở đúng bằng Notepad hoặc Excel trên Windows.
+3. VBDLIS EXCEL BUILDER
+MỤC ĐÍCH: Chuyển dữ liệu Excel nguồn sang biểu mẫu Excel đúng cấu trúc nhập VBDLIS và tạo báo cáo kiểm tra dễ đọc.
+QUY TRÌNH: Dữ liệu → Ánh xạ cột → Cấu hình VBDLIS → Quy tắc nâng cao khi cần → Kiểm tra và Xuất.
+Dòng tiêu đề là dòng chứa tên các cột trong Excel, không phải dòng bắt đầu dữ liệu. File nguồn chỉ được đọc và không bị chỉnh sửa.
+LƯU Ý: Kiểm tra lại gợi ý ánh xạ trước khi xuất. Dòng “Tổng DT” là dòng tổng hợp và không được tạo thành một người.
+Giới tính được tính từ CCCD đủ 12 chữ số: số thứ 4 là 0 → Nam, 1 → Nữ, trường hợp khác → để trống.
+Khi bật tự động bỏ qua, hộ thiếu dữ liệu bắt buộc hoặc người có CCCD sai được xử lý theo chính sách đã chọn. Mở báo cáo chi tiết ở tab 5 để biết dòng, ô nguồn và lý do.
+Muốn đổi Mục 29 thành “Không xác định”: vào tab 4, tìm “29” hoặc “thoi han su dung”, chọn “Giá trị cố định”, nhập “Không xác định” vào cột Mặc định, lưu cấu hình rồi quay lại tab 5 để kiểm tra và xuất.
+Các trường khác có thể cấu hình tương tự nếu chế độ của trường cho phép. Quy tắc của các dòng đang ẩn do tìm kiếm vẫn được giữ nguyên.
 
-5. CẤU HÌNH VÀ NHẬT KÝ
-Excel Builder tiếp tục dùng: %APPDATA%\VBDLIS Excel Builder
-Auto Rename: %APPDATA%\HPNET & VBDLIS Tools\Auto Rename\settings.json
-PDF Cleaner: %APPDATA%\HPNET & VBDLIS Tools\PDF Cleaner\config.json
-Nhật ký Cleaner nằm trong thư mục logs cạnh config.json; nhật ký Excel trong thư mục logs của Excel Builder.
-Auto Rename/Cleaner sao chép cấu hình cũ nhận diện được ở thư mục công cụ, cạnh EXE hoặc thư mục chạy. Không ghi đè cấu hình hiện có và không xóa bản cũ.
-Nếu cấu hình riêng lẻ nằm nơi khác: đóng công cụ, sao lưu cấu hình hiện tại rồi sao chép đúng settings.json/config.json sang vị trí tương ứng ở trên.
-Không dùng lẫn file cấu hình giữa các công cụ. Không tự động dò toàn bộ máy để nhập cấu hình.
-Ba công cụ HPNet vẫn lưu cấu hình và phiên trong thư mục riêng dưới _internal\nodes_tools. Nếu chuyển từ bản cũ, sao lưu và chuyển đúng cấu hình của từng công cụ hoặc đăng nhập lại; không bảo đảm tự nhập phiên đăng nhập ở thư mục cũ.
-Gói phát hành sạch không kèm phiên đăng nhập. Không gửi thư mục đã sử dụng cho người khác nếu bên trong có cấu hình, nhật ký hoặc phiên chứa dữ liệu cá nhân.
+4. AUTO RENAME
+MỤC ĐÍCH: Đọc danh sách Excel, tìm file nguồn phù hợp, tạo bản sao và đặt tên theo mã xã, số tờ, số thửa.
+QUY TRÌNH: Chọn Excel → chọn dòng tiêu đề và đọc dữ liệu → chọn thư mục file nguồn → ánh xạ các cột → phân tích khớp → nhập mã đơn vị hành chính → chọn thư mục đích → xem kết quả dự kiến → tạo file.
+LƯU Ý: Kiểm tra các dòng không khớp, tên trùng và xung đột thư mục trước khi tạo. Công cụ tạo bản sao, không chỉnh sửa nội dung file nguồn.
+KẾT QUẢ: Sau khi chạy, kiểm tra danh sách kết quả và nhật ký trong thư mục đầu ra.
 
-6. PHẠM VI ĐÃ KIỂM TRA
-Đọc docs\KIEM_TOAN_TICH_HOP.md để xem kết quả đối chiếu, các bài kiểm thử và phần chưa kiểm chứng.
+5. PDF CLEANER
+MỤC ĐÍCH: Quét thư mục PDF, nhận diện các cặp file cần làm sạch và chuẩn hóa tên file sau ký số.
+QUY TRÌNH: Chọn thư mục → chọn quy tắc xử lý → Quét/Xem trước → kiểm tra danh sách hành động → xác nhận xử lý → xem nhật ký.
+LƯU Ý: Luôn kiểm tra kỹ danh sách xem trước và lựa chọn chuyển vào Thùng rác hay xóa vĩnh viễn trước khi xác nhận.
+Nên sao lưu thư mục hồ sơ khi thực hiện đợt xử lý lớn. Nhật ký của PDF Cleaner nằm trong thư mục logs cạnh file cấu hình.
+
+6. HPNET PDF DOWNLOADER
+MỤC ĐÍCH: Quét Văn bản đi mà tài khoản được quyền xem, lọc văn bản và tải các PDF khớp quy tắc tên.
+QUY TRÌNH: Chọn phạm vi quét → đặt bộ lọc → chọn quy tắc tên PDF → chọn thư mục lưu → đọc tóm tắt xác nhận → bắt đầu quét và tải → đăng nhập VNeID trong Edge khi được yêu cầu → kiểm tra PDF, TXT và CSV.
+“Theo bộ lọc” sử dụng các điều kiện trích yếu, số thông báo, ký hiệu, ngày và trạng thái xem. Các nhóm bộ lọc đang bật kết hợp theo AND; nhiều giá trị trong cùng nhóm kết hợp theo OR.
+“Toàn bộ Văn bản đi được quyền xem” bỏ qua bộ lọc và trạng thái xem nhưng không mở rộng quyền của tài khoản.
+Quy tắc tên “Mẫu hồ sơ CHUACOGIAY” dùng mã xã và ngoại lệ tên thiếu mã xã. Quy tắc “Theo hậu tố tên file” nhận tên kết thúc bằng hậu tố đã chọn ngay trước .pdf, ví dụ Kế Hoạch.signed.pdf.
+LƯU Ý: Có thể chọn .signed, .ldsigned, .lsigned và nhập hậu tố khác. Đây là lọc theo tên file, không phải kiểm tra chữ ký số.
+KẾT QUẢ: Sau khi chạy, kiểm tra file đã tải, nhật ký TXT và CSV đối soát. Văn bản hoặc file bị loại đều có lý do trong nhật ký.
+
+7. HPNET UPLOAD VĂN BẢN DỰ THẢO
+MỤC ĐÍCH: Tải hàng loạt văn bản dự thảo lên HPNet theo thông tin và người duyệt đã chọn.
+QUY TRÌNH: Chọn thư mục/file cần tải → nhập trích yếu và thông tin bắt buộc → chọn cán bộ phê duyệt → kiểm tra danh sách và cảnh báo trùng → bắt đầu chạy → đăng nhập VNeID khi được yêu cầu → theo dõi nhật ký → kiểm tra kết quả trên HPNet.
+LƯU Ý: Đọc kỹ nội dung xác nhận trước khi chạy thật. Không đóng cửa sổ trình duyệt do công cụ mở trong lúc tác vụ đang thực hiện.
+KẾT QUẢ: Khi hoàn tất, đối chiếu số file thành công, file bị bỏ qua và nguyên nhân trong Nhật ký hoạt động.
+
+8. HPNET DUYỆT VĂN BẢN DỰ THẢO
+MỤC ĐÍCH: Tìm các dự thảo phù hợp, kiểm tra người nhận và thực hiện luồng chuyển duyệt hàng loạt trên HPNet.
+QUY TRÌNH: Nhập điều kiện tìm kiếm → quét danh sách chờ xử lý → xem trước kết quả → chọn người nhận/người xử lý → đọc nội dung xác nhận → bắt đầu duyệt → đăng nhập VNeID khi được yêu cầu → kiểm tra nhật ký và trạng thái trên HPNet.
+LƯU Ý: Luôn xem trước đúng tập văn bản và đúng người nhận trước khi xác nhận. Các văn bản không phù hợp điều kiện được bỏ qua và ghi trong nhật ký.
+
+9. CẤU HÌNH, NHẬT KÝ VÀ DỮ LIỆU CÁ NHÂN
+Excel Builder lưu cấu hình tại %APPDATA%\VBDLIS Excel Builder.
+Auto Rename lưu cấu hình tại %APPDATA%\HPNET & VBDLIS Tools\Auto Rename\settings.json.
+PDF Cleaner lưu cấu hình tại %APPDATA%\HPNET & VBDLIS Tools\PDF Cleaner\config.json; nhật ký nằm trong thư mục logs cạnh cấu hình.
+Ba công cụ HPNet lưu cấu hình và phiên làm việc trong thư mục riêng dưới _internal\nodes_tools.
+Khung Nhật ký hoạt động và các file TXT/CSV sử dụng UTF-8 để hiển thị tiếng Việt. Nếu thấy ký tự lạ, hãy mở đúng bản release và mở lại file bằng Notepad hoặc Excel.
+LƯU Ý: Gói phát hành không chứa phiên đăng nhập cá nhân. Không gửi thư mục đã sử dụng, file cấu hình hoặc nhật ký cho người không có quyền vì có thể chứa thông tin tài khoản, tên hộ và dữ liệu thửa đất.
