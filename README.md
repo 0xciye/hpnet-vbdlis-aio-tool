@@ -177,22 +177,5 @@ run_tests.py                     # Điểm chạy test thống nhất
 verify_release.py                # Kiểm tra thư mục/ZIP release
 build_release.ps1                # Quy trình build Windows
 ```
-
-## Giới hạn hiện tại
-
-- Tự động hóa HPNet phụ thuộc giao diện và quyền tài khoản tại thời điểm chạy; thay đổi từ hệ thống HPNet có thể yêu cầu cập nhật selector hoặc quy trình.
-- Kiểm thử ngoại tuyến không thay thế kiểm tra nghiệp vụ trên môi trường HPNet thật.
-- Kết quả Excel, Word và PDF phải được người phụ trách nghiệp vụ kiểm tra trước khi sử dụng chính thức.
-- Repository chưa công bố giấy phép nguồn mở riêng; các thư viện bên thứ ba giữ giấy phép tương ứng.
-
-## Phát hành trên GitHub
-
-Source code và tài liệu được commit vào nhánh `main`. File ZIP nằm trong `release/` được `.gitignore` loại trừ và nên tải lên dưới dạng **GitHub Release asset**, không commit trực tiếp vào lịch sử Git.
-
-Khi tạo release, nên kèm:
-
-- Phiên bản hoặc ngày phát hành.
-- Tóm tắt thay đổi nghiệp vụ.
-- Kết quả kiểm thử và phạm vi chưa kiểm thử live.
 - SHA-256 của `HPNet VBDLIS AIO Tool.zip`.
 - Hướng dẫn sao lưu và nâng cấp cho người dùng hiện tại.
