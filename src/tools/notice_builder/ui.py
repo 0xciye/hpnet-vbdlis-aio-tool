@@ -164,8 +164,14 @@ class MainWindow(QMainWindow):
         form.addRow(self.continue_check); form.addRow("Số tiếp nối",self.continue_number)
         self.number_date_rows=[]
         self.number_date_box=QWidget(); date_box=QVBoxLayout(self.number_date_box); date_box.setContentsMargins(0,0,0,0); date_box.setSpacing(8)
-        date_note=QLabel("Nhập các số còn thiếu hoặc khoảng số và ngày áp dụng. Nếu để trống Danh sách số ở trên, các nhóm này chính là danh sách sẽ chạy theo thứ tự từ trên xuống. Nếu đã nhập Danh sách số, số không thuộc nhóm nào dùng ngày mặc định.")
-        date_note.setObjectName("muted"); date_note.setWordWrap(True); date_box.addWidget(date_note)
+        self.numbering_cases_note=QLabel(
+            "Cách dùng nhanh:\n"
+            "• Số liên tục: chọn “Số bắt đầu”.\n"
+            "• Số thiếu cùng ngày: nhập “Danh sách số”, dùng ngày mặc định.\n"
+            "• Số thiếu khác ngày: để trống “Danh sách số”, thêm từng nhóm số và ngày bên dưới.\n"
+            "• Hết số: ứng dụng dừng cấp số; chỉ bật “Tiếp tục” khi muốn cấp tiếp từ một số lớn hơn số đã nhập."
+        )
+        self.numbering_cases_note.setObjectName("muted"); self.numbering_cases_note.setWordWrap(True); date_box.addWidget(self.numbering_cases_note)
         self.number_date_rows_layout=QVBoxLayout(); self.number_date_rows_layout.setContentsMargins(0,0,0,0); self.number_date_rows_layout.setSpacing(6); date_box.addLayout(self.number_date_rows_layout)
         self.add_number_date_button=self.button("+ Thêm số hoặc khoảng số",lambda:self.add_number_date_rule()); date_box.addWidget(self.add_number_date_button)
         form.addRow("Các số cần tạo và ngày",self.number_date_box)

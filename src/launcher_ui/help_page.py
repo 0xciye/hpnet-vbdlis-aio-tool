@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (QWidget,QVBoxLayout,QHBoxLayout,QLabel,QLineEdit,
 
 GUIDES = (
     ("Quy trình hiện hành", "HUONG_DAN_BAN_SUA.txt", "docs/HUONG_DAN_BAN_SUA.txt"),
-    ("Hướng dẫn chi tiết ban đầu", "Huong_dan_su_dung_chi_tiet.txt", "Huong_dan_su_dung_chi_tiet.txt"),
+    ("Hướng dẫn chi tiết", "Huong_dan_su_dung_chi_tiet.txt", "Huong_dan_su_dung_chi_tiet.txt"),
     ("Cài đặt và khởi chạy", "README.txt", "README.txt"),
 )
 
@@ -26,8 +26,6 @@ def guide_html(sources):
     for document,(title,path) in enumerate(sources):
         anchor=f"guide-{document}"; chapters.append((title,anchor))
         parts.append(f'<h1><a name="{anchor}"></a>{escape(title)}</h1>')
-        if title==GUIDES[1][0]:
-            parts.append('<p class="note">Bản hướng dẫn ban đầu được giữ đầy đủ để tham khảo. Các thay đổi về mẫu 22 và giấy tờ nhân thân nằm trong trang Quy trình hiện hành.</p>')
         try: text=path.read_text(encoding="utf-8-sig")
         except OSError:
             text="Không đọc được tài liệu hướng dẫn. Hãy giải nén lại đầy đủ gói release và giữ thư mục _internal cạnh EXE."
@@ -51,7 +49,7 @@ class HelpPage(QWidget):
         description=QLabel("Chọn một mục bên trái để mở trang riêng. Tìm kiếm chỉ trong trang đang đọc.")
         description.setWordWrap(True); description.setObjectName("muted"); box.addWidget(description)
         search_row=QHBoxLayout(); search_row.setSpacing(8)
-        self.search=QLineEdit(); self.search.setPlaceholderText("Tìm trong trang này, ví dụ: Mục 29, giấy tờ, nhật ký…")
+        self.search=QLineEdit(); self.search.setPlaceholderText("Tìm trong trang này, ví dụ: số còn thiếu, ngày thông báo, nhật ký…")
         self.search.setAccessibleName("Tìm trong hướng dẫn"); search_row.addWidget(self.search,1)
         previous=QPushButton("Trước"); following=QPushButton("Tiếp")
         previous.setAccessibleName("Kết quả tìm kiếm trước"); following.setAccessibleName("Kết quả tìm kiếm tiếp theo")
