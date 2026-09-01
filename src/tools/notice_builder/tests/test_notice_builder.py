@@ -89,6 +89,41 @@ def test_number_date_groups_override_default_date(config):
     assert pool.date_for(401,default)==default
 
 
+def test_blank_number_list_uses_sparse_date_groups_as_ordered_number_queue(config):
+    cfg=replace(config,number_mode="list",number_list="",number_date_rules=[
+        {"numbers":"397-398,401-410","date":"2026-08-22"},
+        {"numbers":"543","date":"2026-08-25"},
+        {"numbers":"735,777-778,799","date":"2026-08-28"},
+    ])
+    pool=NumberPool.from_config(cfg); default=date(2026,8,31)
+    expected=[397,398,*range(401,411),543,735,777,778,799]
+    actual=[]
+    while pool.peek() is not None:
+        number=pool.peek(); actual.append(number)
+        assert pool.date_for(number,default) in {date(2026,8,22),date(2026,8,25),date(2026,8,28)}
+        pool.commit(number)
+    assert actual==expected
+    assert pool.date_for(397,default)==date(2026,8,22)
+    assert pool.date_for(543,default)==date(2026,8,25)
+    assert pool.date_for(799,default)==date(2026,8,28)
+
+
+def test_blank_number_list_group_queue_can_continue_after_highest_number(config):
+    cfg=replace(config,number_mode="list",number_list="",continue_number=800,number_date_rules=[
+        {"numbers":"397,543,799","date":"2026-08-25"},
+    ])
+    pool=NumberPool.from_config(cfg); default=date(2026,8,31)
+    assert [pool.preview_number(index) for index in range(5)]==[397,543,799,800,801]
+    assert pool.date_for(799,default)==date(2026,8,25)
+    assert pool.date_for(800,default)==default
+
+
+def test_blank_number_list_requires_at_least_one_number_date_group(config):
+    cfg=replace(config,number_mode="list",number_list="",number_date_rules=[])
+    with pytest.raises(UserError,match="Danh sách số hoặc thêm ít nhất một nhóm"):
+        NumberPool.from_config(cfg)
+
+
 @pytest.mark.parametrize("rules,message",[
     ([{"numbers":"300-350","date":"2026-08-25"},{"numbers":"350-360","date":"2026-08-28"}],"nhiều nhóm ngày"),
     ([{"numbers":"299-300","date":"2026-08-25"}],"không nằm trong Danh sách"),

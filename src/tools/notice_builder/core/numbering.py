@@ -24,11 +24,11 @@ def parse_numbers(text):
 
 
 def compile_number_dates(config):
-    """Validate optional number/date groups and return the date for each explicit number."""
+    """Validate number/date groups and preserve their number order."""
     rules = config.number_date_rules or []
     if config.number_mode != "list" or not rules:
         return {}
-    explicit = set(parse_numbers(config.number_list))
+    explicit = set(parse_numbers(config.number_list)) if config.number_list.strip() else None
     compiled = {}
     for index, rule in enumerate(rules, 1):
         if not isinstance(rule, dict):
@@ -45,7 +45,7 @@ def compile_number_dates(config):
             rule_date = date.fromisoformat(raw_date)
         except ValueError:
             raise UserError(f"Ngày của nhóm {index} không hợp lệ.") from None
-        outside = [number for number in numbers if number not in explicit]
+        outside = [number for number in numbers if explicit is not None and number not in explicit]
         if outside:
             shown = ", ".join(map(str, outside[:5]))
             if len(outside) > 5:
@@ -73,8 +73,16 @@ class NumberPool:
 
     @classmethod
     def from_config(cls, config):
-        pool = cls(config.number_mode, config.start_number, config.number_list, config.continue_number)
-        pool.number_dates = compile_number_dates(config)
+        number_dates = compile_number_dates(config)
+        number_list = config.number_list
+        if config.number_mode == "list" and not number_list.strip():
+            if not number_dates:
+                raise UserError("Hãy nhập Danh sách số hoặc thêm ít nhất một nhóm số và ngày.")
+            # Dict giữ thứ tự thêm: các nhóm trở thành danh sách cấp số theo đúng
+            # thứ tự người dùng nhập, còn khoảng số vẫn tăng từ đầu đến cuối.
+            number_list = ",".join(str(number) for number in number_dates)
+        pool = cls(config.number_mode, config.start_number, number_list, config.continue_number)
+        pool.number_dates = number_dates
         return pool
 
     def date_for(self, number, default):
