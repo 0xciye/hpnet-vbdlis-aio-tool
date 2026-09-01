@@ -111,7 +111,7 @@ class MainWindow(QMainWindow):
         self.template_preview=QLabel(); self.template_preview.setObjectName("templatePreview")
         self.template_preview.setAlignment(Qt.AlignCenter); self.template_preview.setAccessibleName("Ảnh xem trước mẫu Word có placeholder")
         pixmap=QPixmap(str(preview_path))
-        if not pixmap.isNull(): self.template_preview.setPixmap(pixmap.scaled(640,435,Qt.KeepAspectRatio,Qt.SmoothTransformation))
+        if not pixmap.isNull(): self.template_preview.setPixmap(pixmap.scaled(600,410,Qt.KeepAspectRatio,Qt.SmoothTransformation))
         box.addWidget(self.template_preview,0,Qt.AlignHCenter)
         box.addWidget(self.button("Mở ảnh mẫu để xem rõ",lambda:self.open_path(preview_path))); box.addStretch()
 

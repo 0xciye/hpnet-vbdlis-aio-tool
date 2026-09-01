@@ -31,7 +31,9 @@ def verify(folder, archive=None):
     for name in originals:
         assert digest(originals[name]) == digest(packaged[name]), f"Changed HPNet file: {name}"
     for worker in packaged_nodes.glob("*/*/*.cjs"):
-        node = worker.parent / "runtime/node.exe"
+        local_node = worker.parent / "runtime/node.exe"
+        node = local_node if local_node.is_file() else packaged_nodes / "runtime/node.exe"
+        assert node.is_file(), f"Missing portable Node runtime for {worker.name}"
         for flags in (["--check", str(worker)], [str(worker), "--self-test"]):
             result = subprocess.run([str(node), *flags], cwd=worker.parent,
                                     capture_output=True, text=True, encoding="utf-8", errors="replace",

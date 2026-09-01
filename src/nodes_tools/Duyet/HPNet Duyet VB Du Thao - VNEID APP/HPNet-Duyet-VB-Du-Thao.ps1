@@ -11,10 +11,16 @@ $scanPath = Join-Path $toolRoot 'ket_qua_quet_moi_nhat.json'
 $defaultTitle = 'Bản nháp Thông báo xác nhận'
 
 function Find-HPNetRuntime {
-    $portableRoot = Join-Path $toolRoot 'runtime'
-    $portableNode = Join-Path $portableRoot 'node.exe'
-    $portableModules = Join-Path $portableRoot 'node_modules'
-    if ((Test-Path -LiteralPath $portableNode) -and (Test-Path -LiteralPath (Join-Path $portableModules 'playwright'))) {
+    $portableRoot = @(
+        (Join-Path $toolRoot 'runtime'),
+        (Join-Path (Split-Path -Parent (Split-Path -Parent $toolRoot)) 'runtime')
+    ) | Where-Object {
+        (Test-Path -LiteralPath (Join-Path $_ 'node.exe')) -and
+        (Test-Path -LiteralPath (Join-Path $_ 'node_modules\playwright'))
+    } | Select-Object -First 1
+    if ($portableRoot) {
+        $portableNode = Join-Path $portableRoot 'node.exe'
+        $portableModules = Join-Path $portableRoot 'node_modules'
         $nodeExe = $portableNode
         $nodeModules = $portableModules
         $runtimeMode = 'Portable đi kèm công cụ'

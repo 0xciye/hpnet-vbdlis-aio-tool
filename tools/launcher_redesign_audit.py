@@ -47,7 +47,7 @@ def propose(output):
         entries.append({"path":str(path),"type":"directory" if path.is_dir() else "file","files":len(files),"bytes":sum(p.stat().st_size for p in files)})
     output.write_text(json.dumps({"status":"AWAITING_USER_CONFIRMATION","workspace":str(ROOT),"targets":entries},ensure_ascii=False,indent=2),encoding="utf-8")
     lines=["# Đề xuất dọn dẹp — CHƯA XÓA", "", "Chỉ xóa sau khi người dùng xác nhận và bản release thay thế đã được kiểm tra. Danh sách cố định tại thời điểm khảo sát, không bao gồm file/build mới sinh sau đó.", "",
-           "Giữ: toàn bộ mã nghiệp vụ và asset runtime, .venv (môi trường build), tests/run_tests.py (kiểm tra hồi quy, KHÔNG đưa vào ZIP), .agents/skills, tài liệu nguồn hướng dẫn, research/notice_template22 (tham chiếu đang được test sử dụng), review (hồ sơ riêng).", "", "| Đường dẫn trong workspace | Số file | MiB |", "|---|---:|---:|"]
+           "Giữ: toàn bộ mã nghiệp vụ và asset runtime, .venv (môi trường build), tests/run_tests.py (kiểm tra hồi quy, KHÔNG đưa vào ZIP), .agents/skills, tài liệu nguồn hướng dẫn, research/notice_template (tham chiếu đang được test sử dụng), review (hồ sơ riêng).", "", "| Đường dẫn trong workspace | Số file | MiB |", "|---|---:|---:|"]
     lines += [f"| {Path(e['path']).relative_to(ROOT).as_posix()} | {e['files']} | {e['bytes']/1048576:.1f} |" for e in entries]
     lines += ["",f"Tổng: {len(entries)} mục; {sum(e['bytes'] for e in entries)/1073741824:.2f} GiB. Chưa xóa mục nào."]
     output.with_suffix(".md").write_text("\n".join(lines),encoding="utf-8")

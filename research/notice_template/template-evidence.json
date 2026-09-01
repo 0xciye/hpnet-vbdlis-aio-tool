@@ -1,7 +1,7 @@
 {
-  "source": "research/notice_template22/MAU_22_THONG_BAO_XAC_NHAN_KET_QUA_DANG_KY_DAT_DAI.docx",
+  "source": "research/notice_template/MAU_22_THONG_BAO_XAC_NHAN_KET_QUA_DANG_KY_DAT_DAI.docx",
   "source_original_sha256": "5780ded0720fb75818bb4955fe2fcd0dab63e861ef52b04f177738edf0c84fda",
-  "canonical_sha256": "12084608849cac5073241f9a02fd684df261146ad508e6cfdccf36a04895f8c0",
+  "canonical_sha256": "3007f4616e3267d4ee45a2e97cdaab44246232b328bac99420f56720bef15177",
   "inventory": [
     {
       "part": "[Content_Types].xml",
@@ -17,8 +17,8 @@
     },
     {
       "part": "word/document.xml",
-      "size": 37823,
-      "sha256": "4ea5ab0fb1b440c3e7e7be78e2e51b27dab52013c5899bf46d5951abf94c0258",
+      "size": 33888,
+      "sha256": "55bc926ea65b5a22259b2436cd1dfdc5ccda76033e882b5f79bbe5d1664cc253",
       "mode": "bounded text/alignment patch"
     },
     {
@@ -29,20 +29,20 @@
     },
     {
       "part": "word/footnotes.xml",
-      "size": 3056,
-      "sha256": "326008a28f1a31e55e1b17b07f02aecda80b06796b902e815d8a9f23d63970aa",
+      "size": 2927,
+      "sha256": "80895ffca3eddec44036c4f37027322936a65773f2c9b12a39ce5e45e86e6325",
       "mode": "preserve-only"
     },
     {
       "part": "word/endnotes.xml",
-      "size": 3050,
-      "sha256": "d14444cb86d567a8422b041e6e4275228cec059e739f70ff3d468676255263dd",
+      "size": 2921,
+      "sha256": "35584f8af553f7d2ef604197c6ba38eee3d87faca151a748a0b80487f1de313a",
       "mode": "preserve-only"
     },
     {
       "part": "word/header1.xml",
-      "size": 2982,
-      "sha256": "91c73beaec8650e330eaf005f9f7e4edb115bf774d8dce6d8adf25759e284d90",
+      "size": 2896,
+      "sha256": "d81e4af761b0ae0dbff839ece8fb8d000956ebd628bc135333f90bd5a81aaf80",
       "mode": "preserve-only"
     },
     {
@@ -77,8 +77,8 @@
     },
     {
       "part": "docProps/core.xml",
-      "size": 761,
-      "sha256": "b87263fbb26e181430786e450c4fedb3cab65b7d45315d0511bb60b3f4206c57",
+      "size": 677,
+      "sha256": "0084e7c84e3d756133b3ed3450466172edfbe2ec1bff1e618d0b55bbdd584f62",
       "mode": "preserve-only"
     },
     {

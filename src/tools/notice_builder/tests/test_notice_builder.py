@@ -302,7 +302,7 @@ def test_invalid_template_and_unresolved_tokens(tmp_path,service):
 def test_default_template_spacing_is_normalized_and_research_copy_matches():
     packaged=default_template_path()
     root=Path(__file__).resolve().parents[4]
-    research=root/"research"/"notice_template22"/packaged.name
+    research=root/"research"/"notice_template"/packaged.name
     assert research.read_bytes()==packaged.read_bytes()
     evidence=json.loads((research.parent/"template-evidence.json").read_text(encoding="utf-8"))
     with ZipFile(packaged) as archive:
@@ -553,7 +553,7 @@ def test_template_default_migration_preserves_custom_files(tmp_path):
 
 def test_canonical_template_preserves_geometry_and_only_authorized_spacing():
     root=Path(__file__).resolve().parents[4]
-    reference=root/"research/notice_template22/MAU_22_THONG_BAO_XAC_NHAN_KET_QUA_DANG_KY_DAT_DAI.docx"
+    reference=root/"research/notice_template/MAU_22_THONG_BAO_XAC_NHAN_KET_QUA_DANG_KY_DAT_DAI.docx"
     evidence=json.loads((reference.parent/"template-evidence.json").read_text(encoding="utf-8"))
     assert file_hash(reference)==evidence["canonical_sha256"]==file_hash(default_template_path())
     assert reference.read_bytes()==default_template_path().read_bytes()

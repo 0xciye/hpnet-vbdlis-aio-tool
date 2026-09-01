@@ -1,3 +1,4 @@
+# Release builds require Python 3.14.x; build_release.ps1 enforces this.
 -r REQUIREMENTS.txt
 PySide6==6.11.2
 send2trash==2.1.0

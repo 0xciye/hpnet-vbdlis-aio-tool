@@ -20,7 +20,7 @@ Thửa trùng bị bỏ toàn bộ nhóm. Thiếu dữ liệu/lỗi ghi/file đ�
 Có thể xuất báo cáo kiểm tra TXT/XLSX ngay ở bước 5 mà không tạo Word.
 Mẫu 22 mới là mặc định. Bước 1 có nút quay về mẫu chuẩn. Phải mở và kiểm tra mẫu, căn cứ, thời hạn, người ký, nơi nhận trước khi xác nhận. Căn cứ viết sẵn giữ nguyên; các trường nhập được điền theo cấu hình hiện tại.
 Bước 1 hiển thị ảnh tham khảo hai trang của mẫu Word còn nguyên placeholder. Cuộn xuống để xem ảnh thu nhỏ hoặc bấm “Mở ảnh mẫu để xem rõ”; đối chiếu tên placeholder với các ô ở Bước 4 trước khi tạo hàng loạt.
-Khoảng cách từ trong mẫu chuẩn đã được sửa cục bộ tại các dòng placeholder; font, cỡ chữ, bảng, lề, header/footer và nội dung pháp lý không đổi. Bản mẫu trong ứng dụng và bản tại research\notice_template22 được đồng bộ.
+Khoảng cách từ trong mẫu chuẩn đã được sửa cục bộ tại các dòng placeholder; font, cỡ chữ, bảng, lề, header/footer và nội dung pháp lý không đổi. Bản mẫu trong ứng dụng và bản tại research\notice_template được đồng bộ.
 Xem README.md để biết quy tắc, cách cấp số và lưu cấu hình. Không chia sẻ log có tên hộ/thửa cho người không có quyền.
 
 3. EXCEL BUILDER

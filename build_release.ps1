@@ -4,6 +4,10 @@ $projectRoot = $PSScriptRoot
 if ($ReleaseId -notmatch '^[a-zA-Z0-9._-]+$') { throw 'ReleaseId chi duoc gom chu, so, dau cham, gach ngang.' }
 $python = Join-Path $projectRoot '.venv\Scripts\python.exe'
 if (-not (Test-Path -LiteralPath $python)) { throw 'Can tao .venv va cai docs\REQUIREMENTS_BUILD.txt truoc.' }
+$pythonVersion = (& $python -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')").Trim()
+if ($LASTEXITCODE -ne 0 -or $pythonVersion -ne '3.14') {
+    throw "Build release bat buoc dung Python 3.14; .venv hien tai la Python $pythonVersion."
+}
 $releaseRoot = Join-Path $projectRoot "release\$ReleaseId"
 $buildRoot = Join-Path $projectRoot "build\$ReleaseId"
 if ((Test-Path -LiteralPath $releaseRoot) -or (Test-Path -LiteralPath $buildRoot)) {
@@ -34,12 +38,19 @@ function Send-SafeItemToRecycleBin([IO.FileSystemInfo]$Item, [string]$AllowedPar
 try {
     Set-Location -LiteralPath $projectRoot
     $env:PYTHONPATH = Join-Path $projectRoot 'src'
+    $sharedRuntime = Join-Path $projectRoot 'src\nodes_tools\runtime'
+    if (-not ((Test-Path -LiteralPath (Join-Path $sharedRuntime 'node.exe') -PathType Leaf) -and
+              (Test-Path -LiteralPath (Join-Path $sharedRuntime 'node_modules\playwright\package.json') -PathType Leaf))) {
+        throw 'Thiếu runtime Node/Playwright dùng chung. Chạy tools\restore_runtime.ps1 từ bản release sạch trước khi build.'
+    }
+    & (Join-Path $projectRoot 'tools\build_hpnet_launchers.ps1')
+    if ($LASTEXITCODE -ne 0) { throw 'HPNet launcher build failed.' }
     & $python -X utf8 (Join-Path $projectRoot 'run_tests.py')
     if ($LASTEXITCODE -ne 0) { throw 'Python tests failed.' }
     New-Item -ItemType Directory -Path $releaseRoot, $buildRoot | Out-Null
     Set-Location -LiteralPath (Join-Path $projectRoot 'src')
     & $python -X utf8 -m PyInstaller HPNET_VBDLIS_Tools.spec --noconfirm --distpath $releaseRoot --workpath $buildRoot
-    if ($LASTEXITCODE -ne 0) { throw 'PyInstaller failed.' }
+    if ($LASTEXITCODE -ne 0) { throw "PyInstaller failed with exit code $LASTEXITCODE." }
     $appFolder = Join-Path $releaseRoot 'HPNET & VBDLIS Tools'
     $executable = Join-Path $appFolder 'HPNET & VBDLIS Tools.exe'
     $env:APPDATA = (New-Item -ItemType Directory -Path (Join-Path $buildRoot 'smoke-appdata')).FullName
@@ -63,18 +74,13 @@ try {
     & $python -X utf8 (Join-Path $projectRoot 'verify_release.py') --folder $appFolder --zip $zipPath
     if ($LASTEXITCODE -ne 0) { throw 'ZIP verification failed.' }
     # Publish one stable ZIP name, only after the new package is verified.
-    # Search the release root and its immediate build-version directories only;
-    # never recurse into _internal (base_library.zip is a required runtime file).
+    # Replace only the public ZIP in the release root. User-maintained archive
+    # directories such as release\old build are outside this cleanup scope.
     $releaseBase = (Resolve-Path -LiteralPath (Join-Path $projectRoot 'release')).Path
     $publicZip = Join-Path $releaseBase 'HPNet VBDLIS AIO Tool.zip'
-    $archiveDirectories = @((Get-Item -LiteralPath $releaseBase)) + @(Get-ChildItem -LiteralPath $releaseBase -Directory)
-    $oldArchives = @()
-    foreach ($directory in $archiveDirectories) {
-        if ($directory.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'Refusing to clean a linked release directory.' }
-        $oldArchives += @(Get-ChildItem -LiteralPath $directory.FullName -File | Where-Object {
-            ($_.Name -eq 'HPNet VBDLIS AIO Tool.zip' -or $_.Name -like 'HPNET-VBDLIS-Tools-*.zip') -and $_.FullName -ne $zipPath
-        })
-    }
+    $oldArchives = @(Get-ChildItem -LiteralPath $releaseBase -File | Where-Object {
+        $_.Name -eq 'HPNet VBDLIS AIO Tool.zip' -or $_.Name -like 'HPNET-VBDLIS-Tools-*.zip'
+    })
     Add-Type -AssemblyName Microsoft.VisualBasic
     foreach ($archive in $oldArchives) {
         $oldPath = [IO.Path]::GetFullPath($archive.FullName)
@@ -89,16 +95,10 @@ try {
     Move-Item -LiteralPath $zipPath -Destination $publicZip
     $publicHash = Get-FileHash -LiteralPath $publicZip -Algorithm SHA256
     $buildBase = (Resolve-Path -LiteralPath (Join-Path $projectRoot 'build')).Path
-    foreach ($artifact in @(Get-ChildItem -LiteralPath $buildBase -Force)) {
-        Send-SafeItemToRecycleBin $artifact $buildBase
-    }
-    foreach ($artifact in @(Get-ChildItem -LiteralPath $releaseBase -Directory -Force)) {
-        Send-SafeItemToRecycleBin $artifact $releaseBase
-    }
-    if (@(Get-ChildItem -LiteralPath $buildBase -Force).Count -ne 0) { throw 'Build folder cleanup failed.' }
-    if (@(Get-ChildItem -LiteralPath $releaseBase -Force).Count -ne 1 -or -not (Test-Path -LiteralPath $publicZip)) {
-        throw 'Release folder must contain only the public ZIP.'
-    }
+    Send-SafeItemToRecycleBin (Get-Item -LiteralPath $buildRoot) $buildBase
+    Send-SafeItemToRecycleBin (Get-Item -LiteralPath $releaseRoot) $releaseBase
+    if ((Test-Path -LiteralPath $buildRoot) -or (Test-Path -LiteralPath $releaseRoot)) { throw 'Generated build cleanup failed.' }
+    if (-not (Test-Path -LiteralPath $publicZip -PathType Leaf)) { throw 'Public release ZIP missing after publish.' }
     $publicHash
     Write-Host "RELEASE_PASS: $publicZip"
 } finally {

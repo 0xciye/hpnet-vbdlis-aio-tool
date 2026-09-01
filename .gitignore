@@ -60,6 +60,7 @@ MAU_22_THONG_BAO_XAC_NHAN_KET_QUA_DANG_KY_DAT_DAI.docx
 *.pdf
 !src/tools/vbdlis_excel_builder/resources/BieuMauThuThapThongTinGiayChungNhan.xlsx
 !src/tools/notice_builder/template/WORD_MAU_THONG_BAO_CHUACOGIAY_PLACEHOLDER.docx
+!src/tools/notice_builder/template/MAU_22_THONG_BAO_XAC_NHAN_KET_QUA_DANG_KY_DAT_DAI.docx
 tmp/
 temp/
 output/
@@ -75,9 +76,10 @@ Xem_truoc/
 /.agents/
 /review/
 /research/*
-!/research/notice_template22/
-/research/notice_template22/*
-!/research/notice_template22/template-evidence.json
+!/research/notice_template/
+/research/notice_template/*
+!/research/notice_template/template-evidence.json
+!/research/notice_template/MAU_22_THONG_BAO_XAC_NHAN_KET_QUA_DANG_KY_DAT_DAI.docx
 /RESEARCH_REPORT.md
 /docs/*
 !/docs/REQUIREMENTS.txt

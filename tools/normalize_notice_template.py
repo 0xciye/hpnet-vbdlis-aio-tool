@@ -83,7 +83,7 @@ def main():
                         help="Use the currently verified release template as the source package.")
     args = parser.parse_args()
     root = args.root.resolve()
-    research = root / "research" / "notice_template22" / TEMPLATE_NAME
+    research = root / "research" / "notice_template" / TEMPLATE_NAME
     packaged = root / "src" / "tools" / "notice_builder" / "template" / TEMPLATE_NAME
     if args.source_release:
         with ZipFile(args.source_release.resolve()) as archive:
