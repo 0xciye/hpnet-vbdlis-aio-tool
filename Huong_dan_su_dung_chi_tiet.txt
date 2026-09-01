@@ -15,6 +15,9 @@ HƯỚNG DẪN KHỞI CHẠY HỆ THỐNG
 - Ở bước 4, “Ngày thông báo mặc định” áp dụng cho mọi số chưa có ngày riêng. Khi dùng “Danh sách số”, có thể để trống ô Danh sách số rồi bấm “+ Thêm số hoặc khoảng số”, nhập trực tiếp các số còn thiếu ở bên trái và chọn ngày ở bên phải. Các nhóm sẽ trở thành danh sách chạy theo thứ tự từ trên xuống và không được trùng số.
 - Ví dụ: nhóm `397-398,401-410` chọn 22/08/2026; nhóm `543,735,777-778,799` chọn 25/08/2026. Nếu vẫn nhập ô Danh sách số theo cách cũ, các nhóm chỉ được chứa số có trong danh sách và số chưa có nhóm dùng ngày mặc định. Nếu một file lỗi và số chưa được dùng, ngày vẫn đi theo chính số đó khi số được cấp cho file hợp lệ tiếp theo.
 - Ảnh placeholder chỉ dùng để hướng dẫn vị trí. Bản Word xem trước ở bước 6 mới là file cần kiểm tra nội dung thực tế trước khi xác nhận.
+- Diện tích sử dụng chung không cần nhập: phần mềm luôn lấy đúng bằng Diện tích của từng thửa trong Excel. Diện tích sử dụng riêng vẫn là ô không bắt buộc và có thể để trống hoặc điền dấu chấm.
+- Mỗi thửa dùng diện tích của chính dòng Excel đó. Nếu diện tích trống hoặc không hợp lệ, thửa bị bỏ qua và nhật ký ghi rõ lỗi; phần mềm không tự lấy diện tích từ thửa khác.
+- Cấu hình cũ từng lưu giá trị “Diện tích sử dụng chung” sẽ được bỏ qua. Lựa chọn “Điền ....” chỉ áp dụng cho các ô không bắt buộc còn lại, không ghi đè diện tích sử dụng chung.
 
 CÁC TRƯỜNG HỢP CẤP SỐ THƯỜNG GẶP
 - Số liên tục: chọn “Số bắt đầu”, nhập số đầu tiên; ứng dụng tăng dần sau mỗi file tạo thành công.

@@ -183,7 +183,10 @@ class MainWindow(QMainWindow):
         self.template_inputs={}
         form.addRow(QLabel("NỘI DUNG BẮT BUỘC TRONG MẪU WORD"))
         for key,label in {**REQUIRED_COMMON,**OPTIONAL_COMMON}.items():
-            if key==next(iter(OPTIONAL_COMMON)): form.addRow(QLabel("NỘI DUNG KHÔNG BẮT BUỘC"))
+            if key==next(iter(OPTIONAL_COMMON)):
+                derived_note=QLabel("Diện tích sử dụng chung tự động bằng Diện tích của từng thửa; không cần nhập.")
+                derived_note.setObjectName("hint"); derived_note.setWordWrap(True); form.addRow(derived_note)
+                form.addRow(QLabel("NỘI DUNG KHÔNG BẮT BUỘC"))
             field=QLineEdit(defaults.get(key,"") if key in REQUIRED_COMMON else "")
             field.setToolTip("{{"+key+"}}"); field.textChanged.connect(self.invalidate)
             field.setPlaceholderText("Bắt buộc nhập" if key in REQUIRED_COMMON else "Có thể để trống")
@@ -451,7 +454,7 @@ class MainWindow(QMainWindow):
         layout=QVBoxLayout(dialog); text=QPlainTextEdit(); text.setReadOnly(True)
         values=json.loads(resource("config/legal_defaults.json").read_text(encoding="utf-8"))
         values.update({key:widget.text().strip() for key,widget in self.template_inputs.items()})
-        labels={"SU_DUNG_CHUNG":"Sử dụng chung","SU_DUNG_RIENG":"Sử dụng riêng",
+        labels={"SU_DUNG_RIENG":"Sử dụng riêng",
             "NGUON_GOC_SU_DUNG_DAT":"Nguồn gốc sử dụng đất","THUA_LIEN_KE":"Thửa liền kề","TO_LIEN_KE":"Tờ liền kề",
             "CHU_SU_HUU_LIEN_KE":"Chủ sở hữu liền kề","NOI_DUNG_QUYEN_LIEN_KE":"Quyền đối với thửa liền kề","TAI_SAN_DANG_KY":"Tài sản đăng ký",
             "GIAY_TO_DA_NOP":"Giấy tờ đã nộp",

@@ -247,7 +247,7 @@ def test_render_values_layout_parts_and_empty_location(tmp_path,service,config):
     payload=service.template.render(service.values(data.records[0],config,100)); text=all_text(payload)
     assert "{{" not in text and "HỘ A & <B>" in text and "000000000001" in text
     assert "xứ đồng ," not in text and "xứ đồng" not in text.casefold()
-    assert text.count("357.25")==2 and "LUC" in text and "chưa xác định" in text and "2074" not in text
+    assert text.count("357.25")==3 and "LUC" in text and "chưa xác định" in text and "2074" not in text
     with ZipFile(BytesIO(service.template.raw)) as original,ZipFile(BytesIO(payload)) as result:
         assert original.namelist()==result.namelist()
         for name in original.namelist():
@@ -450,7 +450,7 @@ def test_ui_standalone_and_config_restore(app,tmp_path,monkeypatch,config):
     window.row_start.setText("7"); window.row_end.setText("7")
     window.number_mode.setCurrentIndex(window.number_mode.findData("list")); window.number_list.setText("300-400")
     window.add_number_date_rule("300-350","2026-08-25"); window.add_number_date_rule("351-400","2026-08-28")
-    window.template_inputs["SU_DUNG_CHUNG"].setText("150")
+    assert "SU_DUNG_CHUNG" not in window.template_inputs
     window.template_inputs["NGUOI_KY"].setText("NGƯỜI KÝ THỬ")
     window.optional_empty.setCurrentIndex(window.optional_empty.findData("dots"))
     window.save_settings(); window.close()
@@ -466,7 +466,7 @@ def test_ui_standalone_and_config_restore(app,tmp_path,monkeypatch,config):
     loop=QEventLoop(); restored.job.finished.connect(loop.quit); QTimer.singleShot(15000,loop.quit); loop.exec(); app.processEvents()
     assert not errors and restored.job is None and restored.steps.currentRow()==2
     assert restored.mapping["area"].currentData()=="M"
-    assert restored.template_inputs["SU_DUNG_CHUNG"].text()=="150"
+    assert "SU_DUNG_CHUNG" not in restored.template_inputs
     assert restored.template_inputs["NGUOI_KY"].text()=="NGƯỜI KÝ THỬ"
     assert restored.optional_empty.currentData()=="dots"
     assert restored.inputs["commune_code"].text()=="12345" and not restored.confirm_button.isEnabled()
@@ -631,8 +631,18 @@ def test_optional_slots_and_editable_common_fields(tmp_path,service,config,mode,
     cfg=replace(config,template_fields=fields,optional_empty=mode)
     values=service.values(row,cfg,100)
     assert all(values[k]==expected for k in OPTIONAL_COMMON)
+    assert values["DIEN_TICH"]==values["SU_DUNG_CHUNG"]=="100"
     text=all_text(service.template.render(values))
     assert "NGƯỜI KÝ THỬ" in text and "{{" not in text
+
+
+def test_shared_area_is_always_derived_from_parcel_area(tmp_path,service,config):
+    row=workbook(tmp_path/"shared-area.xlsx",[("HỘ A",1,1,245,None)]).records[0]
+    legacy_fields={**config.template_fields,"SU_DUNG_CHUNG":"999"}
+    values=service.values(row,replace(config,template_fields=legacy_fields),100)
+    assert values["DIEN_TICH"]==values["SU_DUNG_CHUNG"]=="245"
+    text=all_text(service.template.render(values))
+    assert "999" not in text and text.count("245")>=3
 
 
 def test_ui_mapping_preserved_on_next_and_reset_for_other_workbook(app,tmp_path,monkeypatch):

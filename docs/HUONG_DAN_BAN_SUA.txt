@@ -17,7 +17,8 @@ Khi cần chạy các số còn thiếu có ngày khác nhau, chọn Danh sách 
 Các nhóm không được chồng lặp. Nếu vẫn nhập ô Danh sách số theo cách cũ, nhóm ngày chỉ được chứa số có trong danh sách và số không thuộc nhóm dùng ngày mặc định. Ngày gắn với số thông báo, nên file lỗi không làm mất số hoặc làm lệch ngày của các số còn lại.
 Các trường hợp nhanh: số liên tục dùng “Số bắt đầu”; số thiếu cùng ngày nhập “Danh sách số”; số thiếu khác ngày để trống danh sách và thêm từng nhóm; số trùng/chồng nhóm sẽ bị báo lỗi; hết danh sách thì hồ sơ còn lại được ghi “HẾT SỐ THÔNG BÁO”; số dư không bị sử dụng. Chỉ bật “Tiếp tục” khi muốn cấp tiếp và đặt số tiếp nối lớn hơn mọi số đã khai báo.
 Bước 4: kéo xuống nhập các ô *: nguồn gốc sử dụng đất, tài sản đăng ký, giấy tờ đã nộp, người ký, chi nhánh VPĐKĐĐ, cơ quan thuế và đơn vị lưu. Nội dung điền sẵn có thể sửa; không được chỉ nhập dấu chấm vào ô bắt buộc.
-Mẫu mới đã ghi cố định thời hạn “chưa xác định” và dùng ô “Sử dụng chung”; phần mềm không còn yêu cầu nhập thời hạn hoặc ô “Sử dụng chung vợ chồng” của mẫu cũ.
+Mẫu mới đã ghi cố định thời hạn “chưa xác định”. Diện tích sử dụng chung được tự động lấy bằng Diện tích của từng thửa trong Excel và không còn ô nhập thủ công; diện tích sử dụng riêng vẫn có thể để trống.
+Nếu diện tích nguồn trống hoặc sai, thửa không được tạo và nhật ký chỉ rõ dòng/ô lỗi. Cấu hình cũ từng lưu diện tích sử dụng chung bị bỏ qua; tùy chọn điền dấu chấm không ghi đè giá trị tự động này.
 Các ô không bắt buộc được bỏ trống; chọn cách hiển thị “Để trống” hoặc “Điền ....”.
 Tên lỗi công thức/#REF! không được thay bằng tên hộ trước. Báo cáo nêu ô cần sửa. Dòng “Tổng DT:” cũng được bỏ qua.
 Thửa trùng bị bỏ toàn bộ nhóm. Thiếu dữ liệu/lỗi ghi/file đã có không dùng số; số được giữ cho thửa hợp lệ tiếp theo.

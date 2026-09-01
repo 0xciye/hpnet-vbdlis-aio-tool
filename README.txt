@@ -11,3 +11,4 @@ TÀI LIỆU HƯỚNG DẪN CÀI ĐẶT VÀ SỬ DỤNG - BỘ CÔNG CỤ HPNET &
 9. Khung nhật ký của ba công cụ HPNet và các file TXT/CSV sử dụng UTF-8 để hiển thị đúng tiếng Việt.
 10. Ở bước “Trang tính, tiêu đề và phạm vi xử lý” của công cụ Tạo thông báo, có thể nhập đủ dòng bắt đầu/dòng kết thúc để chỉ xử lý một phần Excel. Để trống cả hai ô sẽ xử lý toàn bộ như trước.
 11. Khi chọn “Danh sách số”, có thể để trống ô Danh sách số rồi bấm “+ Thêm số hoặc khoảng số” để nhập trực tiếp các số còn thiếu cùng ngày áp dụng; các nhóm sẽ chạy theo thứ tự từ trên xuống. Nếu vẫn nhập Danh sách số theo cách cũ, nhóm ngày chỉ gán ngày riêng và số không có nhóm dùng ngày mặc định.
+12. Trong Tạo thông báo đất đai, Diện tích sử dụng chung được tự động lấy bằng Diện tích của từng thửa; người dùng không cần nhập lại trường này.

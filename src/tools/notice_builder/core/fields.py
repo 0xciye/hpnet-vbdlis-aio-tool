@@ -9,7 +9,6 @@ REQUIRED_COMMON = {
     "DON_VI_LUU": "Đơn vị lưu",
 }
 OPTIONAL_COMMON = {
-    "SU_DUNG_CHUNG": "Diện tích sử dụng chung",
     "SU_DUNG_RIENG": "Diện tích sử dụng riêng",
     "THUA_LIEN_KE": "Thửa liền kề",
     "TO_LIEN_KE": "Tờ bản đồ liền kề",
@@ -21,6 +20,7 @@ REQUIRED_TOKENS = {
     "NGAY": "Ngày", "THANG": "Tháng", "NAM": "Năm", "HO_TEN": "Họ tên",
     "GIAY_TO_NHAN_THAN": "Giấy tờ nhân thân", "DIA_CHI_NGUOI_SU_DUNG_DAT": "Địa chỉ",
     "SO_TO": "Số tờ", "SO_THUA": "Số thửa", "TEN_THON": "Tên thôn", "DIEN_TICH": "Diện tích",
+    "SU_DUNG_CHUNG": "Diện tích sử dụng chung",
     **REQUIRED_COMMON,
 }
 
