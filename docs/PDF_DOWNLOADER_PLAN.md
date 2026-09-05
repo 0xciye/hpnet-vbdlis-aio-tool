@@ -112,7 +112,7 @@ Tách phạm vi `filtered/all_visible` khỏi điều kiện tên. Kiểm thử 
 
 Không bỏ hoặc làm yếu các cơ chế hiện có:
 
-- Quét nhiều trang, phát hiện trang lặp, tổng thiếu và đối soát đến trang cuối.
+- Quét nhiều trang; dừng ngay khi số mã riêng biệt đạt tổng HPNet hợp lệ; khi thiếu tổng thì đọc đến trang rỗng. Trang lặp hoặc trang rỗng trước khi đủ tổng vẫn bị chặn.
 - Phân biệt số văn bản và số PDF; không lấy số PDF làm bằng chứng quét đủ văn bản.
 - Bỏ qua liên kết đã xử lý; tên trùng được so nội dung SHA-256. Khác nội dung lưu vào thư mục `Trùng` với hậu tố số; không ghi đè bản đã có.
 - Kiểm tra đầu dữ liệu `%PDF-`, lưu qua `.part`, kiểm tra sau lưu, tiếp tục với file khác khi một file lỗi.

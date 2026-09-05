@@ -358,15 +358,16 @@ function recordKey(record) {
   return id ? `ID:${id}` : `DATA:${JSON.stringify(record)}`;
 }
 
-async function scanDocumentPages(fetchPage, { pageSize = 100, onBatch = () => {}, log = () => {} } = {}) {
+async function scanDocumentPages(fetchPage, { pageSize = 100, maxPages = 10000, onBatch = () => {}, log = () => {} } = {}) {
+  if (!Number.isSafeInteger(pageSize) || pageSize <= 0) throw new Error("Kích thước trang phải là số nguyên dương.");
+  if (!Number.isSafeInteger(maxPages) || maxPages <= 0) throw new Error("Giới hạn số trang phải là số nguyên dương.");
   let startIndex = 0;
   let pageNumber = 0;
   let total = null;
   const seen = new Set();
   let duplicates = 0;
-  // Request one empty page after the last non-empty page, even when the total
-  // is absent/stale. A repeated page is an error, never a successful full scan.
   while (true) {
+    if (pageNumber >= maxPages) throw new Error(`Đã đạt giới hạn an toàn ${maxPages} trang nhưng chưa xác nhận quét hết.`);
     pageNumber += 1;
     const payload = unwrapPayload(await fetchPage(startIndex, pageSize));
     if (!payload || !Array.isArray(payload.Records)) throw new Error(`Trang ${pageNumber}: phản hồi thiếu danh sách Records; chưa thể xác nhận quét hết.`);
@@ -381,18 +382,23 @@ async function scanDocumentPages(fetchPage, { pageSize = 100, onBatch = () => {}
     if (!batch.length) {
       if (total !== null && seen.size < total) throw new Error(`Quét chưa đủ: HPNet báo ${total} văn bản nhưng chỉ đọc được ${seen.size} mã riêng biệt (${duplicates} dòng lặp). Trang ${pageNumber} trả rỗng; hãy quét lại và kiểm tra phạm vi tài khoản.`);
       log(`Đã gặp trang cuối rỗng. Đọc ${startIndex} dòng, ${seen.size} văn bản riêng biệt; tổng HPNet: ${total ?? "không cung cấp"}.`);
-      return { rows: startIndex, unique: seen.size, duplicates, total, pages: pageNumber - 1 };
+      return { rows: startIndex, apiRows: startIndex, unique: seen.size, duplicates, total, pages: pageNumber - 1, dataPages: pageNumber - 1, terminationReason: "empty_page" };
     }
     let added = 0;
+    const newRecords = [];
     for (const record of batch) {
       if (!record || typeof record !== "object" || Array.isArray(record)) throw new Error(`Trang ${pageNumber} có dòng văn bản sai cấu trúc.`);
       const key = recordKey(record);
       if (seen.has(key)) duplicates += 1;
-      else { seen.add(key); added += 1; }
+      else { seen.add(key); added += 1; newRecords.push(record); }
     }
-    await onBatch(batch, pageNumber);
+    await onBatch(newRecords, pageNumber);
     startIndex += batch.length;
     log(`Đã đọc ${startIndex} dòng / tổng HPNet ${total ?? "chưa rõ"}; ${seen.size} văn bản riêng biệt, ${duplicates} dòng lặp (trang ${pageNumber}).`);
+    if (total !== null && seen.size >= total) {
+      log(`Đã quét đủ ${seen.size}/${total} văn bản riêng biệt theo tổng HPNet sau ${pageNumber} trang. Không yêu cầu trang thừa.`);
+      return { rows: startIndex, apiRows: startIndex, unique: seen.size, duplicates, total, pages: pageNumber, dataPages: pageNumber, terminationReason: "reported_total" };
+    }
     if (!added) throw new Error(`Trang ${pageNumber} chỉ lặp lại văn bản đã đọc. Dừng để tránh đếm trùng; chưa xác nhận quét hết. Hãy quét lại khi danh sách ổn định.`);
   }
 }
@@ -617,11 +623,91 @@ async function runSelfTest() {
   ], suffixPolicy);
   assert(sameUrl.length === 1 && sameUrl[0].name === "Tên thật.pdf" && !sameUrl[0].nameMatch.matched, "16l ưu tiên tên đính kèm thật dù URL có vẻ khớp");
 
-  const syntheticRecords = Array.from({ length: 1001 }, (_, index) => ({ VanbanDiId: index + 1 }));
-  const syntheticScan = await scanDocumentPages(async (start, pageSize) => ({
-    Result: "OK", TotalRecordCount: syntheticRecords.length, Records: syntheticRecords.slice(start, start + pageSize),
-  }), { pageSize: 100 });
-  assert(syntheticScan.unique === 1001 && syntheticScan.pages === 11, "16m quét đủ hơn 1.000 văn bản và trang cuối rỗng");
+  const makeRecords = (count, offset = 0) => Array.from({ length: count }, (_, index) => ({ VanbanDiId: offset + index + 1, OrderIndex: offset + index + 1, Name: "TB-ĐKĐĐ" }));
+  const expectScanError = async (action, messagePart, name) => {
+    let errorMessage = "";
+    try { await action(); } catch (error) { errorMessage = error.message; }
+    assert(errorMessage.includes(messagePart), name);
+  };
+
+  const noticeNumbersText = "397, 401, 402, 403, 404, 405, 406, 407, 408, 409, 410, 543, 735, 777, 778, 799, 813, 836, 865, 867, 889, 903, 912, 1001, 1002, 1575, 1576, 1577, 1578, 1579, 1582, 1583, 1584, 1585, 1586, 1588, 1589, 1590, 1591, 1593, 1594, 1595, 1596, 1597, 1598, 1599, 1600, 1601, 1602, 1603, 1604, 1605, 1606, 1608, 1609, 1610, 1611, 1612, 1613, 1614, 1615, 1616, 1618, 1619, 1621, 1622, 1624, 1625, 1626, 1627, 1628, 1629, 1630, 1632, 1633, 1634, 1635, 1637, 1640, 1645";
+  const noticeNumbers = parseNotificationNumbers(noticeNumbersText);
+  assert(noticeNumbers.length === 80 && new Set(noticeNumbers).size === 80, "16m parser đọc đúng 80 số thông báo không trùng");
+  assert(!noticeNumbers.includes(3970) && extractNotificationNumber("3970/TB-ĐKĐĐ") === 3970, "16n số thông báo không match kiểu substring");
+
+  const records2699 = makeRecords(2699);
+  records2699.forEach((record, index) => { record.OrderIndex = 100000 + index; });
+  noticeNumbers.forEach((number, index) => { records2699[index].OrderIndex = number; });
+  let calls2699 = 0;
+  let filterRuns2699 = 0;
+  const transferred2699 = [];
+  const filters80 = buildFilters({ downloadMode: "numbers", notificationNumbers: noticeNumbersText, readFilter: "all" });
+  const scan2699 = await scanDocumentPages(async (start, requestedSize) => {
+    calls2699 += 1;
+    const records = start >= 2699 ? records2699.slice(2600) : records2699.slice(start, start + requestedSize);
+    return { Result: "OK", TotalRecordCount: 2699, Records: records };
+  }, { pageSize: 100, onBatch: (batch, page) => {
+    transferred2699.push(...batch.map((record) => buildDocumentRecord(record, page)));
+    classifyEntries(transferred2699, filters80);
+    filterRuns2699 += 1;
+  } });
+  const matched80 = classifyEntries(transferred2699, filters80).matched;
+  assert(scan2699.unique === 2699 && scan2699.pages === 27 && scan2699.rows === 2699 && scan2699.terminationReason === "reported_total", "16o quét đúng 2699 văn bản trong 27 trang");
+  assert(calls2699 === 27, "16p không gọi trang 28 lặp sau khi đạt 2699/2699");
+  assert(transferred2699.length === 2699 && filterRuns2699 === 27 && matched80.length === 80, "16q chuyển dữ liệu sang lọc và khớp đúng 80 số");
+
+  for (const count of [1001, 2700]) {
+    const records = makeRecords(count);
+    let calls = 0;
+    const result = await scanDocumentPages(async (start, requestedSize) => {
+      calls += 1;
+      return { Result: "OK", TotalRecordCount: count, Records: records.slice(start, start + requestedSize) };
+    }, { pageSize: 100 });
+    const expectedPages = Math.ceil(count / 100);
+    assert(result.unique === count && result.pages === expectedPages && calls === expectedPages && result.terminationReason === "reported_total", `16r dừng đúng tổng ${count} không gọi trang thừa`);
+  }
+
+  const records2500 = makeRecords(2500);
+  let repeatedTransferred = 0;
+  await expectScanError(() => scanDocumentPages(async (start, requestedSize) => ({
+    Result: "OK", TotalRecordCount: 2699,
+    Records: start < 2500 ? records2500.slice(start, start + requestedSize) : records2500.slice(2400),
+  }), { pageSize: 100, onBatch: (batch) => { repeatedTransferred += batch.length; } }), "chỉ lặp", "16s trang lặp trước 2500/2699 vẫn bị chặn");
+  assert(repeatedTransferred === 2500, "16t không chuyển dòng lặp sang bước tải");
+
+  await expectScanError(() => scanDocumentPages(async (start, requestedSize) => ({
+    Result: "OK", TotalRecordCount: 2699, Records: start < 2500 ? records2500.slice(start, start + requestedSize) : [],
+  }), { pageSize: 100 }), "Quét chưa đủ", "16u trang rỗng trước 2500/2699 vẫn bị chặn");
+
+  const recordsWithoutTotal = makeRecords(205);
+  let callsWithoutTotal = 0;
+  const scanWithoutTotal = await scanDocumentPages(async (start, requestedSize) => {
+    callsWithoutTotal += 1;
+    return { Result: "OK", Records: recordsWithoutTotal.slice(start, start + requestedSize) };
+  }, { pageSize: 100 });
+  assert(scanWithoutTotal.unique === 205 && scanWithoutTotal.pages === 3 && callsWithoutTotal === 4 && scanWithoutTotal.terminationReason === "empty_page", "16v thiếu tổng thì kết thúc bằng trang rỗng");
+  await expectScanError(() => scanDocumentPages(async (start, requestedSize) => ({
+    Result: "OK", Records: start < 200 ? recordsWithoutTotal.slice(start, start + requestedSize) : recordsWithoutTotal.slice(100, 200),
+  }), { pageSize: 100 }), "chỉ lặp", "16w thiếu tổng thì trang lặp vẫn bị chặn");
+
+  const increasingRecords = makeRecords(2699);
+  const totalWarnings = [];
+  const increasingTotalScan = await scanDocumentPages(async (start, requestedSize) => ({
+    Result: "OK", TotalRecordCount: start === 0 ? 2600 : 2699, Records: increasingRecords.slice(start, start + requestedSize),
+  }), { pageSize: 100, log: (message) => totalWarnings.push(message) });
+  assert(increasingTotalScan.total === 2699 && increasingTotalScan.unique === 2699 && totalWarnings.some((message) => message.includes("2600") && message.includes("2699")), "16x tổng tăng thì giữ giá trị lớn nhất và cảnh báo");
+
+  const mixedPages = [makeRecords(100), makeRecords(100, 50), makeRecords(50, 150)];
+  const mixedStarts = [];
+  const mixedTransferred = [];
+  const mixedScan = await scanDocumentPages(async (start) => {
+    mixedStarts.push(start);
+    return { Result: "OK", TotalRecordCount: 200, Records: mixedPages[mixedStarts.length - 1] };
+  }, { pageSize: 100, onBatch: (batch) => mixedTransferred.push(...batch) });
+  assert(mixedStarts.join(",") === "0,100,200" && mixedScan.rows === 250, "16y startIndex tăng theo số dòng API");
+  assert(mixedScan.unique === 200 && mixedScan.duplicates === 50 && mixedTransferred.length === 200, "16z trang xen lặp chỉ chuyển mã mới và thống kê đúng");
+
+  await expectScanError(() => scanDocumentPages(async (start) => ({ Result: "OK", Records: [{ VanbanDiId: start + 1 }] }), { pageSize: 1, maxPages: 3 }), "giới hạn an toàn", "16za giới hạn trang chống vòng lặp vô hạn");
   assert(buildDuplicateFileName("van-ban.pdf", 2) === "van-ban_2.pdf" && buildDuplicateFileName("van-ban.signed.pdf", 12) === "van-ban.signed_12.pdf", "17 tạo hậu tố file trùng");
   const os = require("node:os");
   const duplicateTestRoot = await fsp.mkdtemp(path.join(os.tmpdir(), "hpnet-duplicate-test-"));
@@ -635,7 +721,7 @@ async function runSelfTest() {
   } finally {
     await fsp.rm(duplicateTestRoot, { recursive: true, force: true });
   }
-  console.log("NODE_SELF_TEST_OK: bộ lọc, phạm vi, hậu tố, Unicode, an toàn tên file, hơn 1.000 văn bản và xử lý trùng tên");
+  console.log("NODE_SELF_TEST_OK: bộ lọc, 80 số thông báo, phân trang tổng hợp lệ/thiếu tổng/tổng thay đổi, khử dòng lặp, Unicode, an toàn tên file và xử lý trùng tên");
 }
 
 async function ensureLoggedIn(page, context, log) {
@@ -771,7 +857,8 @@ async function main({ configPath = process.argv[2], chromium: suppliedChromium }
     }
     const classified = classifyEntries(recordEntries, filters);
     const uniqueEntries = classified.matched;
-    log(`ĐỐI SOÁT: ${recordEntries.length} dòng = ${classified.duplicates} dòng lặp + ${classified.excluded} văn bản bị lọc + ${uniqueEntries.length} văn bản khớp.`);
+    log(`ĐỐI SOÁT QUÉT: ${scan.rows} dòng API = ${scan.duplicates} dòng lặp + ${scan.unique} mã văn bản riêng biệt; tổng HPNet: ${scan.total ?? "không cung cấp"}; ${scan.pages} trang dữ liệu; kết thúc: ${scan.terminationReason}.`);
+    log(`ĐỐI SOÁT LỌC: ${recordEntries.length} văn bản riêng biệt = ${classified.excluded} văn bản bị lọc + ${uniqueEntries.length} văn bản khớp.`);
     for (const [reason, count] of classified.reasonCounts) log(`[BỊ LỌC] ${count}: ${reason}.`);
     log("Một văn bản có thể không khớp nhiều bộ lọc; không cộng các lý do để tính tổng. Xem CSV ĐỐI SOÁT để biết trích yếu, ngày gốc và lý do của TỪNG văn bản.");
     if (filters.dateEnabled) log("Lưu ý: lọc NGÀY VĂN BẢN trên HPNet, không phải ngày bạn upload. Muốn đối chiếu nhiều ngày, mở rộng khoảng ngày hoặc bỏ chọn bộ lọc ngày.");
@@ -920,8 +1007,8 @@ async function main({ configPath = process.argv[2], chromium: suppliedChromium }
     }
 
     log("--- TỔNG KẾT ---");
-    log(`Tổng văn bản đã quét: ${recordEntries.length}`);
-    log(`Văn bản riêng biệt theo mã HPNet: ${scan.unique}; dòng lặp: ${classified.duplicates}; bị lọc: ${classified.excluded}.`);
+    log(`Tổng dòng API đã đọc: ${scan.rows}; số trang dữ liệu: ${scan.pages}; lý do kết thúc: ${scan.terminationReason}.`);
+    log(`Văn bản riêng biệt theo mã HPNet: ${scan.unique}; dòng lặp đã loại: ${scan.duplicates}; bị lọc: ${classified.excluded}.`);
     log(`Văn bản thuộc phạm vi xử lý: ${uniqueEntries.length}`);
     if (filters.notificationEnabled) {
       log(`Yêu cầu: ${targetNumberList.length} thông báo`);

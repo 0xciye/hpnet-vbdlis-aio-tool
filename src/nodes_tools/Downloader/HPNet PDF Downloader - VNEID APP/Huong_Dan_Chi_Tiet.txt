@@ -30,6 +30,8 @@ Không nhập đường dẫn, wildcard hoặc regex vào ô hậu tố. Đây c
 6) Đăng nhập VNeID trong cửa sổ Microsoft Edge. Không đóng Edge khi công cụ đang chạy.
 7) Chờ thông báo hoàn tất hoặc bấm DỪNG AN TOÀN khi cần.
 
+Khi HPNet cung cấp tổng hợp lệ, công cụ dừng ngay sau khi đã đọc đủ số mã văn bản riêng biệt theo tổng đó, không yêu cầu thêm một trang rỗng. Nếu chưa đủ tổng, trang rỗng hoặc trang chỉ lặp vẫn làm lần quét dừng an toàn và được ghi rõ trong nhật ký.
+
 5. KIỂM TRA KẾT QUẢ
 Trong thư mục kết quả có:
 - PDF tải thành công.
@@ -43,5 +45,5 @@ Một văn bản có thể có nhiều file. Công cụ tải từng file khớp
 - “Toàn bộ” vẫn chỉ là Văn bản đi tài khoản hiện tại được quyền xem.
 - Ngày lọc là ngày văn bản trên HPNet, không phải ngày upload.
 - Số văn bản và số PDF là hai đơn vị khác nhau.
-- Nếu nhật ký báo quét chưa đủ, trang lặp, hết phiên hoặc tổng không khớp, không coi kết quả là đầy đủ; hãy đăng nhập lại và quét lại khi danh sách ổn định.
+- Nếu nhật ký báo quét chưa đủ, trang lặp trước khi đủ tổng, hết phiên hoặc tổng không khớp, không coi kết quả là đầy đủ; hãy đăng nhập lại và quét lại khi danh sách ổn định.
 - Khung Nhật ký hoạt động và các file TXT/CSV dùng UTF-8. Tiếng Việt phải đọc được bình thường trong bản release mới; nếu còn ký tự lạ, kiểm tra lại phiên bản đang chạy.
