@@ -1,6 +1,7 @@
 """Desktop hub: each tool retains its own data and confirmation gates."""
 import subprocess
 import sys
+import os
 from pathlib import Path
 
 from PySide6.QtCore import Qt, QTimer
@@ -198,12 +199,17 @@ class ToolLauncher(QMainWindow):
     def _install_update(self, new_app):
         try:
             from auto_update import launch_installer
+            for tool in list(self.open_tools):
+                tool.close()
             launch_installer(new_app)
         except Exception as error:
             self.setEnabled(True)
             QMessageBox.warning(self, "Không cập nhật được", f"Bản hiện tại vẫn được giữ nguyên.\n\n{error}")
             return
         QApplication.quit()
+        # Give Qt a short grace period, then guarantee the parent process exits
+        # so the detached installer can replace the application directory.
+        QTimer.singleShot(500, lambda: os._exit(0))
 
 
 def main():

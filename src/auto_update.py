@@ -126,12 +126,23 @@ $log = Join-Path $env:TEMP 'hpnet-vbdlis-update.log'
 function Write-UpdateLog([string]$Message) {
     "$(Get-Date -Format o) $Message" | Add-Content -LiteralPath $log -Encoding utf8
 }
+function Stop-ProcessesInApp([string]$Root) {
+    $prefix = $Root.TrimEnd('\') + '\'
+    Get-Process | ForEach-Object {
+        try { $path = $_.Path } catch { $path = $null }
+        if ($path -and $path.StartsWith($prefix, [StringComparison]::OrdinalIgnoreCase)) {
+            Write-UpdateLog "stopping child pid=$($_.Id) path=$path"
+            Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
+        }
+    }
+}
 if ((Split-Path -Parent $previous) -ne $parent) { throw 'Unsafe update path.' }
 Write-UpdateLog "installer started pid=$AppPid current=$Current new=$NewApp"
 Wait-Process -Id $AppPid -ErrorAction SilentlyContinue
-Start-Sleep -Milliseconds 800
+Start-Sleep -Milliseconds 1200
 for ($attempt = 1; $attempt -le 20; $attempt++) {
     try {
+        Stop-ProcessesInApp $Current
         if (Test-Path -LiteralPath $previous) { Remove-Item -LiteralPath $previous -Recurse -Force }
         Move-Item -LiteralPath $Current -Destination $previous
         Move-Item -LiteralPath $NewApp -Destination $Current
