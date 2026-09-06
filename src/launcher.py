@@ -3,7 +3,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (QApplication, QFrame, QGridLayout, QHBoxLayout, QLabel,
     QMainWindow, QMessageBox, QPushButton, QScrollArea, QVBoxLayout, QWidget)
@@ -34,6 +34,7 @@ class ToolLauncher(QMainWindow):
         self.tool_windows = {}
         self.tool_buttons = {}
         self._excel_logging_ready = False
+        self.update_worker = None
         self.setup_ui()
         self.statusBar().showMessage("Chọn công cụ để bắt đầu. Mở công cụ không tự tải lên, duyệt hay xóa dữ liệu.")
 
@@ -133,6 +134,46 @@ class ToolLauncher(QMainWindow):
     def open_help(self):
         self.launcher_view.show_help()
 
+    def check_for_updates(self):
+        if not getattr(sys, "frozen", False):
+            return
+        from auto_update import check_for_update
+        from tools.qt_worker import Worker
+        self.update_worker = Worker(check_for_update, self)
+        self.update_worker.succeeded.connect(self._offer_update)
+        self.update_worker.start()
+
+    def _offer_update(self, release):
+        if not release:
+            return
+        answer = QMessageBox.question(self, "Có bản cập nhật mới",
+            f"Phiên bản {release['version']} đã sẵn sàng. Tải và cài đặt ngay?",
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
+        if answer != QMessageBox.Yes:
+            return
+        from auto_update import download_update
+        from tools.qt_worker import Worker
+        self.statusBar().showMessage("Đang tải và kiểm tra bản cập nhật…")
+        self.setEnabled(False)
+        self.update_worker = Worker(lambda: download_update(release), self)
+        self.update_worker.succeeded.connect(self._install_update)
+        self.update_worker.failed.connect(self._update_failed)
+        self.update_worker.start()
+
+    def _update_failed(self, message):
+        self.setEnabled(True)
+        QMessageBox.warning(self, "Không cập nhật được", f"Bản hiện tại vẫn được giữ nguyên.\n\n{message}")
+
+    def _install_update(self, new_app):
+        try:
+            from auto_update import launch_installer
+            launch_installer(new_app)
+        except Exception as error:
+            self.setEnabled(True)
+            QMessageBox.warning(self, "Không cập nhật được", f"Bản hiện tại vẫn được giữ nguyên.\n\n{error}")
+            return
+        QApplication.quit()
+
 
 def main():
     if sys.platform == "win32":
@@ -160,6 +201,7 @@ def main():
         return 0 if report["status"] == "PASS" else 1
     else:
         window.show()
+        QTimer.singleShot(1500, window.check_for_updates)
     return app.exec()
 
 if __name__ == "__main__":

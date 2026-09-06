@@ -24,8 +24,11 @@ datas = [
     ('tools/vbdlis_excel_builder/config', 'tools/vbdlis_excel_builder/config'),
     ('tools/signed_pdf_cleaner/icon.ico', 'tools/signed_pdf_cleaner'),
 ]
+if os.environ.get('SUITE_BUILD_INFO'):
+    datas.append((os.environ['SUITE_BUILD_INFO'], '.'))
 
 hiddenimports = [
+    'auto_update',
     'tools.notice_builder.ui',
     'tools.notice_builder.smoke',
     'tools.duplicate_parcel.ui',

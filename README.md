@@ -150,6 +150,12 @@ release/
 
 ZIP chỉ chứa ứng dụng và tài nguyên cần chạy; không kèm source test, môi trường phát triển, cấu hình đã sử dụng hoặc phiên đăng nhập. Sau khi build thành công, script xóa toàn bộ thư mục staging cũ trong `build\` và `release\`, giữ một ZIP chuẩn tên `HPNet VBDLIS AIO Tool.zip` trong `release\` và sao chép đúng ZIP đó ra Desktop. Build thất bại không chạy bước publish/cleanup này.
 
+## Cập nhật tự động
+
+Mỗi commit được push vào `main` kích hoạt workflow `Build and publish Windows update`. GitHub chỉ phát hành bản cập nhật sau khi test, build, smoke test và kiểm tra ZIP đều đạt. Khi mở bản ứng dụng đã đóng gói, launcher kiểm tra GitHub Release ở chế độ nền; nếu có bản mới, người dùng có thể xác nhận tải và cài đặt. ZIP phải đi kèm file SHA-256 hợp lệ, nếu không bản hiện tại được giữ nguyên. Dữ liệu và cấu hình trong `%APPDATA%` không bị thay thế.
+
+Lần đầu tiên cần cài thủ công một release có updater. Từ release đó trở đi, ứng dụng tự nhận biết các release mới tạo từ `main`.
+
 Nếu phần mềm bảo mật cảnh báo nhầm PyInstaller hoặc Python chính thức, không nên tắt bảo vệ trên toàn máy. Hãy gửi yêu cầu false-positive, thêm đúng executable đã xác minh vào danh sách tin cậy hoặc build trên máy phát hành được quản lý riêng.
 
 ## Checklist trước khi phát hành

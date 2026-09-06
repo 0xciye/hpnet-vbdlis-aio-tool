@@ -1,4 +1,7 @@
-param([string]$ReleaseId = (Get-Date -Format 'yyyy.MM.dd-HHmmss'))
+param(
+    [string]$ReleaseId = (Get-Date -Format 'yyyy.MM.dd-HHmmss'),
+    [switch]$SkipDesktopCopy
+)
 $ErrorActionPreference = 'Stop'
 $projectRoot = $PSScriptRoot
 $productName = 'HPNet VBDLIS AIO Tool'
@@ -19,12 +22,17 @@ $originalLocation = Get-Location
 $oldPythonPath = $env:PYTHONPATH
 $oldAppData = $env:APPDATA
 $oldPlatform = $env:QT_QPA_PLATFORM
+$oldBuildInfo = $env:SUITE_BUILD_INFO
 function Send-SafeItemToRecycleBin([IO.FileSystemInfo]$Item, [string]$AllowedParent) {
     $parent = [IO.Path]::GetFullPath($AllowedParent).TrimEnd('\')
     $target = [IO.Path]::GetFullPath($Item.FullName).TrimEnd('\')
     if (-not $target.StartsWith($parent + '\', [StringComparison]::OrdinalIgnoreCase) -or
         ($Item.Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw "Unsafe cleanup target: $target" }
     Write-Host "RECYCLE_BUILD_ARTIFACT: $target"
+    if ($env:CI -eq 'true') {
+        if ($Item.PSIsContainer) { [IO.Directory]::Delete($target, $true) } else { [IO.File]::Delete($target) }
+        return
+    }
     if ($Item.PSIsContainer) {
         [Microsoft.VisualBasic.FileIO.FileSystem]::DeleteDirectory($target,
             [Microsoft.VisualBasic.FileIO.UIOption]::OnlyErrorDialogs,
@@ -68,6 +76,11 @@ try {
     & $python -X utf8 (Join-Path $projectRoot 'tools\sync_notice_template.py')
     if ($LASTEXITCODE -ne 0) { throw 'Notice template sync failed.' }
     New-Item -ItemType Directory -Path $releaseRoot, $buildRoot | Out-Null
+    $commit = if ($env:GITHUB_SHA) { $env:GITHUB_SHA } else { (& git rev-parse HEAD).Trim() }
+    $buildInfo = Join-Path $buildRoot 'build_info.json'
+    @{ version=$ReleaseId; commit=$commit; repository='0xciye/hpnet-vbdlis-aio-tool' } |
+        ConvertTo-Json | Set-Content -LiteralPath $buildInfo -Encoding utf8
+    $env:SUITE_BUILD_INFO = $buildInfo
     Set-Location -LiteralPath (Join-Path $projectRoot 'src')
     & $python -X utf8 -m PyInstaller HPNET_VBDLIS_Tools.spec --noconfirm --distpath $releaseRoot --workpath $buildRoot
     if ($LASTEXITCODE -ne 0) { throw "PyInstaller failed with exit code $LASTEXITCODE." }
@@ -114,19 +127,22 @@ try {
     Move-Item -LiteralPath $zipPath -Destination $publicZip
     $publicHash = Get-FileHash -LiteralPath $publicZip -Algorithm SHA256
 
-    $desktopBase = [Environment]::GetFolderPath('Desktop')
-    if (-not (Test-Path -LiteralPath $desktopBase -PathType Container)) { throw 'Không tìm thấy thư mục Desktop.' }
-    $desktopZip = Join-Path $desktopBase "$productName.zip"
-    $desktopTemp = Join-Path $desktopBase ".$productName.copying.zip"
-    Copy-Item -LiteralPath $publicZip -Destination $desktopTemp
-    if ((Get-FileHash -LiteralPath $desktopTemp -Algorithm SHA256).Hash -ne $publicHash.Hash) {
-        throw 'Bản sao Desktop không khớp SHA-256 với release vừa build.'
+    $desktopZip = $null
+    if (-not $SkipDesktopCopy) {
+        $desktopBase = [Environment]::GetFolderPath('Desktop')
+        if (-not (Test-Path -LiteralPath $desktopBase -PathType Container)) { throw 'Không tìm thấy thư mục Desktop.' }
+        $desktopZip = Join-Path $desktopBase "$productName.zip"
+        $desktopTemp = Join-Path $desktopBase ".$productName.copying.zip"
+        Copy-Item -LiteralPath $publicZip -Destination $desktopTemp
+        if ((Get-FileHash -LiteralPath $desktopTemp -Algorithm SHA256).Hash -ne $publicHash.Hash) {
+            throw 'Bản sao Desktop không khớp SHA-256 với release vừa build.'
+        }
+        if (Test-Path -LiteralPath $desktopZip) {
+            Send-SafeItemToRecycleBin (Get-Item -LiteralPath $desktopZip) $desktopBase
+        }
+        Move-Item -LiteralPath $desktopTemp -Destination $desktopZip
+        $desktopTemp = $null
     }
-    if (Test-Path -LiteralPath $desktopZip) {
-        Send-SafeItemToRecycleBin (Get-Item -LiteralPath $desktopZip) $desktopBase
-    }
-    Move-Item -LiteralPath $desktopTemp -Destination $desktopZip
-    $desktopTemp = $null
 
     # A successful release supersedes every prior generated staging directory.
     foreach ($directory in @(Get-ChildItem -LiteralPath $buildBase -Directory | Where-Object { $_.FullName -ne $buildRoot })) {
@@ -140,16 +156,18 @@ try {
     if (@(Get-ChildItem -LiteralPath $buildBase -Directory).Count -or @(Get-ChildItem -LiteralPath $releaseBase -Directory).Count) {
         throw 'Vẫn còn thư mục build cũ sau cleanup.'
     }
-    if (-not (Test-Path -LiteralPath $publicZip -PathType Leaf) -or -not (Test-Path -LiteralPath $desktopZip -PathType Leaf)) {
+    if (-not (Test-Path -LiteralPath $publicZip -PathType Leaf) -or
+        (-not $SkipDesktopCopy -and -not (Test-Path -LiteralPath $desktopZip -PathType Leaf))) {
         throw 'Thiếu ZIP mới trong release hoặc Desktop sau publish.'
     }
     $publicHash
     Write-Host "RELEASE_PASS: $publicZip"
-    Write-Host "DESKTOP_COPY_PASS: $desktopZip"
+    if ($desktopZip) { Write-Host "DESKTOP_COPY_PASS: $desktopZip" }
 } finally {
     if ($desktopTemp -and (Test-Path -LiteralPath $desktopTemp -PathType Leaf)) { [IO.File]::Delete($desktopTemp) }
     $env:PYTHONPATH = $oldPythonPath
     $env:APPDATA = $oldAppData
     $env:QT_QPA_PLATFORM = $oldPlatform
+    $env:SUITE_BUILD_INFO = $oldBuildInfo
     Set-Location -LiteralPath $originalLocation
 }
