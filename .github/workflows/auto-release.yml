@@ -41,7 +41,7 @@ jobs:
           $runtime = Join-Path $PWD 'src\nodes_tools\runtime'
           New-Item -ItemType Directory -Force -Path $runtime | Out-Null
           Copy-Item -LiteralPath (Get-Command node.exe).Source -Destination (Join-Path $runtime 'node.exe')
-          npm ci --prefix '.github\runtime' --ignore-scripts --omit=optional
+          npm install --prefix '.github\runtime' --ignore-scripts --omit=optional --no-audit --no-fund
           Copy-Item -LiteralPath '.github\runtime\node_modules' -Destination $runtime -Recurse
 
       - name: Choose semantic version
