@@ -29,7 +29,7 @@ class MainWindow(QMainWindow):
     def _build(self):
         root = QWidget(); box = QVBoxLayout(root); box.setContentsMargins(24, 20, 24, 20); box.setSpacing(12)
         title = QLabel("KIỂM TRA & LÀM SẠCH THỬA TRÙNG"); title.setObjectName("pageTitle"); box.addWidget(title)
-        box.addWidget(QLabel("Tách hộ bằng dòng Tổng DT; chỉ clear bản ghi trùng hoàn toàn sau khi xem trước và xác nhận."))
+        box.addWidget(QLabel("Tách hộ bằng dòng Tổng DT; mọi dòng cùng Số tờ + Số thửa bị trùng, kể cả khác hộ, sẽ được chọn clear sau khi xem trước và xác nhận."))
         form = QFormLayout(); self.source = QLineEdit(); browse = QPushButton("Chọn…"); browse.clicked.connect(self.browse)
         row = QHBoxLayout(); row.addWidget(self.source, 1); row.addWidget(browse); form.addRow("File Excel", row)
         self.sheet = QComboBox(); form.addRow("Sheet", self.sheet)
@@ -81,9 +81,13 @@ class MainWindow(QMainWindow):
 
     def show_result(self, result):
         self.result = result; counts = result.counts()
+        conflicts = sum(counts.get(status, 0) for status in ("SAME_PARCEL_DIFFERENT_AREA",
+                                                               "SAME_PARCEL_DIFFERENT_LOCATION",
+                                                               "SAME_PARCEL_DIFFERENT_AREA_AND_LOCATION",
+                                                               "INCOMPLETE_DATA"))
         self.summary.setText(f"Đã quét {result.rows_scanned} dòng · {counts.get('HOUSEHOLDS', 0)} hộ · "
                              f"{counts.get('EXACT_DUPLICATE', 0)} dòng sẽ clear · "
-                             f"{counts.get('CROSS_HOUSEHOLD_DUPLICATE', 0)} dòng trùng khác hộ cần xem lại")
+                             f"{conflicts} dòng xung đột/thiếu dữ liệu cần xem lại")
         self.table.setRowCount(len(result.records))
         for index, record in enumerate(result.records):
             check = QTableWidgetItem(); check.setFlags(Qt.ItemIsEnabled | Qt.ItemIsUserCheckable)

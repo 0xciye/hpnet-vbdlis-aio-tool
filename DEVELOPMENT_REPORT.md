@@ -22,7 +22,7 @@ Khóa parcel là cặp số tờ/số thửa đã chuẩn hóa có kiểm soát.
 
 ## Conflict Classification
 
-Các trạng thái gồm `EXACT_DUPLICATE`, `SAME_PARCEL_DIFFERENT_AREA`, `SAME_PARCEL_DIFFERENT_LOCATION`, `SAME_PARCEL_DIFFERENT_AREA_AND_LOCATION`, `INCOMPLETE_DATA` và `CROSS_HOUSEHOLD_DUPLICATE`. Chỉ exact duplicate trong cùng hộ được chọn clear mặc định.
+Các trạng thái gồm `EXACT_DUPLICATE`, `SAME_PARCEL_DIFFERENT_AREA`, `SAME_PARCEL_DIFFERENT_LOCATION`, `SAME_PARCEL_DIFFERENT_AREA_AND_LOCATION`, `INCOMPLETE_DATA` và `CROSS_HOUSEHOLD_DUPLICATE`. Mọi dòng có cùng cặp Số tờ + Số thửa trên toàn bộ các hộ đều được gom vào một nhóm duplicate; nếu nhóm có 2, 3 hoặc 4 dòng thì cả nhóm được chọn clear mặc định, không giữ dòng đại diện.
 
 ## Cleanup Strategy
 
@@ -32,7 +32,7 @@ Scan không sửa nguồn. Sau confirm, tool tạo backup bắt buộc, chỉ g�
 
 Test tổng hợp bao phủ nhiều thành viên trong hộ, nhiều dạng `Tổng DT`, exact/mixed/conflict/cross-household, thiếu dữ liệu, normalization, vùng clear, bảo vệ summary, backup, reopen và workbook report.
 
-Synthetic end-to-end ngày 2026-09-06: quét 11 dòng thuộc 2 hộ, chỉ clear exact duplicate tại dòng 5, giữ nguyên hai dòng `Tổng DT` 12/14, nguồn không đổi, backup/output/report đều mở lại thành công.
+Synthetic end-to-end ngày 2026-09-06: quét 11 dòng thuộc 2 hộ, clear toàn bộ các dòng thuộc nhóm Số tờ + Số thửa bị trùng (kể cả khác hộ), giữ nguyên hai dòng `Tổng DT` 12/14, nguồn không đổi, backup/output/report đều mở lại thành công.
 
 ## Known Limitations
 

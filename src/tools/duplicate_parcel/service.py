@@ -48,14 +48,17 @@ def _classify_group(records: list[ParcelRecord]) -> None:
     for record in records:
         signatures[(record.area, record.location)].append(record)
     for same in signatures.values():
-        first = same[0]
-        for duplicate in same[1:]:
+        if len(same) < 2:
+            continue
+        for duplicate in same:
             duplicate.status = "EXACT_DUPLICATE"
             duplicate.action = "Clear"
-            duplicate.related_rows = [first.row]
+            duplicate.related_rows = [other.row for other in same if other.row != duplicate.row]
             duplicate.selected = True
     representatives = [same[0] for same in signatures.values()]
     for record in representatives:
+        if record.status == "EXACT_DUPLICATE":
+            continue
         others = [other for other in representatives if other is not record]
         if not others:
             continue
@@ -111,14 +114,16 @@ def scan(config: ScanConfig) -> ScanResult:
 
         global_groups: dict[tuple[str, str], list[ParcelRecord]] = defaultdict(list)
         for record in records:
-            if record.status != "EXACT_DUPLICATE":
-                global_groups[(record.sheet, record.parcel)].append(record)
+            global_groups[(record.sheet, record.parcel)].append(record)
         for group in global_groups.values():
-            if len({record.household for record in group}) > 1:
-                for record in group:
-                    record.status = "CROSS_HOUSEHOLD_DUPLICATE"
-                    record.action = "Xem lại"
-                    record.related_rows = [other.row for other in group if other.row != record.row]
+            if len(group) < 2:
+                continue
+            rows = [other.row for other in group]
+            for record in group:
+                record.status = "EXACT_DUPLICATE"
+                record.action = "Clear"
+                record.related_rows = [row for row in rows if row != record.row]
+                record.selected = True
         return ScanResult(config, records, summary_rows, max(0, sheet.max_row - config.start_row + 1))
     finally:
         workbook.close()

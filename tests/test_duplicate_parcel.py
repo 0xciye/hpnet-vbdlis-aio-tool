@@ -31,11 +31,14 @@ def test_household_boundary_duplicate_conflicts_and_cross_household(tmp_path):
     result = scan(ScanConfig(source, "Data", "B", "G", "H", "I", "J", 4, "G", "X"))
     by_row = {record.row: record for record in result.records}
     assert result.summary_rows == [8, 12]
-    assert by_row[5].status == "EXACT_DUPLICATE" and by_row[5].selected
+    duplicate_rows = {4, 5, 6, 9, 10, 11}
+    assert all(by_row[row].status == "EXACT_DUPLICATE" and by_row[row].selected for row in duplicate_rows)
+    assert set(by_row[4].related_rows) == {5, 6, 9}
+    assert set(by_row[10].related_rows) == {11}
     assert by_row[4].household == by_row[7].household == 1
     assert by_row[9].household == 2
-    assert by_row[4].status == by_row[9].status == "CROSS_HOUSEHOLD_DUPLICATE"
-    assert by_row[10].status == by_row[11].status == "INCOMPLETE_DATA"
+    assert by_row[9].household == 2
+    assert by_row[10].status == by_row[11].status == "EXACT_DUPLICATE"
     assert by_row[7].status == "KEEP"
 
 
@@ -45,13 +48,17 @@ def test_apply_only_clears_configured_cells_and_preserves_summary(tmp_path):
     output, backup = apply_cleanup(result, tmp_path / "cleaned.xlsx")
     assert source.read_bytes() == original and backup.read_bytes() == original
     wb = load_workbook(output); ws = wb["Data"]
+    assert ws["B4"].value == "Nguyễn Văn A"
     assert ws["B5"].value == "Nguyễn Thị B"
-    assert all(ws.cell(5, column).value is None for column in range(7, 25))
+    for row in (4, 5, 6, 9, 10, 11):
+        assert all(ws.cell(row, column).value is None for column in range(7, 25))
     assert ws["G8"].value == "protected" and ws["B8"].value.strip().startswith("TỔNG")
     wb.close()
     report = export_report(result, tmp_path / "duplicate_parcel_report.xlsx")
     wb = load_workbook(report, read_only=False); assert {"Summary", "Exact Duplicates", "Parcel Conflicts", "Cross Household", "Incomplete Data"} <= set(wb.sheetnames)
-    assert wb["Cross Household"].column_dimensions["G"].width >= 25
+    assert wb["Summary"]["A4"].value == "EXACT_DUPLICATE"
+    assert wb["Summary"]["B4"].value == 6
+    assert wb["Cross Household"].max_row == 1
     assert wb["Summary"]["A1"].fill.fgColor.rgb.endswith("1F4E78")
     wb.close()
 
