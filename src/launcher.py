@@ -71,9 +71,12 @@ class ToolLauncher(QMainWindow):
         closed = self.tool_windows.pop(key, None)
         if closed is not None:
             self.open_tools = [window for window in self.open_tools if window is not closed]
-        self.showNormal()
-        self.raise_()
-        self.activateWindow()
+        try:
+            self.showNormal()
+            self.raise_()
+            self.activateWindow()
+        except RuntimeError:
+            pass  # Qt may destroy child windows after the launcher during shutdown.
 
     def launch_excel_builder(self):
         try:

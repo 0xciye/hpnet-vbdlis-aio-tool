@@ -97,11 +97,12 @@ def run(hub):
         signed.write_bytes(pdf.read_bytes())
         plans = FileScanner().scan_directory(str(clean_dir))
         assert len(plans) == 1
-        assert FileProcessor(use_recycle_bin=True).process_plan(plans[0]).status == ProcessStatus.COMPLETED
-        assert (clean_dir / "sample.pdf").read_bytes() == pdf.read_bytes()
+        assert FileProcessor(use_recycle_bin=True).process_plan(plans[0]).status == ProcessStatus.SKIPPED
+        assert signed.read_bytes() == pdf.read_bytes()
+        assert not (clean_dir / "sample.pdf").exists()
 
     return {"status": "PASS", "embedded_help_complete": True, "independent_help_pages": 3, "launcher_tools": 9,
             "python_windows": 6, "notice_builder": notice, "notice_styled_popups": True, "excel_export": True,
             "summary_row_excluded": True, "fixed_item_29": True, "cccd_gender": True,
             "diagnostic_reports": True, "source_unchanged": True,
-            "auto_rename_copy": True, "cleaner_rename": True, "hpnet_live_operations": False}
+            "auto_rename_copy": True, "cleaner_fake_signature_blocked": True, "hpnet_live_operations": False}
