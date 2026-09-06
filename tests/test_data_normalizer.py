@@ -67,7 +67,9 @@ def test_scan_formula_ambiguous_invalid_partial_apply_and_report(tmp_path):
     assert ws["A7"].value.startswith("=") and ws["B7"].value.startswith("=")
     wb.close()
     report = export_report(result, tmp_path / "normalization_report.xlsx")
-    wb = load_workbook(report, read_only=True); assert {"Summary", "Name Changes", "Birthdate Changes", "Warnings", "Invalid Dates", "Ambiguous Dates"} <= set(wb.sheetnames); wb.close()
+    wb = load_workbook(report, read_only=False); assert {"Summary", "Name Changes", "Birthdate Changes", "Warnings", "Invalid Dates", "Ambiguous Dates"} <= set(wb.sheetnames)
+    assert wb["Birthdate Changes"].column_dimensions["G"].width >= 30
+    wb.close()
 
 
 def test_name_and_birthdate_modes_are_independent(tmp_path):

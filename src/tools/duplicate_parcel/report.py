@@ -1,6 +1,6 @@
 from pathlib import Path
 from openpyxl import Workbook
-from tools.excel_safety import atomic_save
+from tools.excel_safety import atomic_save, style_report
 
 
 HEADERS = ["Hộ", "Dòng", "Số tờ", "Số thửa", "Diện tích", "Xứ đồng", "Trạng thái", "Hành động", "Dòng liên quan"]
@@ -28,6 +28,7 @@ def export_report(result, path: str | Path):
                               record.status, record.action, ", ".join(map(str, record.related_rows))])
         sheet.freeze_panes = "A2"
         sheet.auto_filter.ref = sheet.dimensions
+    style_report(workbook)
     try:
         return atomic_save(workbook, path)
     finally:

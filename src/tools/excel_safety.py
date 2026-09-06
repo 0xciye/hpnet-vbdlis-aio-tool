@@ -7,6 +7,8 @@ from datetime import datetime
 from pathlib import Path
 
 from openpyxl import load_workbook
+from openpyxl.styles import Font, PatternFill
+from openpyxl.utils import get_column_letter
 
 
 SUPPORTED_EXTENSIONS = {".xlsx", ".xlsm"}
@@ -59,3 +61,14 @@ def atomic_save(workbook, output: str | Path) -> Path:
 def default_output(source: str | Path, suffix: str) -> Path:
     source = validate_workbook_path(source)
     return source.with_name(f"{source.stem}_{suffix}{source.suffix}")
+
+
+def style_report(workbook) -> None:
+    """Keep generated audit sheets readable without adding a styling dependency."""
+    for sheet in workbook.worksheets:
+        for cell in sheet[1]:
+            cell.font = Font(bold=True, color="FFFFFF")
+            cell.fill = PatternFill("solid", fgColor="1F4E78")
+        for column in range(1, sheet.max_column + 1):
+            width = max((len(str(sheet.cell(row, column).value or "")) for row in range(1, sheet.max_row + 1)), default=0)
+            sheet.column_dimensions[get_column_letter(column)].width = min(max(width + 2, 10), 45)

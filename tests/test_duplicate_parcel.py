@@ -50,7 +50,10 @@ def test_apply_only_clears_configured_cells_and_preserves_summary(tmp_path):
     assert ws["G8"].value == "protected" and ws["B8"].value.strip().startswith("TỔNG")
     wb.close()
     report = export_report(result, tmp_path / "duplicate_parcel_report.xlsx")
-    wb = load_workbook(report, read_only=True); assert {"Summary", "Exact Duplicates", "Parcel Conflicts", "Cross Household", "Incomplete Data"} <= set(wb.sheetnames); wb.close()
+    wb = load_workbook(report, read_only=False); assert {"Summary", "Exact Duplicates", "Parcel Conflicts", "Cross Household", "Incomplete Data"} <= set(wb.sheetnames)
+    assert wb["Cross Household"].column_dimensions["G"].width >= 25
+    assert wb["Summary"]["A1"].fill.fgColor.rgb.endswith("1F4E78")
+    wb.close()
 
 
 def test_normalization_keeps_distinct_parcel_identifiers():
