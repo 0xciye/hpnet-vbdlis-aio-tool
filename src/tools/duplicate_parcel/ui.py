@@ -52,7 +52,7 @@ class MainWindow(QMainWindow):
         self.apply_button = QPushButton("Áp dụng làm sạch"); self.apply_button.clicked.connect(self.apply); self.apply_button.setEnabled(False)
         actions.addWidget(self.scan_button); actions.addStretch(); actions.addWidget(self.report_button); actions.addWidget(self.apply_button); box.addLayout(actions)
         self.summary = QLabel("Chưa quét dữ liệu."); box.addWidget(self.summary)
-        self.table = QTableWidget(0, 10); self.table.setHorizontalHeaderLabels(["Chọn", "Hộ", "Chủ hộ", "Dòng", "Số tờ", "Số thửa", "Diện tích", "Xứ đồng", "Trạng thái", "Hành động"])
+        self.table = QTableWidget(0, 11); self.table.setHorizontalHeaderLabels(["Chọn", "Hộ", "Chủ hộ", "Dòng", "Số tờ", "Số thửa", "Diện tích", "Xứ đồng", "Trạng thái", "Hành động", "Trùng với"])
         header = self.table.horizontalHeader()
         header.setStretchLastSection(True)
         header.setSectionResizeMode(QHeaderView.ResizeToContents)
@@ -132,19 +132,20 @@ class MainWindow(QMainWindow):
             if record.status == "EXACT_DUPLICATE":
                 exact_groups.setdefault((record.sheet, record.parcel), []).append(record)
         self.visible_records = [record for record in result.records if record.status == "EXACT_DUPLICATE"]
+        by_row = {record.row: record for record in self.visible_records}
         self.table.setRowCount(len(self.visible_records))
-        rendered_groups = set()
         for index, record in enumerate(self.visible_records):
             check = QTableWidgetItem(); check.setFlags(Qt.ItemIsEnabled | Qt.ItemIsUserCheckable)
             check.setCheckState(Qt.Checked if record.selected else Qt.Unchecked)
             self.table.setItem(index, 0, check)
-            group_key = (record.sheet, record.parcel)
-            repeated = record.status == "EXACT_DUPLICATE" and group_key in rendered_groups
-            if record.status == "EXACT_DUPLICATE": rendered_groups.add(group_key)
+            related = [by_row[row] for row in record.related_rows if row in by_row]
+            related_text = "; ".join(
+                f"Hộ {other.household} — {other.name or '(không có tên)'} — dòng {other.row}"
+                for other in related
+            )
             values = (record.household, record.name or "(không có tên)", record.row,
-                      "↳ trùng" if repeated else record.sheet,
-                      "" if repeated else record.parcel, record.area or "", record.location,
-                      record.status, record.action)
+                      record.sheet, record.parcel, record.area or "", record.location,
+                      record.status, record.action, related_text)
             for column, value in enumerate(values, 1):
                 self.table.setItem(index, column, QTableWidgetItem(str(value)))
         self.report_button.setEnabled(True); self.apply_button.setEnabled(bool(result.clear_rows))
