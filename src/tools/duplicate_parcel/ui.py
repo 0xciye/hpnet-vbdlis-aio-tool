@@ -37,11 +37,11 @@ class MainWindow(QMainWindow):
         self.sheet = QComboBox(); form.addRow("Sheet", self.sheet)
         self.sheet.currentTextChanged.connect(self._refresh_column_choices)
         self.columns = {}
-        for label, key, value in (("Cột Họ và tên", "name", "B"), ("Cột Số tờ", "sheet", "G"),
-                                  ("Cột Số thửa", "parcel", "H"), ("Cột Diện tích", "area", "I"),
-                                  ("Cột Xứ đồng", "location", "J"), ("Cột bắt đầu clear", "clear_start", "G"),
-                                  ("Cột kết thúc clear", "clear_end", "X")):
-            edit = QComboBox(); edit.setProperty("default_column", value)
+        for label, key in (("Cột Họ và tên", "name"), ("Cột Số tờ", "sheet"),
+                           ("Cột Số thửa", "parcel"), ("Cột Diện tích", "area"),
+                           ("Cột Xứ đồng", "location"), ("Cột bắt đầu clear", "clear_start"),
+                           ("Cột kết thúc clear", "clear_end")):
+            edit = QComboBox()
             edit.addItem("— Chọn file Excel trước —", None)
             edit.setMinimumWidth(240); edit.setMaximumWidth(320)
             self.columns[key] = edit; form.addRow(label, edit)
@@ -84,13 +84,14 @@ class MainWindow(QMainWindow):
                         headers[letter] = " ".join(str(value).split())
                         break
             for combo in self.columns.values():
-                selected = combo.currentData() or combo.property("default_column")
+                selected = combo.currentData()
                 combo.blockSignals(True); combo.clear()
+                combo.addItem("— Chọn cột —", None)
                 for column in range(1, max_column + 1):
                     letter = get_column_letter(column)
                     label = f"{letter} — {headers[letter]}" if letter in headers else letter
                     combo.addItem(label, letter)
-                index = combo.findData(selected)
+                index = combo.findData(selected) if selected else -1
                 combo.setCurrentIndex(index if index >= 0 else 0)
                 combo.blockSignals(False)
             wb.close()
@@ -98,8 +99,10 @@ class MainWindow(QMainWindow):
             self._error(error)
 
     def config(self):
-        values = {key: str(value.currentData() or value.currentText()).strip().upper() for key, value in self.columns.items()}
+        values = {key: str(value.currentData() or "").strip().upper() for key, value in self.columns.items()}
         if not self.sheet.currentText(): raise ValueError("Hãy chọn file và sheet Excel.")
+        if any(not values[key] for key in self.columns):
+            raise ValueError("Hãy chọn đủ các cột trước khi quét dữ liệu.")
         return ScanConfig(Path(self.source.text()), self.sheet.currentText(), values["name"], values["sheet"], values["parcel"],
                           values["area"], values["location"], self.start.value(), values["clear_start"], values["clear_end"])
 
