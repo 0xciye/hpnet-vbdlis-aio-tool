@@ -89,14 +89,17 @@ try {
     $env:APPDATA = (New-Item -ItemType Directory -Path (Join-Path $buildRoot 'smoke-appdata')).FullName
     $env:QT_QPA_PLATFORM = 'offscreen'
     $smokeReport = Join-Path $releaseRoot 'frozen-smoke.json'
+    $result = $null
     $process = Start-Process -FilePath $executable -ArgumentList @('--smoke-test', '--smoke-report', ('"' + $smokeReport + '"')) -WorkingDirectory $buildRoot -WindowStyle Hidden -PassThru
     if (-not $process.WaitForExit(60000)) {
         Stop-Process -Id $process.Id
         throw 'Packaged smoke test timed out.'
     }
-    if ($process.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $smokeReport)) { throw 'Packaged smoke test failed. See frozen-smoke.json.' }
-    $result = Get-Content -LiteralPath $smokeReport -Raw | ConvertFrom-Json
-    if ($result.status -ne 'PASS') { throw $result.error }
+    if (Test-Path -LiteralPath $smokeReport) {
+        $result = Get-Content -LiteralPath $smokeReport -Raw | ConvertFrom-Json
+        if ($result.status -ne 'PASS') { throw "Packaged smoke test failed: $($result.error)" }
+    }
+    if ($process.ExitCode -ne 0 -or -not $result) { throw 'Packaged smoke test failed without a usable report.' }
     & $python -X utf8 (Join-Path $projectRoot 'verify_release.py') --folder $appFolder
     if ($LASTEXITCODE -ne 0) { throw 'Packaged worker/resource verification failed.' }
     # User ZIP contains only runtime resources; guides are available inside the UI.
