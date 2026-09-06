@@ -28,6 +28,8 @@ datas = [
 hiddenimports = [
     'tools.notice_builder.ui',
     'tools.notice_builder.smoke',
+    'tools.duplicate_parcel.ui',
+    'tools.data_normalizer.ui',
     'tools.vbdlis_excel_builder.main',
     'tools.hpnet_file_generator.main',
     'tools.signed_pdf_cleaner.main',

@@ -104,6 +104,22 @@ class ToolLauncher(QMainWindow):
             QMessageBox.critical(self,"Không mở được công cụ tạo thông báo",
                 "Hãy giải nén đầy đủ gói phát hành, giữ thư mục _internal cạnh EXE và kiểm tra quyền đọc/ghi cấu hình người dùng.")
 
+    def launch_duplicate_parcel(self):
+        try:
+            from tools.duplicate_parcel.ui import MainWindow
+            self._open_python("duplicate_parcel", MainWindow)
+        except Exception as error:
+            if "--smoke-test" in sys.argv: raise
+            QMessageBox.critical(self, "Không mở được công cụ làm sạch thửa trùng", str(error))
+
+    def launch_data_normalizer(self):
+        try:
+            from tools.data_normalizer.ui import MainWindow
+            self._open_python("data_normalizer", MainWindow)
+        except Exception as error:
+            if "--smoke-test" in sys.argv: raise
+            QMessageBox.critical(self, "Không mở được công cụ chuẩn hóa dữ liệu", str(error))
+
     def launch_external_tool(self, tool_dir, tool_exe):
         try:
             exe_path = Path(resource_path(tool_dir)) / tool_exe

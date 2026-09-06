@@ -33,13 +33,15 @@ def run(hub):
     view.help_page.find_text()
     assert "Đã tìm thấy" in view.help_page.search_status.text()
     view.reset_search()
-    assert len(view.visible_tool_keys) == 7
+    assert len(view.visible_tool_keys) == 9
 
     hub.launch_excel_builder()
     hub.launch_auto_rename()
     hub.launch_pdf_cleaner()
     hub.launch_notice_builder()
-    assert set(hub.tool_windows) == {"excel", "rename", "cleaner", "notice"}
+    hub.launch_duplicate_parcel()
+    hub.launch_data_normalizer()
+    assert set(hub.tool_windows) == {"excel", "rename", "cleaner", "notice", "duplicate_parcel", "data_normalizer"}
     from PySide6.QtWidgets import QListView, QStyle
     notice_window = hub.tool_windows["notice"]
     assert notice_window.steps.count() == notice_window.stack.count() == 8
@@ -98,8 +100,8 @@ def run(hub):
         assert FileProcessor(use_recycle_bin=True).process_plan(plans[0]).status == ProcessStatus.COMPLETED
         assert (clean_dir / "sample.pdf").read_bytes() == pdf.read_bytes()
 
-    return {"status": "PASS", "embedded_help_complete": True, "independent_help_pages": 3, "launcher_tools": 7,
-            "python_windows": 4, "notice_builder": notice, "notice_styled_popups": True, "excel_export": True,
+    return {"status": "PASS", "embedded_help_complete": True, "independent_help_pages": 3, "launcher_tools": 9,
+            "python_windows": 6, "notice_builder": notice, "notice_styled_popups": True, "excel_export": True,
             "summary_row_excluded": True, "fixed_item_29": True, "cccd_gender": True,
             "diagnostic_reports": True, "source_unchanged": True,
             "auto_rename_copy": True, "cleaner_rename": True, "hpnet_live_operations": False}

@@ -4,7 +4,7 @@ HPNET & VBDLIS AIO TOOL — QUY TRÌNH VẬN HÀNH
 Giải nén toàn bộ gói ZIP vào thư mục có quyền ghi, sau đó chạy HPNET & VBDLIS Tools.exe.
 LƯU Ý: Luôn giữ thư mục _internal nằm cạnh file EXE. Không chạy phần mềm trực tiếp trong ZIP và không di chuyển riêng file EXE ra Desktop.
 Nếu cần mở nhanh từ Desktop, hãy tạo shortcut đến file EXE trong thư mục đã giải nén.
-Launcher hiện có 7 công cụ đang hoạt động. Chọn thẻ công cụ phù hợp với công việc cần thực hiện.
+Launcher hiện có 9 công cụ đang hoạt động. Chọn thẻ công cụ phù hợp với công việc cần thực hiện.
 Mỗi công cụ mở trong cửa sổ nghiệp vụ riêng. Mở lại một công cụ Python đang chạy sẽ đưa cửa sổ đó lên trước và giữ nguyên nội dung đang nhập.
 
 2. TẠO THÔNG BÁO ĐẤT ĐAI
