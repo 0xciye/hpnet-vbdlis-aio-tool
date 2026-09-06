@@ -34,10 +34,11 @@ def parse_release(payload, current_version):
     if not tag or payload.get("draft") or payload.get("prerelease") or tag == current_version:
         return None
     assets = {asset.get("name"): asset.get("browser_download_url") for asset in payload.get("assets", [])}
-    checksum_name = f"{REMOTE_ASSET_NAME}.sha256"
-    if not assets.get(REMOTE_ASSET_NAME) or not assets.get(checksum_name):
-        return None
-    return {"version": tag, "zip_url": assets[REMOTE_ASSET_NAME], "checksum_url": assets[checksum_name]}
+    for asset_name in (REMOTE_ASSET_NAME, ASSET_NAME):
+        checksum_name = f"{asset_name}.sha256"
+        if assets.get(asset_name) and assets.get(checksum_name):
+            return {"version": tag, "zip_url": assets[asset_name], "checksum_url": assets[checksum_name]}
+    return None
 
 
 def check_for_update():
@@ -119,21 +120,35 @@ def launch_installer(new_app):
     script_path = Path(script_name)
     script_path.write_text(r'''param([int]$AppPid,[string]$Current,[string]$NewApp,[string]$Exe)
 $ErrorActionPreference = 'Stop'
-Wait-Process -Id $AppPid -ErrorAction SilentlyContinue
 $parent = Split-Path -Parent $Current
 $previous = Join-Path $parent 'HPNET & VBDLIS Tools.previous'
-if ((Split-Path -Parent $previous) -ne $parent) { throw 'Unsafe update path.' }
-if (Test-Path -LiteralPath $previous) { Remove-Item -LiteralPath $previous -Recurse -Force }
-Move-Item -LiteralPath $Current -Destination $previous
-try {
-    Move-Item -LiteralPath $NewApp -Destination $Current
-    Start-Process -FilePath (Join-Path $Current $Exe) -WorkingDirectory $Current -WindowStyle Hidden
-} catch {
-    if (Test-Path -LiteralPath $Current) { Remove-Item -LiteralPath $Current -Recurse -Force }
-    Move-Item -LiteralPath $previous -Destination $Current
-    Start-Process -FilePath (Join-Path $Current $Exe) -WorkingDirectory $Current -WindowStyle Hidden
-    throw
+$log = Join-Path $env:TEMP 'hpnet-vbdlis-update.log'
+function Write-UpdateLog([string]$Message) {
+    "$(Get-Date -Format o) $Message" | Add-Content -LiteralPath $log -Encoding utf8
 }
+if ((Split-Path -Parent $previous) -ne $parent) { throw 'Unsafe update path.' }
+Write-UpdateLog "installer started pid=$AppPid current=$Current new=$NewApp"
+Wait-Process -Id $AppPid -ErrorAction SilentlyContinue
+Start-Sleep -Milliseconds 800
+for ($attempt = 1; $attempt -le 20; $attempt++) {
+    try {
+        if (Test-Path -LiteralPath $previous) { Remove-Item -LiteralPath $previous -Recurse -Force }
+        Move-Item -LiteralPath $Current -Destination $previous
+        Move-Item -LiteralPath $NewApp -Destination $Current
+        Write-UpdateLog "install succeeded attempt=$attempt"
+        Start-Process -FilePath (Join-Path $Current $Exe) -WorkingDirectory $Current -WindowStyle Hidden
+        exit 0
+    } catch {
+        Write-UpdateLog "attempt=$attempt error=$($_.Exception.Message)"
+        if (Test-Path -LiteralPath $Current) { Remove-Item -LiteralPath $Current -Recurse -Force -ErrorAction SilentlyContinue }
+        if ((Test-Path -LiteralPath $previous) -and -not (Test-Path -LiteralPath $Current)) {
+            Move-Item -LiteralPath $previous -Destination $Current -Force -ErrorAction SilentlyContinue
+        }
+        Start-Sleep -Milliseconds 750
+    }
+}
+Write-UpdateLog 'install failed after 20 attempts'
+throw 'Không thể thay thế bản cài đặt sau 20 lần thử.'
 ''', encoding="utf-8-sig")
     subprocess.Popen([
         "powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden",

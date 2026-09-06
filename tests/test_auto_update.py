@@ -24,6 +24,16 @@ def test_release_requires_new_version_and_both_verified_assets():
     assert parse_release(incomplete, "auto-1-abc123") is None
 
 
+def test_release_accepts_space_named_assets():
+    space_payload = payload()
+    space_payload["assets"] = [
+        {"name": ASSET_NAME, "browser_download_url": "https://example.test/space.zip"},
+        {"name": f"{ASSET_NAME}.sha256", "browser_download_url": "https://example.test/space.zip.sha256"},
+    ]
+    release = parse_release(space_payload, "auto-1-abc123")
+    assert release["zip_url"].endswith("space.zip")
+
+
 def test_safe_extract_accepts_app_and_rejects_traversal(tmp_path):
     good = tmp_path / "good.zip"
     with ZipFile(good, "w") as archive:
