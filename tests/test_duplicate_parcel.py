@@ -68,3 +68,22 @@ def test_normalization_keeps_distinct_parcel_identifiers():
     assert len({normalized_identifier(value) for value in ("39", "39.1", "39/1", "39A")}) == 4
     assert normalized_area(500) == normalized_area("500.00")
     assert is_total_dt(" Tổng   DT ") and not is_total_dt("Tổng diện tích")
+
+
+def test_cleanup_skips_read_only_merged_cells(tmp_path):
+    source = tmp_path / "merged.xlsx"
+    make_source(source)
+    wb = load_workbook(source)
+    ws = wb["Data"]
+    ws.merge_cells("W4:X4")
+    ws["W4"] = "merged metadata"
+    wb.save(source)
+    wb.close()
+
+    result = scan(ScanConfig(source, "Data", "B", "G", "H", "I", "J", 4, "G", "X"))
+    output, _ = apply_cleanup(result, tmp_path / "cleaned.xlsx")
+    wb = load_workbook(output)
+    ws = wb["Data"]
+    assert ws["W4"].value is None
+    assert ws["X4"].value is None
+    wb.close()

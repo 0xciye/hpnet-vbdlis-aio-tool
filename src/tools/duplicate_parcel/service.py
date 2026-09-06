@@ -6,6 +6,7 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
 from openpyxl.utils import column_index_from_string
+from openpyxl.cell.cell import MergedCell
 
 from tools.excel_safety import atomic_save, create_backup, open_workbook
 from .models import ParcelRecord, ScanConfig, ScanResult
@@ -148,7 +149,12 @@ def apply_cleanup(result: ScanResult, output: str | Path, selected_rows: set[int
             if row in result.summary_rows or is_total_dt(sheet[f"{result.config.name_column}{row}"].value):
                 raise ValueError(f"Dòng Tổng DT {row} được bảo vệ, không thể clear.")
             for column in range(start, end + 1):
-                sheet.cell(row, column).value = None
+                cell = sheet.cell(row, column)
+                # Non-anchor cells in a merged range are read-only in openpyxl.
+                # Leave them untouched while clearing the normal cells around them.
+                if isinstance(cell, MergedCell):
+                    continue
+                cell.value = None
         output = atomic_save(workbook, output)
     finally:
         workbook.close()

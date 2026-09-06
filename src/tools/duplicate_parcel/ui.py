@@ -8,6 +8,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (QCheckBox, QComboBox, QFileDialog, QFormLayout, QHBoxLayout, QLabel,
     QLineEdit, QMainWindow, QMessageBox, QPushButton, QSpinBox, QTableWidget, QTableWidgetItem,
     QVBoxLayout, QWidget)
+from openpyxl.utils import get_column_letter
 
 from launcher_ui.theme import STYLE, palette
 from tools.excel_safety import default_output, open_workbook, timestamp
@@ -34,11 +35,13 @@ class MainWindow(QMainWindow):
         row = QHBoxLayout(); row.addWidget(self.source, 1); row.addWidget(browse); form.addRow("File Excel", row)
         self.sheet = QComboBox(); form.addRow("Sheet", self.sheet)
         self.columns = {}
+        column_choices = [get_column_letter(index) for index in range(1, 703)]
         for label, key, value in (("Cột Họ và tên", "name", "B"), ("Cột Số tờ", "sheet", "G"),
                                   ("Cột Số thửa", "parcel", "H"), ("Cột Diện tích", "area", "I"),
                                   ("Cột Xứ đồng", "location", "J"), ("Cột bắt đầu clear", "clear_start", "G"),
                                   ("Cột kết thúc clear", "clear_end", "X")):
-            edit = QLineEdit(value); edit.setMaximumWidth(120); self.columns[key] = edit; form.addRow(label, edit)
+            edit = QComboBox(); edit.addItems(column_choices); edit.setCurrentText(value)
+            edit.setMaximumWidth(120); self.columns[key] = edit; form.addRow(label, edit)
         self.start = QSpinBox(); self.start.setRange(1, 1_048_576); self.start.setValue(4); form.addRow("Dòng bắt đầu", self.start)
         box.addLayout(form)
         actions = QHBoxLayout(); self.scan_button = QPushButton("QUÉT & XEM TRƯỚC"); self.scan_button.clicked.connect(self.scan_file)
@@ -59,7 +62,7 @@ class MainWindow(QMainWindow):
         except Exception as error: self._error(error)
 
     def config(self):
-        values = {key: value.text().strip().upper() for key, value in self.columns.items()}
+        values = {key: value.currentText().strip().upper() for key, value in self.columns.items()}
         if not self.sheet.currentText(): raise ValueError("Hãy chọn file và sheet Excel.")
         return ScanConfig(Path(self.source.text()), self.sheet.currentText(), values["name"], values["sheet"], values["parcel"],
                           values["area"], values["location"], self.start.value(), values["clear_start"], values["clear_end"])
