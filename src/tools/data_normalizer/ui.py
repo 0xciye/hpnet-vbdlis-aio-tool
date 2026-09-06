@@ -29,10 +29,10 @@ class MainWindow(QMainWindow):
         form = QFormLayout(); self.source = QLineEdit(); browse = QPushButton("Chọn…"); browse.clicked.connect(self.browse)
         row = QHBoxLayout(); row.addWidget(self.source, 1); row.addWidget(browse); form.addRow("File Excel", row)
         self.sheet = QComboBox(); form.addRow("Sheet", self.sheet)
-        self.start = QSpinBox(); self.start.setRange(1, 1_048_576); self.start.setValue(4)
-        self.end = QLineEdit(); self.end.setPlaceholderText("Auto"); self.end.setMaximumWidth(140)
-        range_row = QHBoxLayout(); range_row.addWidget(QLabel("Từ dòng")); range_row.addWidget(self.start); range_row.addSpacing(20); range_row.addWidget(QLabel("Đến dòng")); range_row.addWidget(self.end); range_row.addStretch()
-        form.addRow("Phạm vi", range_row)
+        self.start = QSpinBox(); self.start.setRange(1, 1_048_576); self.start.setValue(4); self.start.setMaximumWidth(140)
+        self.end = QSpinBox(); self.end.setRange(0, 1_048_576); self.end.setValue(0); self.end.setSpecialValueText("Cuối sheet"); self.end.setMaximumWidth(140)
+        range_row = QHBoxLayout(); range_row.addWidget(QLabel("Dòng bắt đầu")); range_row.addWidget(self.start); range_row.addSpacing(20); range_row.addWidget(QLabel("Dòng kết thúc")); range_row.addWidget(self.end); range_row.addStretch()
+        form.addRow("Phạm vi chuẩn hóa", range_row)
         self.use_name = QCheckBox("Chuẩn hóa Họ tên"); self.use_name.setChecked(True)
         self.name_column = QLineEdit("B"); self.name_column.setMaximumWidth(120)
         name_row = QHBoxLayout(); name_row.addWidget(self.use_name); name_row.addSpacing(20); name_row.addWidget(QLabel("Cột")); name_row.addWidget(self.name_column); name_row.addStretch(); form.addRow("Họ tên", name_row)
@@ -63,9 +63,8 @@ class MainWindow(QMainWindow):
 
     def config(self):
         if not self.sheet.currentText(): raise ValueError("Hãy chọn file và sheet Excel.")
-        end_text = self.end.text().strip()
-        if end_text and not end_text.isdigit(): raise ValueError("Dòng kết thúc phải là số hoặc để trống (Auto).")
-        return NormalizeConfig(Path(self.source.text()), self.sheet.currentText(), self.start.value(), int(end_text) if end_text else None,
+        end_row = self.end.value() or None
+        return NormalizeConfig(Path(self.source.text()), self.sheet.currentText(), self.start.value(), end_row,
                                self.use_name.isChecked(), self.name_column.text().strip().upper(), self.use_birthdate.isChecked(),
                                self.birthdate_column.text().strip().upper(), self.input_mode.currentData(), self.output_format.currentText(), self.store_date.isChecked())
 
