@@ -1,6 +1,8 @@
 param([string]$ReleaseId = (Get-Date -Format 'yyyy.MM.dd-HHmmss'))
 $ErrorActionPreference = 'Stop'
 $projectRoot = $PSScriptRoot
+$productName = 'HPNet VBDLIS AIO Tool'
+$desktopTemp = $null
 if ($ReleaseId -notmatch '^[a-zA-Z0-9._-]+$') { throw 'ReleaseId chi duoc gom chu, so, dau cham, gach ngang.' }
 $python = Join-Path $projectRoot '.venv\Scripts\python.exe'
 if (-not (Test-Path -LiteralPath $python)) { throw 'Can tao .venv va cai docs\REQUIREMENTS_BUILD.txt truoc.' }
@@ -86,18 +88,17 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Packaged worker/resource verification failed.' }
     # User ZIP contains only runtime resources; guides are available inside the UI.
     # QA reports stay beside the ZIP, never inside the app folder.
-    $zipPath = Join-Path $releaseRoot 'HPNet VBDLIS AIO Tool.zip'
+    $zipPath = Join-Path $releaseRoot "$productName.zip"
     Add-Type -AssemblyName System.IO.Compression.FileSystem
     [IO.Compression.ZipFile]::CreateFromDirectory($appFolder, $zipPath, [IO.Compression.CompressionLevel]::Optimal, $true)
     & $python -X utf8 (Join-Path $projectRoot 'verify_release.py') --folder $appFolder --zip $zipPath
     if ($LASTEXITCODE -ne 0) { throw 'ZIP verification failed.' }
-    # Publish one stable ZIP name, only after the new package is verified.
-    # Replace only the public ZIP in the release root. User-maintained archive
-    # directories such as release\old build are outside this cleanup scope.
+    # Publish one stable name only after the new package is fully verified.
     $releaseBase = (Resolve-Path -LiteralPath (Join-Path $projectRoot 'release')).Path
-    $publicZip = Join-Path $releaseBase 'HPNet VBDLIS AIO Tool.zip'
+    $buildBase = (Resolve-Path -LiteralPath (Join-Path $projectRoot 'build')).Path
+    $publicZip = Join-Path $releaseBase "$productName.zip"
     $oldArchives = @(Get-ChildItem -LiteralPath $releaseBase -File | Where-Object {
-        $_.Name -eq 'HPNet VBDLIS AIO Tool.zip' -or $_.Name -like 'HPNET-VBDLIS-Tools-*.zip'
+        $_.Name -like "$productName*.zip" -or $_.Name -like 'HPNET-VBDLIS-Tools-*.zip'
     })
     Add-Type -AssemblyName Microsoft.VisualBasic
     foreach ($archive in $oldArchives) {
@@ -112,14 +113,41 @@ try {
     }
     Move-Item -LiteralPath $zipPath -Destination $publicZip
     $publicHash = Get-FileHash -LiteralPath $publicZip -Algorithm SHA256
-    $buildBase = (Resolve-Path -LiteralPath (Join-Path $projectRoot 'build')).Path
+
+    $desktopBase = [Environment]::GetFolderPath('Desktop')
+    if (-not (Test-Path -LiteralPath $desktopBase -PathType Container)) { throw 'Không tìm thấy thư mục Desktop.' }
+    $desktopZip = Join-Path $desktopBase "$productName.zip"
+    $desktopTemp = Join-Path $desktopBase ".$productName.copying.zip"
+    Copy-Item -LiteralPath $publicZip -Destination $desktopTemp
+    if ((Get-FileHash -LiteralPath $desktopTemp -Algorithm SHA256).Hash -ne $publicHash.Hash) {
+        throw 'Bản sao Desktop không khớp SHA-256 với release vừa build.'
+    }
+    if (Test-Path -LiteralPath $desktopZip) {
+        Send-SafeItemToRecycleBin (Get-Item -LiteralPath $desktopZip) $desktopBase
+    }
+    Move-Item -LiteralPath $desktopTemp -Destination $desktopZip
+    $desktopTemp = $null
+
+    # A successful release supersedes every prior generated staging directory.
+    foreach ($directory in @(Get-ChildItem -LiteralPath $buildBase -Directory | Where-Object { $_.FullName -ne $buildRoot })) {
+        Send-SafeItemToRecycleBin $directory $buildBase
+    }
+    foreach ($directory in @(Get-ChildItem -LiteralPath $releaseBase -Directory | Where-Object { $_.FullName -ne $releaseRoot })) {
+        Send-SafeItemToRecycleBin $directory $releaseBase
+    }
     Send-SafeItemToRecycleBin (Get-Item -LiteralPath $buildRoot) $buildBase
     Send-SafeItemToRecycleBin (Get-Item -LiteralPath $releaseRoot) $releaseBase
-    if ((Test-Path -LiteralPath $buildRoot) -or (Test-Path -LiteralPath $releaseRoot)) { throw 'Generated build cleanup failed.' }
-    if (-not (Test-Path -LiteralPath $publicZip -PathType Leaf)) { throw 'Public release ZIP missing after publish.' }
+    if (@(Get-ChildItem -LiteralPath $buildBase -Directory).Count -or @(Get-ChildItem -LiteralPath $releaseBase -Directory).Count) {
+        throw 'Vẫn còn thư mục build cũ sau cleanup.'
+    }
+    if (-not (Test-Path -LiteralPath $publicZip -PathType Leaf) -or -not (Test-Path -LiteralPath $desktopZip -PathType Leaf)) {
+        throw 'Thiếu ZIP mới trong release hoặc Desktop sau publish.'
+    }
     $publicHash
     Write-Host "RELEASE_PASS: $publicZip"
+    Write-Host "DESKTOP_COPY_PASS: $desktopZip"
 } finally {
+    if ($desktopTemp -and (Test-Path -LiteralPath $desktopTemp -PathType Leaf)) { [IO.File]::Delete($desktopTemp) }
     $env:PYTHONPATH = $oldPythonPath
     $env:APPDATA = $oldAppData
     $env:QT_QPA_PLATFORM = $oldPlatform

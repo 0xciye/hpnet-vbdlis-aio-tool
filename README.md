@@ -139,6 +139,7 @@ Quy trình build thực hiện tuần tự:
 6. Đối chiếu tài nguyên, Node workers, PowerShell self-test và icon EXE.
 7. Tạo ZIP và xác minh tên, số lượng, nội dung, hash của từng tệp.
 8. Chỉ thay ZIP công khai sau khi mọi kiểm tra đạt.
+9. Xóa các thư mục build/release staging cũ và sao chép bản mới nhất ra Desktop.
 
 Kết quả:
 
@@ -147,7 +148,7 @@ release/
 └── HPNet VBDLIS AIO Tool.zip
 ```
 
-ZIP chỉ chứa ứng dụng và tài nguyên cần chạy; không kèm source test, môi trường phát triển, cấu hình đã sử dụng hoặc phiên đăng nhập. Script chỉ dọn thư mục trung gian của chính lần build hiện tại và giữ nguyên các thư mục lưu trữ do người dùng tạo, ví dụ `release\old build`.
+ZIP chỉ chứa ứng dụng và tài nguyên cần chạy; không kèm source test, môi trường phát triển, cấu hình đã sử dụng hoặc phiên đăng nhập. Sau khi build thành công, script xóa toàn bộ thư mục staging cũ trong `build\` và `release\`, giữ một ZIP chuẩn tên `HPNet VBDLIS AIO Tool.zip` trong `release\` và sao chép đúng ZIP đó ra Desktop. Build thất bại không chạy bước publish/cleanup này.
 
 Nếu phần mềm bảo mật cảnh báo nhầm PyInstaller hoặc Python chính thức, không nên tắt bảo vệ trên toàn máy. Hãy gửi yêu cầu false-positive, thêm đúng executable đã xác minh vào danh sách tin cậy hoặc build trên máy phát hành được quản lý riêng.
 
