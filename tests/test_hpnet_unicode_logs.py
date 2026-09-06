@@ -32,3 +32,4 @@ def test_hpnet_user_state_lives_outside_install_folder():
         assert "GetFolderPath('LocalApplicationData')" in source
         assert "HPNet VBDLIS AIO Tool" in source
         assert "du_lieu_dang_nhap_vneid" in source
+        assert "HPNET & VBDLIS Tools.previous" in source

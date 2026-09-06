@@ -44,9 +44,14 @@ if ($SelfTest) {
 
 $stateRoot = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'HPNet VBDLIS AIO Tool\Duyet'
 New-Item -ItemType Directory -Force -Path $stateRoot | Out-Null
+$appRoot = $toolRoot; 1..4 | ForEach-Object { $appRoot = Split-Path -Parent $appRoot }
+$previousToolRoot = Join-Path (Join-Path (Split-Path -Parent $appRoot) 'HPNET & VBDLIS Tools.previous') '_internal\nodes_tools\Duyet\HPNet Duyet VB Du Thao - VNEID APP'
 foreach ($name in @('cau_hinh.json','profiles.json','du_lieu_dang_nhap_vneid','nhat_ky','ket_qua_quet_moi_nhat.json')) {
-    $legacy = Join-Path $toolRoot $name; $saved = Join-Path $stateRoot $name
-    if ((Test-Path -LiteralPath $legacy) -and -not (Test-Path -LiteralPath $saved)) { Copy-Item -LiteralPath $legacy -Destination $saved -Recurse }
+    $saved = Join-Path $stateRoot $name
+    foreach ($legacyRoot in @($toolRoot,$previousToolRoot)) {
+        $legacy = Join-Path $legacyRoot $name
+        if ((Test-Path -LiteralPath $legacy) -and -not (Test-Path -LiteralPath $saved)) { Copy-Item -LiteralPath $legacy -Destination $saved -Recurse }
+    }
 }
 $configPath = Join-Path $stateRoot 'cau_hinh.json'
 $profilesPath = Join-Path $stateRoot 'profiles.json'
