@@ -6,6 +6,7 @@ def test_successful_build_replaces_old_staging_and_copies_default_zip_to_desktop
     assert "$productName = 'HPNet VBDLIS AIO Tool'" in script
     assert "[switch]$SkipDesktopCopy" in script
     assert "$env:SUITE_BUILD_INFO = $buildInfo" in script
+    assert script.index("sync_notice_template.py") < script.index("run_tests.py")
     assert "[Environment]::GetFolderPath('Desktop')" in script
     assert "DESKTOP_COPY_PASS" in script
     assert "Get-ChildItem -LiteralPath $buildBase -Directory" in script
