@@ -8,7 +8,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (QCheckBox, QComboBox, QFileDialog, QFormLayout, QHBoxLayout, QLabel,
     QLineEdit, QMainWindow, QMessageBox, QPushButton, QSpinBox, QTableWidget, QTableWidgetItem,
     QVBoxLayout, QWidget)
-from openpyxl.utils import get_column_letter
+from openpyxl.utils import get_column_letter, column_index_from_string
 
 from launcher_ui.theme import STYLE, palette
 from tools.excel_safety import default_output, open_workbook, timestamp
@@ -34,13 +34,14 @@ class MainWindow(QMainWindow):
         form = QFormLayout(); self.source = QLineEdit(); browse = QPushButton("Chọn…"); browse.clicked.connect(self.browse)
         row = QHBoxLayout(); row.addWidget(self.source, 1); row.addWidget(browse); form.addRow("File Excel", row)
         self.sheet = QComboBox(); form.addRow("Sheet", self.sheet)
+        self.sheet.currentTextChanged.connect(self._refresh_column_choices)
         self.columns = {}
-        column_choices = [get_column_letter(index) for index in range(1, 703)]
         for label, key, value in (("Cột Họ và tên", "name", "B"), ("Cột Số tờ", "sheet", "G"),
                                   ("Cột Số thửa", "parcel", "H"), ("Cột Diện tích", "area", "I"),
                                   ("Cột Xứ đồng", "location", "J"), ("Cột bắt đầu clear", "clear_start", "G"),
                                   ("Cột kết thúc clear", "clear_end", "X")):
-            edit = QComboBox(); edit.addItems(column_choices); edit.setCurrentText(value)
+            edit = QComboBox(); edit.setProperty("default_column", value)
+            edit.addItem(value, value)
             edit.setMaximumWidth(120); self.columns[key] = edit; form.addRow(label, edit)
         self.start = QSpinBox(); self.start.setRange(1, 1_048_576); self.start.setValue(4); form.addRow("Dòng bắt đầu", self.start)
         box.addLayout(form)
@@ -61,8 +62,37 @@ class MainWindow(QMainWindow):
             wb = open_workbook(path, read_only=True); self.sheet.clear(); self.sheet.addItems(wb.sheetnames); wb.close()
         except Exception as error: self._error(error)
 
+    def _refresh_column_choices(self):
+        if not self.source.text() or not self.sheet.currentText():
+            return
+        try:
+            wb = open_workbook(self.source.text(), read_only=True, data_only=True)
+            ws = wb[self.sheet.currentText()]
+            max_column = max(26, ws.max_column)
+            headers = {}
+            for column in range(1, max_column + 1):
+                letter = get_column_letter(column)
+                for row in range(1, min(ws.max_row, 5) + 1):
+                    value = ws.cell(row, column).value
+                    if value is not None and str(value).strip():
+                        headers[letter] = " ".join(str(value).split())
+                        break
+            for combo in self.columns.values():
+                selected = combo.currentData() or combo.property("default_column")
+                combo.blockSignals(True); combo.clear()
+                for column in range(1, max_column + 1):
+                    letter = get_column_letter(column)
+                    label = f"{letter} — {headers[letter]}" if letter in headers else letter
+                    combo.addItem(label, letter)
+                index = combo.findData(selected)
+                combo.setCurrentIndex(index if index >= 0 else 0)
+                combo.blockSignals(False)
+            wb.close()
+        except Exception as error:
+            self._error(error)
+
     def config(self):
-        values = {key: value.currentText().strip().upper() for key, value in self.columns.items()}
+        values = {key: str(value.currentData() or value.currentText()).strip().upper() for key, value in self.columns.items()}
         if not self.sheet.currentText(): raise ValueError("Hãy chọn file và sheet Excel.")
         return ScanConfig(Path(self.source.text()), self.sheet.currentText(), values["name"], values["sheet"], values["parcel"],
                           values["area"], values["location"], self.start.value(), values["clear_start"], values["clear_end"])
