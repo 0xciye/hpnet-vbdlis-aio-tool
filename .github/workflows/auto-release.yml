@@ -59,7 +59,12 @@ jobs:
       - name: Build and verify release
         shell: pwsh
         run: |
-          .\build_release.ps1 -ReleaseId $env:RELEASE_ID -SkipDesktopCopy
+          try {
+            .\build_release.ps1 -ReleaseId $env:RELEASE_ID -SkipDesktopCopy
+          } catch {
+            Write-Output "::error title=Release build failed::$($_.Exception.Message)"
+            throw
+          }
 
       - name: Create checksum
         shell: pwsh
