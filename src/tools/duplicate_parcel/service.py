@@ -105,7 +105,8 @@ def scan(config: ScanConfig) -> ScanResult:
             parcel_number = normalized_identifier(sheet[f"{config.parcel_column}{row}"].value)
             if not sheet_number or not parcel_number:
                 continue
-            record = ParcelRecord(household, row, sheet_number, parcel_number,
+            record = ParcelRecord(household, row, " ".join(str(sheet[f"{config.name_column}{row}"].value or "").split()),
+                                  sheet_number, parcel_number,
                                   normalized_area(sheet[f"{config.area_column}{row}"].value),
                                   normalized_text(sheet[f"{config.location_column}{row}"].value))
             records.append(record)

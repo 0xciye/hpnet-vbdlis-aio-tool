@@ -22,6 +22,7 @@ class ScanConfig:
 class ParcelRecord:
     household: int
     row: int
+    name: str
     sheet: str
     parcel: str
     area: str | None

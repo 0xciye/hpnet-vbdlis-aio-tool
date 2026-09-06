@@ -50,7 +50,7 @@ class MainWindow(QMainWindow):
         self.apply_button = QPushButton("Áp dụng làm sạch"); self.apply_button.clicked.connect(self.apply); self.apply_button.setEnabled(False)
         actions.addWidget(self.scan_button); actions.addStretch(); actions.addWidget(self.report_button); actions.addWidget(self.apply_button); box.addLayout(actions)
         self.summary = QLabel("Chưa quét dữ liệu."); box.addWidget(self.summary)
-        self.table = QTableWidget(0, 9); self.table.setHorizontalHeaderLabels(["Chọn", "Hộ", "Dòng", "Số tờ", "Số thửa", "Diện tích", "Xứ đồng", "Trạng thái", "Hành động"])
+        self.table = QTableWidget(0, 10); self.table.setHorizontalHeaderLabels(["Chọn", "Hộ", "Chủ hộ", "Dòng", "Số tờ", "Số thửa", "Diện tích", "Xứ đồng", "Trạng thái", "Hành động"])
         self.table.horizontalHeader().setStretchLastSection(True); box.addWidget(self.table, 1)
         self.setCentralWidget(root); self.statusBar().showMessage("Quét chỉ đọc dữ liệu và không sửa file.")
 
@@ -121,13 +121,25 @@ class MainWindow(QMainWindow):
         self.summary.setText(f"Đã quét {result.rows_scanned} dòng · {counts.get('HOUSEHOLDS', 0)} hộ · "
                              f"{counts.get('EXACT_DUPLICATE', 0)} dòng sẽ clear · "
                              f"{conflicts} dòng xung đột/thiếu dữ liệu cần xem lại")
+        exact_groups = {}
+        for record in result.records:
+            if record.status == "EXACT_DUPLICATE":
+                exact_groups.setdefault((record.sheet, record.parcel), []).append(record)
         self.table.setRowCount(len(result.records))
+        rendered_groups = set()
         for index, record in enumerate(result.records):
             check = QTableWidgetItem(); check.setFlags(Qt.ItemIsEnabled | Qt.ItemIsUserCheckable)
             check.setCheckState(Qt.Checked if record.selected else Qt.Unchecked)
             if record.status != "EXACT_DUPLICATE": check.setFlags(Qt.ItemIsEnabled)
             self.table.setItem(index, 0, check)
-            for column, value in enumerate((record.household, record.row, record.sheet, record.parcel, record.area or "", record.location, record.status, record.action), 1):
+            group_key = (record.sheet, record.parcel)
+            repeated = record.status == "EXACT_DUPLICATE" and group_key in rendered_groups
+            if record.status == "EXACT_DUPLICATE": rendered_groups.add(group_key)
+            values = (record.household, record.name or "(không có tên)", record.row,
+                      "↳ trùng" if repeated else record.sheet,
+                      "" if repeated else record.parcel, record.area or "", record.location,
+                      record.status, record.action)
+            for column, value in enumerate(values, 1):
                 self.table.setItem(index, column, QTableWidgetItem(str(value)))
         self.report_button.setEnabled(True); self.apply_button.setEnabled(bool(result.clear_rows))
         self._log("scan=" + repr(result.counts()) + "\n")
