@@ -82,6 +82,7 @@ def test_installer_replaces_app_and_keeps_previous_copy(tmp_path, monkeypatch):
     auto_update.launch_installer(new_app)
 
     args = captured["args"]
+    assert captured["kwargs"]["cwd"] == str(current.parent)
     args[args.index("-AppPid") + 1] = "2147483647"
     subprocess.run(args, check=True)
     assert (current / "marker.txt").read_text(encoding="ascii") == "new"
