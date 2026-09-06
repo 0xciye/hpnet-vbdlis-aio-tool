@@ -32,6 +32,8 @@ class ToolLauncher(QMainWindow):
         self.setWindowIcon(QIcon(resource_path("tools/vbdlis_excel_builder/resources/app_icon.ico")))
         self.open_tools = []
         self.tool_windows = {}
+        self.external_processes = {}
+        self.external_timers = {}
         self.tool_buttons = {}
         self._excel_logging_ready = False
         self.update_worker = None
@@ -54,12 +56,23 @@ class ToolLauncher(QMainWindow):
         window = self.tool_windows.get(key)
         if window is None:
             window = factory()
+            window.setAttribute(Qt.WA_DeleteOnClose, True)
+            window.destroyed.connect(lambda _=None, tool_key=key: self._tool_closed(tool_key))
             self.tool_windows[key] = window
             self.open_tools.append(window)
+        self.hide()
         window.showNormal()
         window.raise_()
         window.activateWindow()
         self.statusBar().showMessage(f"Đã mở {window.windowTitle()}. Các bước xử lý nằm trong cửa sổ công cụ.")
+
+    def _tool_closed(self, key):
+        closed = self.tool_windows.pop(key, None)
+        if closed is not None:
+            self.open_tools = [window for window in self.open_tools if window is not closed]
+        self.showNormal()
+        self.raise_()
+        self.activateWindow()
 
     def launch_excel_builder(self):
         try:
@@ -126,10 +139,28 @@ class ToolLauncher(QMainWindow):
             exe_path = Path(resource_path(tool_dir)) / tool_exe
             if not exe_path.is_file():
                 raise FileNotFoundError(f"Không tìm thấy công cụ:\n{exe_path}\nHãy giải nén đầy đủ gói phát hành.")
-            subprocess.Popen([str(exe_path)], cwd=str(exe_path.parent))
+            process = subprocess.Popen([str(exe_path)], cwd=str(exe_path.parent))
+            self.external_processes[tool_exe] = process
+            timer = QTimer(self)
+            timer.timeout.connect(lambda name=tool_exe: self._poll_external(name))
+            timer.start(500)
+            self.external_timers[tool_exe] = timer
+            self.hide()
             self.statusBar().showMessage(f"Đã mở {tool_exe}. Kiểm tra cấu hình trong cửa sổ riêng.")
         except Exception as error:
             QMessageBox.critical(self, "Không mở được công cụ", str(error))
+
+    def _poll_external(self, tool_exe):
+        process = self.external_processes.get(tool_exe)
+        if process is None or process.poll() is None:
+            return
+        timer = self.external_timers.pop(tool_exe, None)
+        if timer:
+            timer.stop(); timer.deleteLater()
+        self.external_processes.pop(tool_exe, None)
+        self.showNormal()
+        self.raise_()
+        self.activateWindow()
 
     def open_help(self):
         self.launcher_view.show_help()

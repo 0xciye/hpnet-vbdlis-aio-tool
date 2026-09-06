@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 
 from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QHeaderView
 from PySide6.QtWidgets import (QCheckBox, QComboBox, QFileDialog, QFormLayout, QHBoxLayout, QLabel,
     QLineEdit, QMainWindow, QMessageBox, QPushButton, QSpinBox, QTableWidget, QTableWidgetItem,
     QVBoxLayout, QWidget)
@@ -41,8 +42,9 @@ class MainWindow(QMainWindow):
                                   ("Cột Xứ đồng", "location", "J"), ("Cột bắt đầu clear", "clear_start", "G"),
                                   ("Cột kết thúc clear", "clear_end", "X")):
             edit = QComboBox(); edit.setProperty("default_column", value)
-            edit.addItem(value, value)
-            edit.setMaximumWidth(120); self.columns[key] = edit; form.addRow(label, edit)
+            edit.addItem("— Chọn file Excel trước —", None)
+            edit.setMinimumWidth(240); edit.setMaximumWidth(320)
+            self.columns[key] = edit; form.addRow(label, edit)
         self.start = QSpinBox(); self.start.setRange(1, 1_048_576); self.start.setValue(4); form.addRow("Dòng bắt đầu", self.start)
         box.addLayout(form)
         actions = QHBoxLayout(); self.scan_button = QPushButton("QUÉT & XEM TRƯỚC"); self.scan_button.clicked.connect(self.scan_file)
@@ -51,7 +53,11 @@ class MainWindow(QMainWindow):
         actions.addWidget(self.scan_button); actions.addStretch(); actions.addWidget(self.report_button); actions.addWidget(self.apply_button); box.addLayout(actions)
         self.summary = QLabel("Chưa quét dữ liệu."); box.addWidget(self.summary)
         self.table = QTableWidget(0, 10); self.table.setHorizontalHeaderLabels(["Chọn", "Hộ", "Chủ hộ", "Dòng", "Số tờ", "Số thửa", "Diện tích", "Xứ đồng", "Trạng thái", "Hành động"])
-        self.table.horizontalHeader().setStretchLastSection(True); box.addWidget(self.table, 1)
+        header = self.table.horizontalHeader()
+        header.setStretchLastSection(True)
+        header.setSectionResizeMode(QHeaderView.ResizeToContents)
+        header.setMinimumSectionSize(72)
+        box.addWidget(self.table, 1)
         self.setCentralWidget(root); self.statusBar().showMessage("Quét chỉ đọc dữ liệu và không sửa file.")
 
     def browse(self):
