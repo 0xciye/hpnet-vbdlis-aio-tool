@@ -114,7 +114,9 @@ def launch_installer(new_app):
     probe = parent / f".hpnet-update-write-test-{os.getpid()}"
     probe.write_text("ok", encoding="ascii")
     probe.unlink()
-    script_path = Path(tempfile.mkstemp(prefix="hpnet-vbdlis-installer-", suffix=".ps1")[1])
+    script_fd, script_name = tempfile.mkstemp(prefix="hpnet-vbdlis-installer-", suffix=".ps1")
+    os.close(script_fd)
+    script_path = Path(script_name)
     script_path.write_text(r'''param([int]$AppPid,[string]$Current,[string]$NewApp,[string]$Exe)
 $ErrorActionPreference = 'Stop'
 Wait-Process -Id $AppPid -ErrorAction SilentlyContinue

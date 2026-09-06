@@ -1,3 +1,7 @@
+import os
+import shutil
+import subprocess
+from types import SimpleNamespace
 from zipfile import ZipFile
 
 import pytest
@@ -47,3 +51,28 @@ def test_download_verifies_checksum_and_returns_extracted_app(tmp_path, monkeypa
     monkeypatch.setattr(auto_update, "_download", copy_download)
     app = auto_update.download_update({"zip_url": "good.zip", "checksum_url": "good.sha256"})
     assert (app / EXE_NAME).read_bytes() == b"exe"
+
+
+def test_installer_replaces_app_and_keeps_previous_copy(tmp_path, monkeypatch):
+    current = tmp_path / "install" / APP_FOLDER
+    new_app = tmp_path / "download" / APP_FOLDER
+    current.mkdir(parents=True); new_app.mkdir(parents=True)
+    shutil.copy2(os.environ["COMSPEC"], current / EXE_NAME)
+    shutil.copy2(os.environ["COMSPEC"], new_app / EXE_NAME)
+    (current / "marker.txt").write_text("old", encoding="ascii")
+    (new_app / "marker.txt").write_text("new", encoding="ascii")
+    captured = {}
+    fake_subprocess = SimpleNamespace(
+        CREATE_NO_WINDOW=0,
+        Popen=lambda args, **kwargs: captured.update(args=list(args), kwargs=kwargs),
+    )
+    monkeypatch.setattr(auto_update.sys, "frozen", True, raising=False)
+    monkeypatch.setattr(auto_update.sys, "executable", str(current / EXE_NAME))
+    monkeypatch.setattr(auto_update, "subprocess", fake_subprocess)
+    auto_update.launch_installer(new_app)
+
+    args = captured["args"]
+    args[args.index("-AppPid") + 1] = "2147483647"
+    subprocess.run(args, check=True)
+    assert (current / "marker.txt").read_text(encoding="ascii") == "new"
+    assert (tmp_path / "install" / f"{APP_FOLDER}.previous" / "marker.txt").read_text(encoding="ascii") == "old"
