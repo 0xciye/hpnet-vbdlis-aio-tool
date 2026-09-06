@@ -9,6 +9,8 @@ Bộ công cụ desktop dành cho Windows, hợp nhất các quy trình chuẩn 
 | Nhóm | Công cụ | Chức năng chính |
 | --- | --- | --- |
 | Hồ sơ đất đai | **Tạo thông báo đất đai** | Đọc toàn bộ Excel hoặc một khoảng dòng chỉ định, kiểm tra dữ liệu, xem trước và tạo Word theo Mẫu 22; tự lấy diện tích sử dụng chung bằng diện tích thửa, hỗ trợ cấp số, gán ngày theo từng nhóm số và xuất nhật ký. |
+| Hồ sơ đất đai | **Kiểm tra & Làm sạch thửa trùng** | Tách hộ bằng dòng Tổng DT, phân loại trùng/xung đột, xem trước rồi chỉ clear vùng dữ liệu của bản ghi trùng hoàn toàn. |
+| Tiện ích Excel | **Chuẩn hóa Họ tên & Ngày sinh** | Chuẩn hóa độc lập một hoặc hai cột; giữ nguyên công thức, ngày mơ hồ, ngày lỗi và ngày thiếu. |
 | Dữ liệu VBDLIS | **VBDLIS Excel Builder** | Ánh xạ cột, xử lý hộ/người/thửa, kiểm tra quy tắc nghiệp vụ và xuất Excel theo biểu mẫu VBDLIS. |
 | Quản lý tệp | **Auto Rename** | Đối chiếu Excel để nhân bản và đặt tên PDF/Word theo thông tin thửa đất. |
 | Quản lý PDF | **PDF Cleaner** | Ghép cặp PDF thường với bản có hậu tố ký, dọn bản thường và chuẩn hóa tên file. |
@@ -20,7 +22,7 @@ Launcher hỗ trợ tìm kiếm công cụ, mở hướng dẫn bằng phím **F
 
 ## Điểm nổi bật
 
-- Một giao diện thống nhất cho bảy công cụ nghiệp vụ.
+- Một giao diện thống nhất cho chín công cụ nghiệp vụ.
 - Bản Windows portable, không yêu cầu cài Python hoặc Node.js trên máy sử dụng.
 - Kiểm tra và xem trước dữ liệu trước khi xuất hoặc thực hiện thao tác HPNet.
 - Mẫu Word được chuẩn hóa cục bộ tại các dòng placeholder, giữ nguyên cấu trúc và định dạng pháp lý còn lại.
@@ -157,7 +159,7 @@ Nếu phần mềm bảo mật cảnh báo nhầm PyInstaller hoặc Python chí
 - PowerShell self-test của PDF Downloader đạt.
 - ZIP giải nén được và không có entry trùng.
 - ZIP không chứa `du_lieu_dang_nhap_vneid`, cookies, cấu hình đã dùng, log, PDF tải về hoặc dữ liệu nghiệp vụ.
-- Thử mở launcher và bảy trang công cụ trên máy Windows sạch.
+- Thử mở launcher và chín trang công cụ trên máy Windows sạch.
 - Ghi nhận SHA-256 của ZIP trước khi tải lên GitHub Releases.
 
 ## Cấu trúc repository

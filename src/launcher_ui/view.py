@@ -11,6 +11,8 @@ from .help_page import HelpPage
 TOOLS = (
     ("notice","prepare","MẪU 22","Tạo thông báo đất đai","Từ Excel đến thông báo Word. Kiểm tra dữ liệu, xem trước rồi xác nhận tạo."),
     ("excel","prepare","VBDLIS","Excel Builder","Chuẩn hóa dữ liệu, ánh xạ cột và xuất biểu mẫu hồ sơ VBDLIS."),
+    ("duplicate_parcel","prepare","EXCEL AN TOÀN","Kiểm tra & Làm sạch thửa trùng","Tách hộ theo Tổng DT, xem trước và chỉ clear các bản ghi trùng hoàn toàn."),
+    ("data_normalizer","prepare","EXCEL TIỆN ÍCH","Chuẩn hóa Họ tên & Ngày sinh","Chuẩn hóa định dạng tên và ngày sinh độc lập, không đoán dữ liệu mơ hồ."),
     ("rename","prepare","TỆP HỒ SƠ","Auto Rename","Nhân bản và đặt tên Word, PDF theo thông tin hộ và thửa đất."),
     ("cleaner","prepare","PDF ĐÃ KÝ","PDF Cleaner","Quét, xem trước và xử lý tệp PDF; chuẩn hóa tên văn bản đã ký."),
     ("downloader","hpnet","TẢI XUỐNG","PDF Downloader","Lọc, đối soát và tải PDF đã ký từ mục Văn bản đi trên HPNet."),
@@ -150,7 +152,7 @@ class LauncherView(QWidget):
         note=QFrame(); note.setObjectName("sidebarNote"); note_box=QVBoxLayout(note); note_box.setContentsMargins(2,8,2,8); note_box.setSpacing(5)
         note_box.addWidget(label("Bạn luôn kiểm soát","sidebarNoteTitle"))
         note_box.addWidget(label("Mở công cụ không tự tải lên, duyệt hoặc xóa dữ liệu.","sidebarNoteText")); side.addWidget(note)
-        side.addSpacing(12); side.addWidget(label("7 công cụ · Một nơi làm việc","muted")); outer.addWidget(sidebar)
+        side.addSpacing(12); side.addWidget(label(f"{len(TOOLS)} công cụ · Một nơi làm việc","muted")); outer.addWidget(sidebar)
         self.pages=QStackedWidget(); outer.addWidget(self.pages,1)
         self.tools_page=QWidget(); page=QVBoxLayout(self.tools_page); page.setContentsMargins(28,26,28,20); page.setSpacing(16)
         self.eyebrow=label("BỘ CÔNG CỤ XỬ LÝ HỒ SƠ","eyebrow"); page.addWidget(self.eyebrow)
@@ -162,11 +164,12 @@ class LauncherView(QWidget):
         self.search.setAccessibleName("Tìm công cụ"); self.search.setClearButtonEnabled(True)
         self.search.addAction(icon("search","#53657A"),QLineEdit.LeadingPosition)
         self.search.textChanged.connect(self.filter_tools); search_row.addWidget(self.search,1)
-        self.count=label("7 công cụ","muted"); search_row.addWidget(self.count); search_row.addStretch(1); page.addLayout(search_row)
+        self.count=label(f"{len(TOOLS)} công cụ","muted"); search_row.addWidget(self.count); search_row.addStretch(1); page.addLayout(search_row)
         self.scroll=QScrollArea(); self.scroll.setWidgetResizable(True); self.scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         content=QWidget(); content.setObjectName("toolContent"); body=QVBoxLayout(content); body.setContentsMargins(0,4,12,8); body.setSpacing(20)
         body.setSizeConstraint(QLayout.SetMinimumSize)
         handlers={"notice":hub.launch_notice_builder,"excel":hub.launch_excel_builder,"rename":hub.launch_auto_rename,
+                  "duplicate_parcel":hub.launch_duplicate_parcel,"data_normalizer":hub.launch_data_normalizer,
                   "cleaner":hub.launch_pdf_cleaner,"downloader":lambda:hub.launch_external("downloader"),
                   "upload":lambda:hub.launch_external("upload"),"approve":lambda:hub.launch_external("approve")}
         for key,title,description in (("prepare","Chuẩn bị dữ liệu & hồ sơ","Tạo biểu mẫu, chuẩn hóa dữ liệu và sắp xếp tệp."),
@@ -230,7 +233,7 @@ class LauncherView(QWidget):
             # Recompute after re-showing a filtered section or changing grid columns.
             grid.invalidate(); section.layout().invalidate(); section.layout().activate()
             section.updateGeometry()
-        self.count.setText(f"{len(visible)} / 7 công cụ"); self.empty.setVisible(not visible)
+        self.count.setText(f"{len(visible)} / {len(TOOLS)} công cụ"); self.empty.setVisible(not visible)
         self.visible_tool_keys=visible
         controls=[self.search,*[self.hub.tool_buttons[key] for key in visible]]
         for before,after in zip(controls,controls[1:]): QWidget.setTabOrder(before,after)

@@ -83,8 +83,8 @@ def test_search_category_and_return_preserve_ui_state(hub,app):
     view.reset_search(); view.navigate("hpnet")
     assert view.visible_tool_keys==["downloader","upload","approve"]
     view.search.setText("nothing-qa"); assert view.visible_tool_keys==[] and view.empty.isVisible()
-    view.reset_search(); assert len(view.visible_tool_keys)==7
-    assert len(hub.tool_buttons)==7
+    view.reset_search(); assert len(view.visible_tool_keys)==9
+    assert len(hub.tool_buttons)==9
 
 
 @pytest.mark.parametrize("size",[(900,660),(960,680),(1240,860),(1600,1000)])

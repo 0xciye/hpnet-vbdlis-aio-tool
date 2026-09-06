@@ -50,10 +50,17 @@ def hub(app, monkeypatch, tmp_path):
     app.processEvents()
 
 
-def test_seven_cards_and_resource_paths_independent_of_cwd(hub):
-    assert set(hub.tool_buttons) == {"excel", "rename", "cleaner", "downloader", "upload", "approve", "notice"}
+def test_nine_cards_and_resource_paths_independent_of_cwd(hub):
+    assert set(hub.tool_buttons) == {"excel", "rename", "cleaner", "downloader", "upload", "approve", "notice", "duplicate_parcel", "data_normalizer"}
     assert Path(resource_path("tools/vbdlis_excel_builder/config/template_schema.json")).is_file()
     assert not hub.windowIcon().isNull()
+
+
+def test_new_excel_utilities_open_as_independent_windows(hub):
+    hub.launch_duplicate_parcel(); hub.launch_data_normalizer()
+    assert hub.tool_windows["duplicate_parcel"].windowTitle() == "Kiểm tra & Làm sạch thửa trùng"
+    assert hub.tool_windows["data_normalizer"].windowTitle() == "Chuẩn hóa Họ tên & Ngày sinh"
+    assert hub.tool_windows["duplicate_parcel"] is not hub.tool_windows["data_normalizer"]
 
 
 def test_notice_builder_reuse_theme_and_offline_service(hub,app):

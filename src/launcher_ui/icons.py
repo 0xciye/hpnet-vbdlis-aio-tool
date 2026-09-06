@@ -8,6 +8,8 @@ PATHS = {
     "grid": '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
     "notice": '<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M8 13h8M8 17h5"/>',
     "excel": '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 9v12M15 9v12M3 15h18"/>',
+    "duplicate_parcel": '<rect x="3" y="4" width="14" height="16" rx="2"/><path d="M3 10h14M9 4v16M18 8l3 3-6 6-3 1 1-3z"/>',
+    "data_normalizer": '<path d="M4 5h16M8 5v14M5 19h6M14 11h7M17.5 7.5v7M14 19h7"/>',
     "rename": '<path d="M9 4H5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h13a2 2 0 0 0 2-2v-4M13 3h8v8M21 3 10 14M7 17h7"/>',
     "cleaner": '<path d="M12 3 4 6v6c0 5 8 9 8 9s8-4 8-9V6zM8 12l3 3 5-6"/>',
     "downloader": '<path d="M12 3v12m-5-5 5 5 5-5M4 16v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4"/>',
