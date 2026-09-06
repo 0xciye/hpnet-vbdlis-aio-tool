@@ -127,11 +127,11 @@ if (Test-Path -LiteralPath $previous) { Remove-Item -LiteralPath $previous -Recu
 Move-Item -LiteralPath $Current -Destination $previous
 try {
     Move-Item -LiteralPath $NewApp -Destination $Current
-    Start-Process -FilePath (Join-Path $Current $Exe) -WorkingDirectory $Current
+    Start-Process -FilePath (Join-Path $Current $Exe) -WorkingDirectory $Current -WindowStyle Hidden
 } catch {
     if (Test-Path -LiteralPath $Current) { Remove-Item -LiteralPath $Current -Recurse -Force }
     Move-Item -LiteralPath $previous -Destination $Current
-    Start-Process -FilePath (Join-Path $Current $Exe) -WorkingDirectory $Current
+    Start-Process -FilePath (Join-Path $Current $Exe) -WorkingDirectory $Current -WindowStyle Hidden
     throw
 }
 ''', encoding="utf-8-sig")
