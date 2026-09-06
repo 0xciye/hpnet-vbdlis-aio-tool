@@ -3,13 +3,13 @@ from zipfile import ZipFile
 import pytest
 
 import auto_update
-from auto_update import APP_FOLDER, ASSET_NAME, EXE_NAME, _safe_extract, parse_release
+from auto_update import APP_FOLDER, ASSET_NAME, EXE_NAME, REMOTE_ASSET_NAME, _safe_extract, parse_release
 
 
 def payload(tag="auto-2-def456"):
     return {"tag_name": tag, "draft": False, "prerelease": False, "assets": [
-        {"name": ASSET_NAME, "browser_download_url": "https://example.test/app.zip"},
-        {"name": f"{ASSET_NAME}.sha256", "browser_download_url": "https://example.test/app.zip.sha256"},
+        {"name": REMOTE_ASSET_NAME, "browser_download_url": "https://example.test/app.zip"},
+        {"name": f"{REMOTE_ASSET_NAME}.sha256", "browser_download_url": "https://example.test/app.zip.sha256"},
     ]}
 
 

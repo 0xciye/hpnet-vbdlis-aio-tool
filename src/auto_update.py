@@ -13,6 +13,7 @@ from zipfile import ZipFile
 
 REPOSITORY = "0xciye/hpnet-vbdlis-aio-tool"
 ASSET_NAME = "HPNet VBDLIS AIO Tool.zip"
+REMOTE_ASSET_NAME = "HPNet.VBDLIS.AIO.Tool.zip"
 APP_FOLDER = "HPNET & VBDLIS Tools"
 EXE_NAME = f"{APP_FOLDER}.exe"
 API_URL = f"https://api.github.com/repos/{REPOSITORY}/releases/latest"
@@ -33,10 +34,10 @@ def parse_release(payload, current_version):
     if not tag or payload.get("draft") or payload.get("prerelease") or tag == current_version:
         return None
     assets = {asset.get("name"): asset.get("browser_download_url") for asset in payload.get("assets", [])}
-    checksum_name = f"{ASSET_NAME}.sha256"
-    if not assets.get(ASSET_NAME) or not assets.get(checksum_name):
+    checksum_name = f"{REMOTE_ASSET_NAME}.sha256"
+    if not assets.get(REMOTE_ASSET_NAME) or not assets.get(checksum_name):
         return None
-    return {"version": tag, "zip_url": assets[ASSET_NAME], "checksum_url": assets[checksum_name]}
+    return {"version": tag, "zip_url": assets[REMOTE_ASSET_NAME], "checksum_url": assets[checksum_name]}
 
 
 def check_for_update():

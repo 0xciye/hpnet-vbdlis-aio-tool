@@ -22,3 +22,5 @@ def test_packaged_launcher_contains_build_metadata_and_updater():
     assert "branches: [main]" in workflow
     assert "contents: write" in workflow
     assert "HPNet VBDLIS AIO Tool.zip.sha256" in workflow
+    updater = (root / "src/auto_update.py").read_text(encoding="utf-8")
+    assert 'REMOTE_ASSET_NAME = "HPNet.VBDLIS.AIO.Tool.zip"' in updater
