@@ -134,7 +134,12 @@ class MainWindow(QMainWindow):
         for record in result.records:
             if record.status == "EXACT_DUPLICATE":
                 exact_groups.setdefault((record.sheet, record.parcel), []).append(record)
-        self.visible_records = [record for record in result.records if record.status == "EXACT_DUPLICATE"]
+        duplicate_groups = {}
+        for record in result.records:
+            if record.status == "EXACT_DUPLICATE":
+                duplicate_groups.setdefault((record.sheet, record.parcel), []).append(record)
+        # Keep every member of one parcel group adjacent for side-by-side comparison.
+        self.visible_records = [record for group in duplicate_groups.values() for record in group]
         by_row = {record.row: record for record in self.visible_records}
         self.table.setRowCount(len(self.visible_records))
         for index, record in enumerate(self.visible_records):
