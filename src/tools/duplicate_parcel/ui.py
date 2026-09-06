@@ -24,7 +24,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Kiểm tra & Làm sạch thửa trùng")
         self.resize(1180, 760); self.setMinimumSize(900, 620)
         self.setStyleSheet(STYLE); self.setPalette(palette())
-        self.result = None; self.worker = None
+        self.result = None; self.visible_records = []; self.worker = None
         self._build()
 
     def _build(self):
@@ -125,12 +125,12 @@ class MainWindow(QMainWindow):
         for record in result.records:
             if record.status == "EXACT_DUPLICATE":
                 exact_groups.setdefault((record.sheet, record.parcel), []).append(record)
-        self.table.setRowCount(len(result.records))
+        self.visible_records = [record for record in result.records if record.status == "EXACT_DUPLICATE"]
+        self.table.setRowCount(len(self.visible_records))
         rendered_groups = set()
-        for index, record in enumerate(result.records):
+        for index, record in enumerate(self.visible_records):
             check = QTableWidgetItem(); check.setFlags(Qt.ItemIsEnabled | Qt.ItemIsUserCheckable)
             check.setCheckState(Qt.Checked if record.selected else Qt.Unchecked)
-            if record.status != "EXACT_DUPLICATE": check.setFlags(Qt.ItemIsEnabled)
             self.table.setItem(index, 0, check)
             group_key = (record.sheet, record.parcel)
             repeated = record.status == "EXACT_DUPLICATE" and group_key in rendered_groups
@@ -145,7 +145,7 @@ class MainWindow(QMainWindow):
         self._log("scan=" + repr(result.counts()) + "\n")
 
     def selected_rows(self):
-        return {self.result.records[row].row for row in range(self.table.rowCount()) if self.table.item(row, 0).checkState() == Qt.Checked}
+        return {self.visible_records[row].row for row in range(self.table.rowCount()) if self.table.item(row, 0).checkState() == Qt.Checked}
 
     def export(self):
         if not self.result: return
