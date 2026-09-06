@@ -165,4 +165,4 @@ throw 'Không thể thay thế bản cài đặt sau 20 lần thử.'
         "powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden",
         "-File", str(script_path), "-AppPid", str(os.getpid()), "-Current", str(current),
         "-NewApp", str(new_app), "-Exe", EXE_NAME,
-    ], creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+    ], cwd=str(parent), creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
