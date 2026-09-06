@@ -43,13 +43,22 @@ jobs:
           Copy-Item -LiteralPath (Get-Command node.exe).Source -Destination (Join-Path $runtime 'node.exe')
           npm install --prefix $runtime --ignore-scripts --omit=optional playwright@1.62.1
 
+      - name: Choose semantic version
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $versions = @(gh api "repos/$env:GITHUB_REPOSITORY/releases?per_page=100" --jq '.[].tag_name' |
+            Where-Object { $_ -match '^v\d+\.\d+\.\d+$' } |
+            ForEach-Object { [version]$_.Substring(1) })
+          $latest = $versions | Sort-Object -Descending | Select-Object -First 1
+          $releaseId = if ($latest) { "v$($latest.Major).$($latest.Minor).$($latest.Build + 1)" } else { 'v1.0.0' }
+          "RELEASE_ID=$releaseId" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
       - name: Build and verify release
         shell: pwsh
         run: |
-          $short = $env:GITHUB_SHA.Substring(0, 7)
-          $releaseId = "auto-$env:GITHUB_RUN_NUMBER-$short"
-          "RELEASE_ID=$releaseId" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          .\build_release.ps1 -ReleaseId $releaseId -SkipDesktopCopy
+          .\build_release.ps1 -ReleaseId $env:RELEASE_ID -SkipDesktopCopy
 
       - name: Create checksum
         shell: pwsh
@@ -70,3 +79,13 @@ jobs:
             --title "HPNet VBDLIS AIO Tool $env:RELEASE_ID" `
             --notes "Bản cập nhật tự động từ commit $env:GITHUB_SHA." --latest
 
+      - name: Keep only latest release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $oldTags = @(gh api "repos/$env:GITHUB_REPOSITORY/releases?per_page=100" --jq '.[].tag_name' |
+            Where-Object { $_ -ne $env:RELEASE_ID })
+          foreach ($tag in $oldTags) {
+            gh release delete $tag --repo $env:GITHUB_REPOSITORY --yes --cleanup-tag
+          }
