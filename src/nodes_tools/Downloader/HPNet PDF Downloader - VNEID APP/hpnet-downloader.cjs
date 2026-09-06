@@ -6,6 +6,7 @@ const crypto = require("node:crypto");
 const MAIN_URL = "https://qlvb.hpnet.vn/?action=101";
 const LIST_URL = "https://qlvb.hpnet.vn/vpdt/xaphuong/VanbanDiListChuyenvien.aspx";
 const DETAIL_URL = "https://qlvb.hpnet.vn/vpdt/xaphuong/Ajax/LoadVanBanDiInfo.aspx";
+const MAX_PDF_BYTES = 200 * 1024 * 1024;
 
 function fail(message, code = 1) {
   console.error(`[LỖI] ${message}`);
@@ -456,9 +457,12 @@ function fileNameFromUrl(url) {
 function absoluteHpnetUrl(value) {
   const url = String(value ?? "").trim();
   if (!url) return "";
-  if (url.startsWith("//")) return `https:${url}`;
-  if (/^https?:\/\//i.test(url)) return url;
-  return new URL(url, "https://qlvb.hpnet.vn/").href;
+  try {
+    const absolute = new URL(url.startsWith("//") ? `https:${url}` : url, "https://qlvb.hpnet.vn/");
+    return absolute.protocol === "https:" && isHpnetUrl(absolute.href) ? absolute.href : "";
+  } catch {
+    return "";
+  }
 }
 
 function sha256(buffer) {
@@ -622,6 +626,7 @@ async function runSelfTest() {
     { url: "/files/generated.signed.pdf", name: "Tên thật.pdf", explicitName: true },
   ], suffixPolicy);
   assert(sameUrl.length === 1 && sameUrl[0].name === "Tên thật.pdf" && !sameUrl[0].nameMatch.matched, "16l ưu tiên tên đính kèm thật dù URL có vẻ khớp");
+  assert(absoluteHpnetUrl("https://evil.example/file.pdf") === "", "16m chặn URL file ngoài HPNet");
 
   const makeRecords = (count, offset = 0) => Array.from({ length: count }, (_, index) => ({ VanbanDiId: offset + index + 1, OrderIndex: offset + index + 1, Name: "TB-ĐKĐĐ" }));
   const expectScanError = async (action, messagePart, name) => {
@@ -949,9 +954,13 @@ async function main({ configPath = process.argv[2], chromium: suppliedChromium }
           }
           if (fileNamePolicy.mode === "legacy" && !fileNamePolicy.strictPattern.test(candidate.name)) log(`[NGOẠI LỆ THIẾU MÃ XÃ] ${safeName}: chấp nhận và giữ nguyên tên.`);
           try {
-          const fileResponse = await context.request.get(candidate.url, { timeout: 120000 });
+          const fileResponse = await context.request.get(candidate.url, { timeout: 120000, maxRedirects: 0 });
           if (!fileResponse.ok()) throw new Error(`HTTP ${fileResponse.status()} khi tải ${safeName}.`);
+          if (!isHpnetUrl(fileResponse.url())) throw new Error(`${safeName} chuyển hướng ra ngoài máy chủ HPNet.`);
+          const declaredSize = Number(fileResponse.headers()["content-length"] || 0);
+          if (declaredSize > MAX_PDF_BYTES) throw new Error(`${safeName} vượt giới hạn 200 MB.`);
           const buffer = await fileResponse.body();
+          if (buffer.length > MAX_PDF_BYTES) throw new Error(`${safeName} vượt giới hạn 200 MB.`);
           if (buffer.length < 5 || buffer.subarray(0, 5).toString("ascii") !== "%PDF-") {
             throw new Error(`${safeName} không phải dữ liệu PDF hợp lệ.`);
           }

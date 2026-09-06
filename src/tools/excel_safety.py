@@ -66,6 +66,10 @@ def default_output(source: str | Path, suffix: str) -> Path:
 def style_report(workbook) -> None:
     """Keep generated audit sheets readable without adding a styling dependency."""
     for sheet in workbook.worksheets:
+        for row in sheet.iter_rows():
+            for cell in row:
+                if isinstance(cell.value, str):
+                    cell.data_type = "s"
         for cell in sheet[1]:
             cell.font = Font(bold=True, color="FFFFFF")
             cell.fill = PatternFill("solid", fgColor="1F4E78")

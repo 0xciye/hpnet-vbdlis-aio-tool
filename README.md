@@ -57,7 +57,7 @@ Không chạy trực tiếp EXE bên trong cửa sổ xem ZIP vì ứng dụng c
 - Luôn kiểm tra dữ liệu đầu vào, người nhận, phạm vi tài khoản và danh sách xem trước trước khi xác nhận thao tác thật.
 - Sao lưu dữ liệu trước các thao tác dọn, đổi tên hoặc ghi đè hàng loạt.
 
-> **Lưu ý về PDF:** việc nhận diện `.signed`, `.ldsigned`, `.lsigned` hoặc hậu tố do người dùng chọn chỉ là lọc theo tên file. Chức năng này không xác thực chữ ký số nằm bên trong tài liệu PDF.
+> **Lưu ý về PDF:** PDF Cleaner chỉ xử lý bản `.signed.pdf` khi tìm thấy cấu trúc chữ ký nhúng trong PDF. Kiểm tra này ngăn file thường bị đổi tên giả, nhưng chưa xác minh chuỗi chứng thư hoặc hiệu lực pháp lý của chữ ký. Bộ lọc hậu tố của HPNet Downloader vẫn chỉ dùng để chọn tên file cần tải.
 
 ## Phát triển từ source
 

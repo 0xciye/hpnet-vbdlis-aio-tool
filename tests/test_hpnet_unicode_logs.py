@@ -23,3 +23,12 @@ def test_hpnet_text_and_csv_logs_keep_utf8_bom_for_windows_readers():
     for script in node_scripts:
         source = script.read_text(encoding="utf-8")
         assert "\\uFEFF" in source
+
+
+def test_hpnet_user_state_lives_outside_install_folder():
+    scripts = [next(folder.glob("HPNet-*.ps1")) for folder in TOOLS]
+    for script in scripts:
+        source = script.read_text(encoding="utf-8-sig")
+        assert "GetFolderPath('LocalApplicationData')" in source
+        assert "HPNet VBDLIS AIO Tool" in source
+        assert "du_lieu_dang_nhap_vneid" in source

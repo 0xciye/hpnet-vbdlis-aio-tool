@@ -1,9 +1,11 @@
 import os
 import pytest
 from pathlib import Path
+from pypdf import PdfWriter
 from tools.signed_pdf_cleaner.core.scanner import FileScanner
 from tools.signed_pdf_cleaner.core.processor import FileProcessor
-from tools.signed_pdf_cleaner.core.models import ActionType, ProcessStatus
+from tools.signed_pdf_cleaner.core.models import ActionType, FileActionPlan, ProcessStatus
+from tools.signed_pdf_cleaner.utils.logger import AppLogger
 
 @pytest.fixture
 def temp_dir(tmp_path):
@@ -20,7 +22,7 @@ def test_1_signed_and_unsigned(temp_dir):
     create_file(temp_dir, "A.pdf", "UNSIGNED")
     create_file(temp_dir, "A.signed.pdf", "SIGNED")
     
-    scanner = FileScanner()
+    scanner = FileScanner(validate_signatures=False)
     plans = scanner.scan_directory(str(temp_dir))
     
     assert len(plans) == 1
@@ -39,7 +41,7 @@ def test_2_only_signed(temp_dir):
     # Test 2: A.signed.pdf -> A.pdf
     create_file(temp_dir, "A.signed.pdf", "SIGNED")
     
-    scanner = FileScanner()
+    scanner = FileScanner(validate_signatures=False)
     plans = scanner.scan_directory(str(temp_dir))
     
     assert len(plans) == 1
@@ -55,7 +57,7 @@ def test_3_only_unsigned(temp_dir):
     # Test 3: A.pdf -> A.pdf (không xóa)
     create_file(temp_dir, "A.pdf", "UNSIGNED")
     
-    scanner = FileScanner()
+    scanner = FileScanner(validate_signatures=False)
     plans = scanner.scan_directory(str(temp_dir))
     
     assert len(plans) == 1
@@ -73,7 +75,7 @@ def test_4_multiple_pairs(temp_dir):
     create_file(temp_dir, "B.pdf")
     create_file(temp_dir, "B.signed.pdf")
     
-    scanner = FileScanner()
+    scanner = FileScanner(validate_signatures=False)
     plans = scanner.scan_directory(str(temp_dir))
     
     assert len(plans) == 2
@@ -99,7 +101,7 @@ def test_5_complex_names(temp_dir):
     create_file(temp_dir, f"{n2}.pdf", "2_UNSIGNED")
     create_file(temp_dir, f"{n2}.signed.pdf", "2_SIGNED")
     
-    scanner = FileScanner()
+    scanner = FileScanner(validate_signatures=False)
     plans = scanner.scan_directory(str(temp_dir))
     
     assert len(plans) == 2
@@ -119,7 +121,7 @@ def test_ignore_unrelated_files(temp_dir):
     create_file(temp_dir, "GhiChu.txt")
     create_file(temp_dir, "B.pdf")
     
-    scanner = FileScanner()
+    scanner = FileScanner(validate_signatures=False)
     plans = scanner.scan_directory(str(temp_dir))
     
     processor = FileProcessor(use_recycle_bin=False)
@@ -134,7 +136,7 @@ def test_ignore_unrelated_files(temp_dir):
 def test_abnormal_signed_name(temp_dir):
     create_file(temp_dir, "A.signed.signed.pdf")
     
-    scanner = FileScanner()
+    scanner = FileScanner(validate_signatures=False)
     plans = scanner.scan_directory(str(temp_dir))
     
     assert len(plans) == 1
@@ -146,7 +148,7 @@ def test_file_lock(temp_dir):
     create_file(temp_dir, "A.pdf")
     create_file(temp_dir, "A.signed.pdf")
     
-    scanner = FileScanner()
+    scanner = FileScanner(validate_signatures=False)
     plans = scanner.scan_directory(str(temp_dir))
     
     # Simulate file lock by opening the file
@@ -160,3 +162,20 @@ def test_file_lock(temp_dir):
     
     # Original files should remain
     assert (temp_dir / "A.signed.pdf").exists()
+
+
+def test_fake_signed_suffix_is_not_processed(temp_dir):
+    writer = PdfWriter(); writer.add_blank_page(width=100, height=100)
+    with (temp_dir / "A.signed.pdf").open("wb") as stream: writer.write(stream)
+    plans = FileScanner().scan_directory(str(temp_dir))
+    assert len(plans) == 1
+    assert plans[0].action == ActionType.SKIP
+    assert plans[0].status == ProcessStatus.WARNING
+    assert "không tìm thấy cấu trúc chữ ký" in plans[0].warning_message
+
+
+def test_csv_log_escapes_excel_formula(tmp_path):
+    logger = AppLogger(str(tmp_path / "logs"))
+    report = tmp_path / "report.csv"
+    logger.export_csv([FileActionPlan(Path("=HYPERLINK(1).signed.pdf"), None, Path("safe.pdf"), ActionType.RENAME_SIGNED, ProcessStatus.READY)], report)
+    assert "'=HYPERLINK(1).signed.pdf" in report.read_text(encoding="utf-8-sig")

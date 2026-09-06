@@ -2,6 +2,7 @@
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -21,6 +22,21 @@ MAX_DOWNLOAD_BYTES = 1_000_000_000
 MAX_EXTRACTED_BYTES = 2_000_000_000
 
 
+def _semantic_version(value):
+    match = re.fullmatch(r"v(\d+)\.(\d+)\.(\d+)", str(value).strip())
+    return tuple(map(int, match.groups())) if match else None
+
+
+def _release_asset_url(value, tag=None):
+    from urllib.parse import urlsplit
+    try:
+        url = urlsplit(str(value))
+    except ValueError:
+        return False
+    prefix = f"/{REPOSITORY}/releases/download/{tag}/" if tag else f"/{REPOSITORY}/releases/download/"
+    return url.scheme == "https" and url.hostname == "github.com" and url.path.startswith(prefix)
+
+
 def build_info():
     path = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent)) / "build_info.json"
     try:
@@ -31,12 +47,16 @@ def build_info():
 
 def parse_release(payload, current_version):
     tag = str(payload.get("tag_name", "")).strip()
-    if not tag or payload.get("draft") or payload.get("prerelease") or tag == current_version:
+    remote = _semantic_version(tag)
+    current = _semantic_version(current_version)
+    if (not remote or payload.get("draft") or payload.get("prerelease") or
+            (current is not None and remote <= current)):
         return None
     assets = {asset.get("name"): asset.get("browser_download_url") for asset in payload.get("assets", [])}
     for asset_name in (REMOTE_ASSET_NAME, ASSET_NAME):
         checksum_name = f"{asset_name}.sha256"
-        if assets.get(asset_name) and assets.get(checksum_name):
+        if (_release_asset_url(assets.get(asset_name), tag) and
+                _release_asset_url(assets.get(checksum_name), tag)):
             return {"version": tag, "zip_url": assets[asset_name], "checksum_url": assets[checksum_name]}
     return None
 
@@ -66,7 +86,7 @@ def _download(url, target, limit=MAX_DOWNLOAD_BYTES):
             output.write(chunk)
 
 
-def _safe_extract(archive, destination):
+def _safe_extract(archive, destination, expected_version=None):
     with ZipFile(archive) as package:
         extracted_size = 0
         for item in package.infolist():
@@ -81,6 +101,13 @@ def _safe_extract(archive, destination):
     app = destination / APP_FOLDER
     if not (app / EXE_NAME).is_file():
         raise ValueError("ZIP cập nhật không có đúng cấu trúc ứng dụng.")
+    if expected_version:
+        try:
+            metadata = json.loads((app / "_internal/build_info.json").read_text(encoding="utf-8-sig"))
+        except (OSError, ValueError):
+            raise ValueError("ZIP cập nhật thiếu thông tin phiên bản hợp lệ.")
+        if metadata.get("version") != expected_version or metadata.get("repository") != REPOSITORY:
+            raise ValueError("ZIP cập nhật không khớp phiên bản hoặc kho phát hành.")
     return app
 
 
@@ -99,7 +126,7 @@ def download_update(release):
         actual = digest.hexdigest()
         if len(expected) != 64 or expected != actual:
             raise ValueError("Mã SHA-256 của bản cập nhật không khớp.")
-        return _safe_extract(archive, root / "extracted")
+        return _safe_extract(archive, root / "extracted", release["version"])
     except Exception:
         shutil.rmtree(root, ignore_errors=True)
         raise
@@ -126,13 +153,22 @@ $log = Join-Path $env:TEMP 'hpnet-vbdlis-update.log'
 function Write-UpdateLog([string]$Message) {
     "$(Get-Date -Format o) $Message" | Add-Content -LiteralPath $log -Encoding utf8
 }
-function Stop-ProcessesInApp([string]$Root) {
-    $prefix = $Root.TrimEnd('\') + '\'
-    Get-Process | ForEach-Object {
-        try { $path = $_.Path } catch { $path = $null }
-        if ($path -and $path.StartsWith($prefix, [StringComparison]::OrdinalIgnoreCase)) {
-            Write-UpdateLog "stopping child pid=$($_.Id) path=$path"
-            Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
+function Copy-UserState([string]$OldApp) {
+    $stateBase = Join-Path $env:LOCALAPPDATA 'HPNet VBDLIS AIO Tool'
+    $tools = @(
+        @('Downloader','Downloader\HPNet PDF Downloader - VNEID APP',@('cau_hinh.json','du_lieu_dang_nhap_vneid')),
+        @('Upload','Upload\HPNet Upload VB Du Thao - VNEID APP',@('cau_hinh.json','profiles.json','du_lieu_dang_nhap_vneid','nhat_ky','trang_thai_da_up.json')),
+        @('Duyet','Duyet\HPNet Duyet VB Du Thao - VNEID APP',@('cau_hinh.json','profiles.json','du_lieu_dang_nhap_vneid','nhat_ky','ket_qua_quet_moi_nhat.json'))
+    )
+    foreach ($tool in $tools) {
+        $destinationRoot = Join-Path $stateBase $tool[0]
+        New-Item -ItemType Directory -Force -Path $destinationRoot | Out-Null
+        $legacyRoot = Join-Path (Join-Path $OldApp '_internal\nodes_tools') $tool[1]
+        foreach ($name in $tool[2]) {
+            $source = Join-Path $legacyRoot $name; $destination = Join-Path $destinationRoot $name
+            if ((Test-Path -LiteralPath $source) -and -not (Test-Path -LiteralPath $destination)) {
+                Copy-Item -LiteralPath $source -Destination $destination -Recurse
+            }
         }
     }
 }
@@ -140,19 +176,21 @@ if ((Split-Path -Parent $previous) -ne $parent) { throw 'Unsafe update path.' }
 Write-UpdateLog "installer started pid=$AppPid current=$Current new=$NewApp"
 Wait-Process -Id $AppPid -ErrorAction SilentlyContinue
 Start-Sleep -Milliseconds 1200
+Copy-UserState $Current
 for ($attempt = 1; $attempt -le 20; $attempt++) {
+    $movedCurrent = $false
     try {
-        Stop-ProcessesInApp $Current
         if (Test-Path -LiteralPath $previous) { Remove-Item -LiteralPath $previous -Recurse -Force }
         Move-Item -LiteralPath $Current -Destination $previous
+        $movedCurrent = $true
         Move-Item -LiteralPath $NewApp -Destination $Current
         Write-UpdateLog "install succeeded attempt=$attempt"
         Start-Process -FilePath (Join-Path $Current $Exe) -WorkingDirectory $Current -WindowStyle Hidden
         exit 0
     } catch {
         Write-UpdateLog "attempt=$attempt error=$($_.Exception.Message)"
-        if (Test-Path -LiteralPath $Current) { Remove-Item -LiteralPath $Current -Recurse -Force -ErrorAction SilentlyContinue }
-        if ((Test-Path -LiteralPath $previous) -and -not (Test-Path -LiteralPath $Current)) {
+        if ($movedCurrent -and (Test-Path -LiteralPath $Current)) { Remove-Item -LiteralPath $Current -Recurse -Force -ErrorAction SilentlyContinue }
+        if ($movedCurrent -and (Test-Path -LiteralPath $previous) -and -not (Test-Path -LiteralPath $Current)) {
             Move-Item -LiteralPath $previous -Destination $Current -Force -ErrorAction SilentlyContinue
         }
         Start-Sleep -Milliseconds 750

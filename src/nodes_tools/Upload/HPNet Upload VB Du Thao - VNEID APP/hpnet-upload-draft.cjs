@@ -135,7 +135,8 @@ function timestamp() {
 }
 
 function csvCell(value) {
-  const text = String(value ?? "");
+  let text = String(value ?? "");
+  if (/^[\s\uFEFF]*[=+@-]/u.test(text)) text = `'${text}`;
   return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }
 
@@ -166,6 +167,7 @@ function runSelfTest() {
   if (!recordIsCurrentVersion(newRecord, testFile, true)) throw new Error("Self-test: không nhận ra bản mới đã up.");
   if (!isHpnetUrl("https://qlvb.hpnet.vn/?action=901") || isHpnetUrl("https://id.vneid.gov.vn/oauth2/authorize")) throw new Error("Self-test: nhận diện HPNet/VNeID không đúng.");
   if (!isHpnetLoginUrl("https://qlvb.hpnet.vn/Login.aspx?ReturnUrl=%2f") || isHpnetLoginUrl("https://id.vneid.gov.vn/Login.aspx")) throw new Error("Self-test: nhận diện trang đăng nhập không đúng.");
+  if (!csvCell("=HYPERLINK(1)").startsWith("'=")) throw new Error("Self-test: CSV chưa chặn công thức Excel.");
   console.log("NODE_SELF_TEST_OK");
 }
 

@@ -47,6 +47,15 @@ if ($SelfTest) {
     exit 0
 }
 
+$stateRoot = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'HPNet VBDLIS AIO Tool\Upload'
+New-Item -ItemType Directory -Force -Path $stateRoot | Out-Null
+foreach ($name in @('cau_hinh.json','profiles.json','du_lieu_dang_nhap_vneid','nhat_ky','trang_thai_da_up.json')) {
+    $legacy = Join-Path $toolRoot $name; $saved = Join-Path $stateRoot $name
+    if ((Test-Path -LiteralPath $legacy) -and -not (Test-Path -LiteralPath $saved)) { Copy-Item -LiteralPath $legacy -Destination $saved -Recurse }
+}
+$configPath = Join-Path $stateRoot 'cau_hinh.json'
+$profilesPath = Join-Path $stateRoot 'profiles.json'
+
 function Read-JsonSafe([string]$path) {
     if (-not (Test-Path -LiteralPath $path)) { return $null }
     try { return Get-Content -LiteralPath $path -Raw -Encoding UTF8 | ConvertFrom-Json } catch { return $null }

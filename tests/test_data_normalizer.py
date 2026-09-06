@@ -69,6 +69,7 @@ def test_scan_formula_ambiguous_invalid_partial_apply_and_report(tmp_path):
     report = export_report(result, tmp_path / "normalization_report.xlsx")
     wb = load_workbook(report, read_only=False); assert {"Summary", "Name Changes", "Birthdate Changes", "Warnings", "Invalid Dates", "Ambiguous Dates"} <= set(wb.sheetnames)
     assert wb["Birthdate Changes"].column_dimensions["G"].width >= 30
+    assert all(cell.data_type != "f" for sheet in wb.worksheets for row in sheet.iter_rows() for cell in row)
     wb.close()
 
 

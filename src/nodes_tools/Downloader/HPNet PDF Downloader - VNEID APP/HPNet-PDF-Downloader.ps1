@@ -92,6 +92,16 @@ if ($SelfTest) {
     exit 0
 }
 
+if (-not $UiSelfTest) {
+    $stateRoot = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'HPNet VBDLIS AIO Tool\Downloader'
+    New-Item -ItemType Directory -Force -Path $stateRoot | Out-Null
+    foreach ($name in @('cau_hinh.json','du_lieu_dang_nhap_vneid')) {
+        $legacy = Join-Path $toolRoot $name; $saved = Join-Path $stateRoot $name
+        if ((Test-Path -LiteralPath $legacy) -and -not (Test-Path -LiteralPath $saved)) { Copy-Item -LiteralPath $legacy -Destination $saved -Recurse }
+    }
+    $configPath = Join-Path $stateRoot 'cau_hinh.json'
+}
+
 $defaultOutput = Join-Path ([Environment]::GetFolderPath('Desktop')) 'PDF HPNET'
 $savedConfig = $null
 if (Test-Path -LiteralPath $configPath) {

@@ -16,16 +16,16 @@ jobs:
   release:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.14"
           architecture: x64
           cache: pip
           cache-dependency-path: docs/REQUIREMENTS_BUILD.txt
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: "24.19.0"
 
@@ -41,7 +41,8 @@ jobs:
           $runtime = Join-Path $PWD 'src\nodes_tools\runtime'
           New-Item -ItemType Directory -Force -Path $runtime | Out-Null
           Copy-Item -LiteralPath (Get-Command node.exe).Source -Destination (Join-Path $runtime 'node.exe')
-          npm install --prefix $runtime --ignore-scripts --omit=optional playwright@1.62.1
+          npm ci --prefix '.github\runtime' --ignore-scripts --omit=optional
+          Copy-Item -LiteralPath '.github\runtime\node_modules' -Destination $runtime -Recurse
 
       - name: Choose semantic version
         shell: pwsh

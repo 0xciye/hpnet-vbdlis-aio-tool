@@ -19,6 +19,8 @@
 
 ## Lưu ý An toàn (Quy tắc hoạt động):
 - Ứng dụng **chỉ** xóa file bản chưa ký khi đã tìm thấy bản `.signed.pdf` tương ứng trong cùng thư mục.
+- Bản `.signed.pdf` phải là PDF đọc được và có trường chữ ký nhúng; nếu chỉ đổi tên file thường thành `.signed.pdf`, ứng dụng sẽ cảnh báo và bỏ qua.
+- Công cụ chưa xác minh chuỗi chứng thư, thời hạn hoặc hiệu lực pháp lý của chữ ký số.
 - Nếu chỉ tồn tại bản chưa ký, ứng dụng sẽ **không xóa** (bỏ qua).
 - Nếu chỉ tồn tại bản đã ký (file có đuôi `.signed.pdf`), ứng dụng vẫn sẽ đổi tên bỏ đi đuôi `.signed` thành tên gốc bình thường.
 - Tuyệt đối không chạm vào các định dạng file khác ngoài PDF (như Word, Excel, ảnh...).

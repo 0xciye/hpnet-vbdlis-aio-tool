@@ -58,4 +58,5 @@ class AppLogger:
                 target = p.target_path.name if p.target_path else ""
                 status = p.status.value
                 error = p.error_message or p.warning_message
-                writer.writerow([folder, signed, unsigned, action, target, status, error])
+                values = [folder, signed, unsigned, action, target, status, error]
+                writer.writerow([f"'{value}" if str(value).lstrip().startswith(("=", "+", "-", "@")) else value for value in values])

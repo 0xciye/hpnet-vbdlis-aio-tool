@@ -1,11 +1,19 @@
-import os
 from pathlib import Path
-from typing import List, Dict
+from typing import List
+from pypdf import PdfReader
 from tools.signed_pdf_cleaner.core.models import FileActionPlan, ActionType, ProcessStatus
 
 class FileScanner:
-    def __init__(self):
-        pass
+    def __init__(self, validate_signatures: bool = True):
+        self.validate_signatures = validate_signatures
+
+    @staticmethod
+    def has_embedded_signature(path: Path) -> bool:
+        try:
+            fields = PdfReader(path, strict=False).get_fields() or {}
+            return any(str(field.get("/FT", "")) == "/Sig" and field.get("/V") for field in fields.values())
+        except Exception:
+            return False
 
     def scan_directory(self, folder_path: str, recursive: bool = False) -> List[FileActionPlan]:
         plans = []
@@ -68,6 +76,17 @@ class FileScanner:
                     action=ActionType.SKIP,
                     status=ProcessStatus.WARNING,
                     warning_message="Tên file bất thường (có nhiều .signed)"
+                ))
+                continue
+
+            if self.validate_signatures and not self.has_embedded_signature(signed_f):
+                plans.append(FileActionPlan(
+                    signed_path=signed_f,
+                    unsigned_path=None,
+                    target_path=directory / target_name,
+                    action=ActionType.SKIP,
+                    status=ProcessStatus.WARNING,
+                    warning_message="File có hậu tố .signed nhưng không tìm thấy cấu trúc chữ ký số trong PDF"
                 ))
                 continue
 
