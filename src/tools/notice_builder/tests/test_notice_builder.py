@@ -557,6 +557,47 @@ def inspect_edge(path, strict=True):
     return inspect_workbook(path,"Nguồn",1,1,ColumnMapping("A","B","C","D","F","E",household_index="G"),require_identity=strict)
 
 
+def test_uncached_running_household_numbers_preserve_owners_and_range(tmp_path):
+    path=edge_workbook(tmp_path/"sequence.xlsx",[
+        ["HỘ A",1,1,100,"GIẤY A",None,5],
+        ["Tổng DT",None,None,None,None,None,None],
+        ["HỘ B",1,2,100,"GIẤY B",None,"=MAX($G$2:G3)+1"],
+        ["THÀNH VIÊN B",1,3,100,"GIẤY THÀNH VIÊN",None,None],
+        ["HỘ C",1,4,100,None,None,"=MAX($G$2:G5)+1"],
+        [None,1,5,100,None,None,None]])
+    before=file_hash(path); data=inspect_edge(path)
+    assert [r.household_number for r in data.records]==["5","6","6","7","7"]
+    assert [r.owner for r in data.records]==["HỘ A","HỘ B","HỘ B","HỘ C","HỘ C"]
+    assert [r.identity for r in data.records]==["GIẤY A","GIẤY B","GIẤY B","",""]
+    assert len(data.valid_records)==3 and all("E6" in " ".join(r.errors) for r in data.records[-2:])
+    selected=inspect_workbook(path,"Nguồn",1,1,data.mapping,require_identity=True,start_row=5,end_row=5)
+    assert selected.records==[data.records[2]]
+    assert file_hash(path)==before
+
+
+@pytest.mark.parametrize("formula",["=1+1","=MAX($G$2:G4)+1","=MAX($G$3:G2)+1","=MAX($F$2:F2)+1","=MAX($G$2:G2)+2","#REF!"])
+def test_unknown_household_formula_never_borrows_previous_identity(tmp_path,formula):
+    path=edge_workbook(tmp_path/"unknown.xlsx",[
+        ["HỘ A",1,1,100,"GIẤY A",None,1],
+        ["HỘ B",1,2,100,"GIẤY B",None,formula],
+        ["HỘ C",1,3,100,"GIẤY C",None,"=MAX($G$2:G3)+1"]])
+    data=inspect_edge(path)
+    assert len(data.valid_records)==1
+    assert all(not r.owner and not r.identity and "STT hộ" in " ".join(r.errors) for r in data.records[1:])
+
+
+def test_household_formula_uses_exact_range_even_when_numbers_repeat(tmp_path):
+    path=edge_workbook(tmp_path/"range.xlsx",[
+        ["HỘ A",1,1,100,"GIẤY A",None,1],
+        ["HỘ B",1,2,100,"GIẤY B",None,"=MAX($G$2:G2)+1"],
+        ["HỘ C",1,3,100,"GIẤY C",None,"=MAX($G$2:G2)+1"],
+        ["HỘ D",1,4,100,"GIẤY D",None,"=MAX($G$2:G4)+1"]])
+    data=inspect_edge(path)
+    assert len(data.valid_records)==4
+    assert [r.household_number for r in data.records]==["1","2","2","3"]
+    assert [r.identity for r in data.records]==["GIẤY A","GIẤY B","GIẤY C","GIẤY D"]
+
+
 @pytest.mark.parametrize("bad_name",['="HỘ B"',"#REF!","#VALUE!","#N/A","...."])
 @pytest.mark.parametrize("name_only",[False,True])
 def test_bad_owner_blocks_inheritance_until_next_valid_owner(tmp_path,bad_name,name_only):
@@ -600,6 +641,20 @@ def test_mapped_formula_without_cache_logs_cell(tmp_path,column):
     wb=load_workbook(path); wb.active[f"{column}2"]="=1+1"; wb.save(path); wb.close()
     row=inspect_edge(path).records[0]
     assert not row.valid and any(f"{column}2" in e and "công thức" in e for e in row.errors)
+
+
+@pytest.mark.parametrize("formula,expected",[("=755-678","77"),("= 100.25 - 0.15 ","100.1"),("=10-0","10")])
+def test_area_literal_subtraction_without_cache(tmp_path,formula,expected):
+    path=edge_workbook(tmp_path/"area.xlsx",[["HỘ A",41,441,formula,"GIẤY A"]])
+    before=file_hash(path); row=inspect_edge(path).records[0]
+    assert row.valid and row.area==expected and file_hash(path)==before
+
+
+@pytest.mark.parametrize("formula",["=1-2","=2-2","=B2-C2","=SUM(755,-678)","=755-678+1","=1,5-0,5"])
+def test_invalid_or_unsupported_area_formula_still_blocks(tmp_path,formula):
+    path=edge_workbook(tmp_path/"bad-area.xlsx",[["HỘ A",41,441,formula,"GIẤY A"]])
+    row=inspect_edge(path).records[0]
+    assert not row.valid and any("D2" in e for e in row.errors)
 
 
 def test_identity_required_no_cross_household_and_no_number(tmp_path,service,config):

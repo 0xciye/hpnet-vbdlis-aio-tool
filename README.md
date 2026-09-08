@@ -25,6 +25,8 @@ Launcher hỗ trợ tìm kiếm công cụ, mở hướng dẫn bằng phím **F
 - Một giao diện thống nhất cho chín công cụ nghiệp vụ.
 - Bản Windows portable, không yêu cầu cài Python hoặc Node.js trên máy sử dụng.
 - Kiểm tra và xem trước dữ liệu trước khi xuất hoặc thực hiện thao tác HPNet.
+- Tạo thông báo đọc được STT dạng `=MAX($B$7:B11)+1` khi Excel chưa lưu kết quả công thức (đúng cột STT đã chọn, từ dòng dữ liệu đầu đến một dòng phía trên). Tên và giấy tờ luôn lấy từ đúng dòng chủ hộ; công thức khác chưa có kết quả vẫn được báo lỗi tại ô nguồn.
+- Diện tích hỗ trợ phép trừ hai số trực tiếp như `=755-678` (77 m²), kể cả khi chưa có kết quả lưu sẵn. Kết quả phải dương; công thức tham chiếu ô hoặc hàm khác vẫn cần Excel tính và lưu trước.
 - Mẫu Word được chuẩn hóa cục bộ tại các dòng placeholder, giữ nguyên cấu trúc và định dạng pháp lý còn lại.
 - Nhật ký TXT/CSV và đầu ra Node.js dùng UTF-8, tương thích tiếng Việt trên Windows.
 - Runtime HPNet dùng chung nhưng cấu hình, nhật ký và phiên đăng nhập vẫn tách theo từng công cụ.

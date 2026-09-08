@@ -129,6 +129,9 @@ def inspect_workbook(path, sheet_name, header_row, depth, mapping, *, require_id
     current_household = ""; household_problem = ""
     current_owner = ""; owner_row = None; owner_problem = ""
     current_identity = ""; identity_row = None; identity_problem = ""
+    maximum_household = 0
+    unresolved_household = False
+    household_prefix = {}
     with ExitStack() as stack:
         wb = load_workbook(path, read_only=True, data_only=True)
         stack.callback(wb.close)
@@ -162,6 +165,7 @@ def inspect_workbook(path, sheet_name, header_row, depth, mapping, *, require_id
             # range begins on a parcel/member row. Only selected rows become output records.
             row_options = {"min_row": first, "max_row": requested_end}
         for number, (cells, source_cells) in enumerate(zip(ws.iter_rows(**row_options), source_ws.iter_rows(**row_options), strict=True), row_options["min_row"]):
+            household_prefix[number - 1] = (maximum_household, unresolved_household)
             selected = requested_start is None or number >= requested_start
             if not any(clean(c.value) for c in source_cells):
                 if selected: blanks.append(number)
@@ -173,11 +177,31 @@ def inspect_workbook(path, sheet_name, header_row, depth, mapping, *, require_id
                     return ""
                 return cell_problem(source_cells[indices[key]], cells[indices[key]], f"{getattr(mapping,key)}{number}", label)
             owner = clean(value("owner"))
+            marker_issue = problem("household_index", "STT hộ")
+            marker = clean(value("household_index"))
+            marker_source = source_cells[indices["household_index"]]
+            # Cleaned workbooks can lose formula caches. Resolve only the exact
+            # running MAX(STT from first data row through an earlier row)+1 pattern.
+            # Never evaluate arbitrary formulas or guess across an unresolved STT.
+            column = re.escape(mapping.household_index)
+            sequence = rf"=MAX\(\$?{column}\$?{first}:\$?{column}\$?([0-9]+)\)\+1"
+            if (marker_source.data_type == "f" and isinstance(marker_source.value, str)
+                    and value("household_index") is None):
+                match = re.fullmatch(sequence, re.sub(r"\s+", "", marker_source.value), re.IGNORECASE)
+                if match and first <= int(match[1]) < number:
+                    prior_max, prior_unresolved = household_prefix[int(match[1])]
+                    if not prior_unresolved:
+                        marker, marker_issue = str(prior_max + 1), ""
+            if marker_issue:
+                unresolved_household = True
+            elif marker:
+                try:
+                    maximum_household = max(maximum_household, int(identifier(marker)))
+                except ValueError:
+                    unresolved_household = True
             if is_summary(owner):
                 if selected: summaries.append(number)
                 continue
-            marker_issue = problem("household_index", "STT hộ")
-            marker = clean(value("household_index"))
             if marker_issue:
                 current_household, household_problem = "", marker_issue
                 current_owner, owner_row, owner_problem = "", number, ""
@@ -237,6 +261,14 @@ def inspect_workbook(path, sheet_name, header_row, depth, mapping, *, require_id
             for key, label, convert in (("sheet", "tờ BĐ mới", identifier), ("parcel", "thửa BĐ mới", identifier), ("area", "diện tích", area_text)):
                 raw = value(key)
                 issue = problem(key, label)
+                source_cell = source_cells[indices[key]]
+                if (key == "area" and raw is None and source_cell.data_type == "f"
+                        and isinstance(source_cell.value, str)):
+                    # Only literal subtraction; no eval, cell references or functions.
+                    subtraction = re.fullmatch(r"=\s*([0-9]+(?:\.[0-9]+)?)\s*-\s*([0-9]+(?:\.[0-9]+)?)\s*", source_cell.value)
+                    if subtraction:
+                        raw = Decimal(subtraction[1]) - Decimal(subtraction[2])
+                        issue = ""
                 if issue:
                     normalized[key] = ""; errors.append(issue); continue
                 try:
