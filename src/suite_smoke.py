@@ -42,6 +42,7 @@ def run(hub):
     hub.launch_duplicate_parcel()
     hub.launch_data_normalizer()
     assert set(hub.tool_windows) == {"excel", "rename", "cleaner", "notice", "duplicate_parcel", "data_normalizer"}
+    assert all(not window.windowIcon().isNull() for window in hub.tool_windows.values())
     from PySide6.QtWidgets import QListView, QStyle
     notice_window = hub.tool_windows["notice"]
     assert notice_window.steps.count() == notice_window.stack.count() == 8
@@ -102,7 +103,7 @@ def run(hub):
         assert not (clean_dir / "sample.pdf").exists()
 
     return {"status": "PASS", "embedded_help_complete": True, "independent_help_pages": 3, "launcher_tools": 9,
-            "python_windows": 6, "notice_builder": notice, "notice_styled_popups": True, "excel_export": True,
+            "python_windows": 6, "python_window_icons": True, "notice_builder": notice, "notice_styled_popups": True, "excel_export": True,
             "summary_row_excluded": True, "fixed_item_29": True, "cccd_gender": True,
             "diagnostic_reports": True, "source_unchanged": True,
             "auto_rename_copy": True, "cleaner_fake_signature_blocked": True, "hpnet_live_operations": False}

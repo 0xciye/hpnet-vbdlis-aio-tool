@@ -1,14 +1,16 @@
-﻿param([switch]$SelfTest)
+﻿param([switch]$SelfTest, [switch]$UiSelfTest, [string]$TestImagePath)
 
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
 $toolRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+. (Join-Path (Split-Path -Parent (Split-Path -Parent $toolRoot)) 'hpnet_ui_common.ps1')
 $nodeScript = Join-Path $toolRoot 'hpnet-upload-draft.cjs'
 $configPath = Join-Path $toolRoot 'cau_hinh.json'
 $profilesPath = Join-Path $toolRoot 'profiles.json'
 
 function Find-HPNetRuntime {
+    param([switch]$SkipBrowserCheck)
     # Runtime dùng chung tại nodes_tools/runtime/ — duy nhất, không fallback vào runtime riêng từng tool.
     $sharedRuntime = Join-Path (Split-Path -Parent (Split-Path -Parent $toolRoot)) 'runtime'
     if ((Test-Path -LiteralPath (Join-Path $sharedRuntime 'node.exe')) -and
@@ -25,12 +27,12 @@ function Find-HPNetRuntime {
         'C:\Program Files\Microsoft\Edge\Application\msedge.exe'
     )
     $edgeExe = $edgeCandidates | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
-    if (-not $edgeExe) { throw 'Không tìm thấy Microsoft Edge.' }
+    if (-not $edgeExe -and -not $SkipBrowserCheck) { throw 'Không tìm thấy Microsoft Edge.' }
     return [PSCustomObject]@{ NodeExe=$nodeExe; NodeModules=$nodeModules; EdgeExe=$edgeExe; Mode=$runtimeMode }
 }
 
-try { $runtime = Find-HPNetRuntime } catch {
-    if ($SelfTest) { throw }
+try { $runtime = Find-HPNetRuntime -SkipBrowserCheck:($SelfTest -or $UiSelfTest) } catch {
+    if ($SelfTest -or $UiSelfTest) { throw }
     [System.Windows.Forms.MessageBox]::Show($_.Exception.Message, 'HPNet Upload VB dự thảo', 'OK', 'Error') | Out-Null
     exit 1
 }
@@ -45,6 +47,13 @@ if ($SelfTest) {
         RuntimeMode=$runtime.Mode
     } | ConvertTo-Json
     exit 0
+}
+
+function Parse-UploadBatches([string[]]$lines) {
+    return @($lines | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | ForEach-Object {
+        $parts = $_ -split '\|', 2
+        [ordered]@{ folder = $parts[0].Trim(); abstract = if ($parts.Count -eq 2) { $parts[1].Trim() } else { '' } }
+    })
 }
 
 $stateRoot = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'HPNet VBDLIS AIO Tool\Upload'
@@ -124,10 +133,11 @@ $initialReviewer = if ($savedConfig -and $savedConfig.reviewerLevel1) { [string]
 $form = New-Object System.Windows.Forms.Form
 $form.Text = 'HPNet - Tự động up VB dự thảo'
 $form.StartPosition = 'CenterScreen'
-$form.Size = New-Object System.Drawing.Size(900, 800)
-$form.MinimumSize = New-Object System.Drawing.Size(860, 750)
+$form.Size = New-Object System.Drawing.Size(1420, 900)
+$form.MinimumSize = New-Object System.Drawing.Size(1240, 820)
 $form.Font = New-Object System.Drawing.Font('Segoe UI', 9.75)
 $form.BackColor = [System.Drawing.Color]::FromArgb(245, 246, 248)
+Set-HPNetWindowIdentity -Form $form -ToolRoot $toolRoot -AppId 'HPNET.VBDLIS.Tools.Upload'
 
 $headerPanel = New-Object System.Windows.Forms.Panel
 $headerPanel.Dock = 'Top'
@@ -150,13 +160,14 @@ $subtitle.ForeColor = [System.Drawing.Color]::FromArgb(100, 100, 100)
 $subtitle.Text = 'Tự động hóa quy trình tải văn bản dự thảo'
 $headerPanel.Controls.Add($subtitle)
 
-$mainPanel = New-Object System.Windows.Forms.FlowLayoutPanel
+$mainPanel = New-Object System.Windows.Forms.Panel
 $mainPanel.Dock = 'Fill'
-$mainPanel.FlowDirection = 'TopDown'
-$mainPanel.WrapContents = $false
-$mainPanel.AutoScroll = $true
 $mainPanel.Padding = New-Object System.Windows.Forms.Padding(15)
-$form.Controls.Add($mainPanel)
+$contentPanel = New-Object System.Windows.Forms.Panel
+$contentPanel.Dock = 'Fill'
+$contentPanel.BackColor = [System.Drawing.Color]::FromArgb(245, 246, 248)
+$contentPanel.Controls.Add($mainPanel)
+$form.Controls.Add($contentPanel)
 $form.Controls.Add($headerPanel)
 
 # CARD 1: NGUỒN DỮ LIỆU
@@ -196,7 +207,7 @@ $saveProfileButton.FlatStyle = 'Flat'
 $group1.Controls.Add($saveProfileButton)
 
 $folderLabel = New-Object System.Windows.Forms.Label
-$folderLabel.Text = 'Thư mục chép File:'
+$folderLabel.Text = 'Danh sách upload:'
 $folderLabel.Location = New-Object System.Drawing.Point(20, 75)
 $folderLabel.AutoSize = $true
 $folderLabel.Font = $fontNormal
@@ -204,13 +215,15 @@ $group1.Controls.Add($folderLabel)
 
 $folderBox = New-Object System.Windows.Forms.TextBox
 $folderBox.Location = New-Object System.Drawing.Point(150, 72)
-$folderBox.Size = New-Object System.Drawing.Size(480, 25)
+$folderBox.Size = New-Object System.Drawing.Size(480, 65)
+$folderBox.Multiline = $true
+$folderBox.ScrollBars = 'Vertical'
 $folderBox.Font = $fontNormal
-$folderBox.Text = if ($savedConfig -and $savedConfig.sourceFolder) { [string]$savedConfig.sourceFolder } else { '' }
+$folderBox.Text = if ($savedConfig -and $savedConfig.batches) { (@($savedConfig.batches) | ForEach-Object { "$($_.folder) | $($_.abstract)" }) -join "`r`n" } elseif ($savedConfig -and $savedConfig.sourceFolder) { "$( $savedConfig.sourceFolder ) | $( $savedConfig.abstract )" } else { '' }
 $group1.Controls.Add($folderBox)
 
 $browseButton = New-Object System.Windows.Forms.Button
-$browseButton.Text = 'Chọn thư mục'
+$browseButton.Text = 'Thêm thư mục'
 $browseButton.Location = New-Object System.Drawing.Point(650, 71)
 $browseButton.Size = New-Object System.Drawing.Size(160, 28)
 $browseButton.Font = $fontNormal
@@ -220,13 +233,13 @@ $group1.Controls.Add($browseButton)
 
 $abstractLabel = New-Object System.Windows.Forms.Label
 $abstractLabel.Text = 'Trích yếu chung:'
-$abstractLabel.Location = New-Object System.Drawing.Point(20, 115)
+$abstractLabel.Visible = $false
 $abstractLabel.AutoSize = $true
 $abstractLabel.Font = $fontNormal
 $group1.Controls.Add($abstractLabel)
 
 $abstractBox = New-Object System.Windows.Forms.TextBox
-$abstractBox.Location = New-Object System.Drawing.Point(150, 112)
+$abstractBox.Visible = $false
 $abstractBox.Size = New-Object System.Drawing.Size(660, 65)
 $abstractBox.Multiline = $true
 $abstractBox.ScrollBars = 'Vertical'
@@ -337,6 +350,26 @@ $logLabel.AutoSize = $true
 $logLabel.Margin = New-Object System.Windows.Forms.Padding(0, 0, 0, 5)
 $mainPanel.Controls.Add($logLabel)
 
+$progressPanel = New-Object System.Windows.Forms.Panel
+$progressPanel.Size = New-Object System.Drawing.Size(830, 32)
+$progressPanel.Margin = New-Object System.Windows.Forms.Padding(0, 0, 0, 5)
+$mainPanel.Controls.Add($progressPanel)
+$progressLabel = New-Object System.Windows.Forms.Label
+$progressLabel.Text = 'Sẵn sàng'
+$progressLabel.Location = New-Object System.Drawing.Point(0, 7)
+$progressLabel.Size = New-Object System.Drawing.Size(185, 20)
+$progressLabel.Font = New-Object System.Drawing.Font('Segoe UI', 9)
+$progressPanel.Controls.Add($progressLabel)
+$progressBar = New-Object System.Windows.Forms.ProgressBar
+$progressBar.Location = New-Object System.Drawing.Point(190, 7)
+$progressBar.Size = New-Object System.Drawing.Size(640, 20)
+$progressBar.Minimum = 0
+$progressBar.Maximum = 1
+$progressBar.Value = 0
+$progressBar.Style = 'Continuous'
+$progressBar.AccessibleName = 'Tiến độ upload'
+$progressPanel.Controls.Add($progressBar)
+
 $statusBox = New-Object System.Windows.Forms.TextBox
 $statusBox.Size = New-Object System.Drawing.Size(830, 180)
 $statusBox.Multiline = $true
@@ -348,13 +381,18 @@ $statusBox.ForeColor = [System.Drawing.Color]::FromArgb(200, 200, 200)
 $statusBox.Text = "Sẵn sàng.`r`nCông cụ sẽ quét toàn bộ danh sách HPNet trước, bỏ qua file đã có rồi mới up lần lượt các file còn lại."
 $mainPanel.Controls.Add($statusBox)
 
+$footerLabel = New-HPNetFooter -Form $form -Text 'Sẵn sàng'
+$uiWorkspace = New-HPNetSplitWorkspace -MainPanel $mainPanel -InputControls @($group1, $group2, $group3, $actionBar) -ProgressPanel $progressPanel -LogLabel $logLabel -StatusBox $statusBox -ActivityTitle 'PHIÊN UPLOAD' -ActivityHint 'Theo dõi tiến độ, thông báo và nhật ký của phiên upload hiện tại.'
+
 $script:activeProcess = $null
 $script:stopRequested = $false
 
 function Stop-ActiveWorker {
     if (-not $script:activeProcess -or $script:activeProcess.HasExited) { return }
     $script:stopRequested = $true
+    Set-HPNetFooterState $footerLabel 'Đang dừng tiến trình…' 'Stopped'
     $statusBox.Text = 'Đang dừng tiến trình và Edge do công cụ mở...'
+    Set-HPNetProgressStopped $progressBar $progressLabel 'Đang dừng…'
     $form.Refresh()
     try {
         $stopInfo = New-Object System.Diagnostics.ProcessStartInfo
@@ -373,13 +411,17 @@ function Stop-ActiveWorker {
 # EVENT HANDLERS
 $browseButton.Add_Click({
     $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
-    $dialog.Description = 'Chọn thư mục chứa các file Word cần up'
-    if (Test-Path -LiteralPath $folderBox.Text) { $dialog.SelectedPath = $folderBox.Text }
-    if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { $folderBox.Text = $dialog.SelectedPath }
+    $dialog.Description = 'Chọn thêm thư mục chứa các file Word cần up'
+    if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
+        $newLine = "$($dialog.SelectedPath) | "
+        $folderBox.Text = if ([string]::IsNullOrWhiteSpace($folderBox.Text)) { $newLine } else { "$($folderBox.Text.TrimEnd())`r`n$newLine" }
+        $folderBox.SelectionStart = $folderBox.TextLength
+        $folderBox.Focus()
+    }
 })
 
 $openLogButton.Add_Click({
-    $logDir = Join-Path $toolRoot 'nhat_ky'
+    $logDir = Join-Path $stateRoot 'nhat_ky'
     if (-not (Test-Path -LiteralPath $logDir)) { [System.IO.Directory]::CreateDirectory($logDir) | Out-Null }
     Start-Process explorer.exe -ArgumentList @($logDir)
 })
@@ -420,22 +462,29 @@ $saveProfileButton.Add_Click({
 Update-WorkflowPreview
 
 $startButton.Add_Click({
-    $abstract = $abstractBox.Text.Trim()
-    $folder = $folderBox.Text.Trim()
+    $lines = @($folderBox.Lines | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+    $batches = @(Parse-UploadBatches $lines)
+    $folder = if ($batches.Count) { [string]$batches[0].folder } else { '' }
+    $abstract = if ($batches.Count) { (($batches | ForEach-Object { $_.abstract }) -join '; ') } else { '' }
     $reviewer = $reviewerBox.Text.Trim()
-    if ([string]::IsNullOrWhiteSpace($abstract)) {
-        [System.Windows.Forms.MessageBox]::Show('Hãy nhập trích yếu.', 'Thiếu trích yếu', 'OK', 'Warning') | Out-Null
+    if ($batches.Count -eq 0) {
+        [System.Windows.Forms.MessageBox]::Show('Hãy nhập ít nhất một thư mục theo dạng: C:\DuThao | Trích yếu.', 'Thiếu thư mục', 'OK', 'Warning') | Out-Null
         return
     }
-    if (-not (Test-Path -LiteralPath $folder -PathType Container)) {
-        [System.Windows.Forms.MessageBox]::Show('Thư mục file Word không tồn tại.', 'Sai thư mục', 'OK', 'Warning') | Out-Null
+    $invalidFolder = @($batches | Where-Object { -not (Test-Path -LiteralPath $_.folder -PathType Container) })
+    if ($invalidFolder.Count -gt 0) {
+        [System.Windows.Forms.MessageBox]::Show("Không tìm thấy thư mục: $($invalidFolder[0].folder)", 'Sai thư mục', 'OK', 'Warning') | Out-Null
+        return
+    }
+    if (@($batches | Where-Object { [string]::IsNullOrWhiteSpace($_.abstract) }).Count -gt 0) {
+        [System.Windows.Forms.MessageBox]::Show('Mỗi thư mục phải có trích yếu riêng sau dấu |.', 'Thiếu trích yếu', 'OK', 'Warning') | Out-Null
         return
     }
     if ([string]::IsNullOrWhiteSpace($reviewer)) {
         [System.Windows.Forms.MessageBox]::Show('Vui lòng nhập Người duyệt cấp 1 / lãnh đạo.', 'Thiếu người duyệt', 'OK', 'Warning') | Out-Null
         return
     }
-    $wordFiles = @(Get-ChildItem -LiteralPath $folder -File | Where-Object { $_.Name -notlike '~$*' -and $_.Extension -match '^\.docx?$' })
+    $wordFiles = @($batches | ForEach-Object { Get-ChildItem -LiteralPath $_.folder -File | Where-Object { $_.Name -notlike '~$*' -and $_.Extension -match '^\.docx?$' } })
     if ($wordFiles.Count -eq 0) {
         [System.Windows.Forms.MessageBox]::Show('Thư mục không có file .doc hoặc .docx.', 'Không có file Word', 'OK', 'Warning') | Out-Null
         return
@@ -443,21 +492,23 @@ $startButton.Add_Click({
 
     $modeText = if ($dryRun.Checked) { 'CHỈ KIỂM TRA, KHÔNG UP' } else { 'UP THẬT LÊN HPNET' }
     $reuploadText = if ($reuploadModified.Checked) { 'Có - bỏ qua bản cũ, up lại bản đã sửa' } else { 'Không - thấy cùng tên là bỏ qua' }
-    $message = "Chế độ: $modeText`r`nProfile: $($profileBox.Text.Trim())`r`nSố file Word: $($wordFiles.Count)`r`nUp lại file đã sửa: $reuploadText`r`nNgười duyệt cấp 1 / lãnh đạo: $reviewer`r`nVị trí: Văn bản trình duyệt (*)`r`n`r`nTrích yếu:`r`n$abstract`r`n`r`nTiếp tục?"
+    $message = "Chế độ: $modeText`r`nProfile: $($profileBox.Text.Trim())`r`nSố thư mục: $($batches.Count)`r`nSố file Word: $($wordFiles.Count)`r`nUp lại file đã sửa: $reuploadText`r`nNgười duyệt cấp 1 / lãnh đạo: $reviewer`r`nVị trí: Văn bản trình duyệt (*)`r`n`r`nCác thư mục và trích yếu:`r`n$($lines -join "`r`n")`r`n`r`nTiếp tục?"
     $answer = [System.Windows.Forms.MessageBox]::Show($message, 'Xác nhận chạy công cụ', 'OKCancel', 'Information')
     if ($answer -ne [System.Windows.Forms.DialogResult]::OK) { return }
 
     try {
-        $config = [ordered]@{ profileName=$profileBox.Text.Trim(); abstract=$abstract; sourceFolder=$folder; reviewerLevel1=$reviewer; dryRun=[bool]$dryRun.Checked; reuploadModified=[bool]$reuploadModified.Checked; listPageSize=100 }
+        $config = [ordered]@{ profileName=$profileBox.Text.Trim(); abstract=$abstract; batches=$batches; sourceFolder=$folder; reviewerLevel1=$reviewer; dryRun=[bool]$dryRun.Checked; reuploadModified=[bool]$reuploadModified.Checked; listPageSize=100 }
         $config | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $configPath -Encoding UTF8
 
         $startButton.Enabled = $false
         $browseButton.Enabled = $false
+        $folderBox.Enabled = $false
         $profileBox.Enabled = $false
         $reviewerBox.Enabled = $false
         $saveProfileButton.Enabled = $false
         $script:stopRequested = $false
         $stopButton.Enabled = $true
+        Set-HPNetFooterState $footerLabel 'Đang xử lý — không đóng cửa sổ' 'Running'
         $statusBox.Text = 'Đang chạy. Nếu Edge hiện trang đăng nhập, hãy chọn VNeID và hoàn tất xác thực; công cụ sẽ tự chạy tiếp. Không đóng Edge cho đến khi công cụ báo xong.'
         $form.Refresh()
 
@@ -478,27 +529,42 @@ $startButton.Add_Click({
         $process.StartInfo = $psi
         $process.Start() | Out-Null
         $script:activeProcess = $process
-        $stdoutTask = $process.StandardOutput.ReadToEndAsync()
-        $stderrTask = $process.StandardError.ReadToEndAsync()
+        Set-HPNetProgressRunning $progressBar $progressLabel 'Đang quét HPNet…'
+        $script:liveOutput = New-Object System.Collections.Concurrent.ConcurrentQueue[string]
+        $process.add_OutputDataReceived({ param($sender, $event); if ($null -ne $event.Data) { [void]$script:liveOutput.Enqueue($event.Data) } })
+        $process.add_ErrorDataReceived({ param($sender, $event); if ($null -ne $event.Data) { [void]$script:liveOutput.Enqueue("[LỖI] $($event.Data)") } })
+        $process.BeginOutputReadLine()
+        $process.BeginErrorReadLine()
         while (-not $process.HasExited) {
             [System.Windows.Forms.Application]::DoEvents()
+            $statusBox.Lines = @($script:liveOutput.ToArray())
+            foreach ($line in @($script:liveOutput.ToArray())) { Update-HPNetProgressFromLine $progressBar $progressLabel $line }
+            $statusBox.SelectionStart = $statusBox.TextLength
+            $statusBox.ScrollToCaret()
             Start-Sleep -Milliseconds 150
         }
-        $stdout = $stdoutTask.Result
-        $stderr = $stderrTask.Result
-        $statusText = ($stdout + [Environment]::NewLine + $stderr).Trim()
+        $process.WaitForExit()
+        $statusText = (@($script:liveOutput.ToArray()) -join [Environment]::NewLine).Trim()
         if ($script:stopRequested) {
+            Set-HPNetProgressStopped $progressBar $progressLabel 'Đã dừng theo yêu cầu'
+            Set-HPNetFooterState $footerLabel 'Đã dừng theo yêu cầu' 'Stopped'
             $statusBox.Text = if ($statusText) { "Đã dừng theo yêu cầu.`r`n$statusText" } else { 'Đã dừng theo yêu cầu.' }
             [System.Windows.Forms.MessageBox]::Show('Tiến trình đã được dừng theo yêu cầu.', 'Đã dừng', 'OK', 'Information') | Out-Null
         } elseif ($process.ExitCode -eq 0) {
+            Set-HPNetProgressCompleted $progressBar $progressLabel 'Hoàn tất'
+            Set-HPNetFooterState $footerLabel 'Hoàn tất' 'Success'
             $statusBox.Text = $statusText
             $doneText = if ($dryRun.Checked) { 'Đã kiểm tra xong, chưa tải file nào.' } else { 'Đã hoàn tất quét và up các file chưa có.' }
             [System.Windows.Forms.MessageBox]::Show("$doneText`r`nXem chi tiết trong thư mục nhật ký.", 'Hoàn tất', 'OK', 'Information') | Out-Null
         } else {
+            Set-HPNetProgressStopped $progressBar $progressLabel 'Chưa hoàn tất — xem lỗi'
+            Set-HPNetFooterState $footerLabel 'Chưa hoàn tất — xem nhật ký' 'Warning'
             $statusBox.Text = $statusText
             [System.Windows.Forms.MessageBox]::Show('Công cụ đã dừng an toàn. Xem lại ở khung phía dưới và nhật ký.', 'Đã dừng an toàn', 'OK', 'Warning') | Out-Null
         }
     } catch {
+        Set-HPNetProgressStopped $progressBar $progressLabel 'Lỗi — xem chi tiết'
+        Set-HPNetFooterState $footerLabel 'Lỗi — xem chi tiết' 'Error'
         $statusBox.Text = $_.Exception.ToString()
         [System.Windows.Forms.MessageBox]::Show($_.Exception.Message, 'Lỗi', 'OK', 'Error') | Out-Null
     } finally {
@@ -506,6 +572,7 @@ $startButton.Add_Click({
         $stopButton.Enabled = $false
         $startButton.Enabled = $true
         $browseButton.Enabled = $true
+        $folderBox.Enabled = $true
         $profileBox.Enabled = $true
         $reviewerBox.Enabled = $true
         $saveProfileButton.Enabled = $true
@@ -515,5 +582,27 @@ $startButton.Add_Click({
 $form.Add_FormClosing({
     if ($script:activeProcess -and -not $script:activeProcess.HasExited) { Stop-ActiveWorker }
 })
+
+if ($UiSelfTest) {
+    $testBatches = @(Parse-UploadBatches @('C:\A | Trích yếu A', 'C:\B | Trích yếu B', 'C:\C | Trích yếu C'))
+    if ($testBatches.Count -ne 3 -or $testBatches[2].abstract -ne 'Trích yếu C') { throw 'UI test: không phân tích đúng ba thư mục và trích yếu.' }
+    if (-not $folderBox.Multiline -or $folderBox.Height -lt 50 -or $browseButton.Text -ne 'Thêm thư mục') { throw 'UI test: ô nhập nhiều thư mục chưa sẵn sàng.' }
+    $form.StartPosition = 'Manual'; $form.Location = New-Object Drawing.Point(-32000,-32000); $form.ShowInTaskbar = $false
+    $form.Show(); $form.PerformLayout(); [Windows.Forms.Application]::DoEvents()
+    if ($null -eq $form.Icon) { throw 'UI test: cửa sổ chưa có icon riêng.' }
+    if (-not $uiWorkspace -or $uiWorkspace.Workspace.ColumnCount -ne 2 -or $uiWorkspace.ActivityPanel.RowCount -ne 5 -or $statusBox.Dock -ne 'Fill' -or $progressPanel.Dock -ne 'Fill' -or [string]::IsNullOrWhiteSpace($footerLabel.Text)) { throw 'UI test: workspace hoạt động/footer chưa hoàn chỉnh.' }
+    foreach ($control in @($group1, $group2, $group3, $actionBar, $progressPanel, $statusBox)) {
+        if ($control.Right -gt $mainPanel.ClientSize.Width + 2) { throw "UI test: điều khiển vượt chiều rộng: $($control.Name)" }
+    }
+    if ($progressBar.Style -ne 'Continuous' -or $progressBar.Maximum -lt 1) { throw 'UI test: thanh tiến độ chưa được cấu hình.' }
+    if ($TestImagePath) {
+        $bitmap = New-Object Drawing.Bitmap($form.Width, $form.Height)
+        try { $form.DrawToBitmap($bitmap, (New-Object Drawing.Rectangle(0,0,$form.Width,$form.Height))); $bitmap.Save($TestImagePath, [Drawing.Imaging.ImageFormat]::Png) }
+        finally { $bitmap.Dispose() }
+    }
+    $form.Dispose()
+    Write-Output 'UI_SELF_TEST_OK: nhiều thư mục/trích yếu, trạng thái điều khiển và bố cục; không mở Edge và không upload.'
+    exit 0
+}
 
 [void]$form.ShowDialog()

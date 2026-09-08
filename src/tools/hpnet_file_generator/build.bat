@@ -4,7 +4,7 @@ echo Dang build ung dung HPNet Excel File Generator...
 if exist build rmdir /s /q build
 if exist dist rmdir /s /q dist
 
-C:\Users\admin\AppData\Local\Programs\Python\Python312\python.exe -m PyInstaller --noconsole --name "HPNet Parcel Builder" --windowed main.py
+python -m PyInstaller --noconsole --name "HPNet Parcel Builder" --icon "assets\app_icon.ico" --add-data "assets\app_icon.ico;assets" --windowed main.py
 
 echo Build hoan tat!
 pause

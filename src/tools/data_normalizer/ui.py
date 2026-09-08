@@ -4,8 +4,9 @@ import os
 from pathlib import Path
 
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (QCheckBox, QComboBox, QFileDialog, QFormLayout, QHBoxLayout, QLabel,
-    QLineEdit, QMainWindow, QMessageBox, QPushButton, QSpinBox, QTableWidget, QTableWidgetItem,
+    QLineEdit, QMainWindow, QMessageBox, QPushButton, QSpinBox, QTableWidget, QTableWidgetItem, QProgressBar,
     QVBoxLayout, QWidget)
 
 from launcher_ui.theme import STYLE, palette
@@ -19,6 +20,7 @@ from .service import apply_changes, scan
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__(); self.setWindowTitle("Chuẩn hóa Họ tên & Ngày sinh")
+        self.setWindowIcon(QIcon(str(Path(__file__).resolve().parent / "assets" / "app_icon.ico")))
         self.resize(1180, 760); self.setMinimumSize(900, 620); self.setStyleSheet(STYLE); self.setPalette(palette())
         self.result = None; self.worker = None; self._build()
 
@@ -50,6 +52,7 @@ class MainWindow(QMainWindow):
         self.apply_button = QPushButton("Áp dụng chuẩn hóa"); self.apply_button.clicked.connect(self.apply); self.apply_button.setEnabled(False)
         actions.addWidget(self.scan_button); actions.addWidget(self.filter); actions.addStretch(); actions.addWidget(self.report_button); actions.addWidget(self.apply_button); box.addLayout(actions)
         self.summary = QLabel("Chưa quét dữ liệu."); box.addWidget(self.summary)
+        self.progress = QProgressBar(); self.progress.setRange(0, 0); self.progress.setVisible(False); self.progress.setAccessibleName("Tiến độ xử lý"); box.addWidget(self.progress)
         self.table = QTableWidget(0, 7); self.table.setHorizontalHeaderLabels(["Chọn", "Dòng", "Trường", "Trước", "Sau", "Trạng thái", "Cảnh báo"]); self.table.horizontalHeader().setStretchLastSection(True); box.addWidget(self.table, 1)
         self.setCentralWidget(root); self.statusBar().showMessage("Quét chỉ đọc dữ liệu và không sửa file.")
 
@@ -70,12 +73,20 @@ class MainWindow(QMainWindow):
 
     def _run(self, function, done):
         if self.worker: return
-        self.setEnabled(False); self.statusBar().showMessage("Đang xử lý…")
-        self.worker = Worker(function, self); self.worker.succeeded.connect(done); self.worker.failed.connect(self._error); self.worker.finished.connect(self._finished); self.worker.start()
+        self._operation_failed = False
+        self.setEnabled(False); self.progress.setVisible(True); self.statusBar().showMessage("Đang xử lý…")
+        self.worker = Worker(function, self); self.worker.succeeded.connect(done); self.worker.failed.connect(self._worker_error); self.worker.finished.connect(self._finished); self.worker.start()
 
     def _finished(self):
-        worker = self.worker; self.worker = None; self.setEnabled(True); self.statusBar().showMessage("Sẵn sàng.")
+        worker = self.worker; self.worker = None; self.progress.setVisible(False); self.setEnabled(True)
+        if not self._operation_failed and self.statusBar().currentMessage().startswith("Đang xử lý"):
+            self.statusBar().showMessage("Hoàn tất.")
         if worker: worker.deleteLater()
+
+    def _worker_error(self, error):
+        self._operation_failed = True
+        self.statusBar().showMessage("Xử lý thất bại. Xem thông báo và nhật ký.")
+        self._error(error)
 
     def scan_file(self):
         try: config = self.config()
@@ -93,6 +104,7 @@ class MainWindow(QMainWindow):
             for column, value in enumerate((change.row, "Họ tên" if change.field == "name" else "Ngày sinh", change.original if change.original is not None else "", change.display_value, change.status, change.warning), 1):
                 self.table.setItem(index, column, QTableWidgetItem(str(value)))
         self.report_button.setEnabled(True); self.apply_button.setEnabled(changes > 0); self.apply_filter()
+        self.statusBar().showMessage(f"Quét hoàn tất: {result.rows_scanned} dòng, {changes} ô có thể thay đổi.")
         self._log("scan=" + repr(result.counts()) + "\n")
 
     def apply_filter(self):
@@ -126,6 +138,7 @@ class MainWindow(QMainWindow):
 
     def _applied(self, value):
         output, backup = value; self._log(f"output={output}\nbackup={backup}\n")
+        self.statusBar().showMessage("Chuẩn hóa hoàn tất. File mới và backup đã được tạo.")
         QMessageBox.information(self, "Đã chuẩn hóa", f"File mới: {output}\nBackup: {backup}")
 
     def _log(self, text):

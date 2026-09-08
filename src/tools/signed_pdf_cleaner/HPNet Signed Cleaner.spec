@@ -5,7 +5,7 @@ a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-    datas=[('C:/Users/admin/Desktop/LÀM CÔNG NGHỆ/signed_pdf_cleaner/icon.ico', '.')],
+    datas=[('app_icon.ico', '.')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -32,7 +32,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['C:/Users/admin/Desktop/LÀM CÔNG NGHỆ/signed_pdf_cleaner/icon.ico'],
+    icon='app_icon.ico',
 )
 coll = COLLECT(
     exe,

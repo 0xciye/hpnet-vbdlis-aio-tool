@@ -2,11 +2,13 @@ import json
 import logging
 import os
 from pathlib import Path
+import threading
+import time
 from unittest.mock import patch
 
 import pytest
 from PySide6.QtGui import QColor, QFontDatabase, QPalette
-from PySide6.QtWidgets import QApplication, QComboBox, QTableWidget
+from PySide6.QtWidgets import QApplication, QComboBox, QMessageBox, QTableWidget
 
 from launcher import EXTERNAL_TOOLS, ToolLauncher, resource_path
 from tools.runtime_paths import tool_settings_path
@@ -61,6 +63,27 @@ def test_new_excel_utilities_open_as_independent_windows(hub):
     assert hub.tool_windows["duplicate_parcel"].windowTitle() == "Kiểm tra & Làm sạch thửa trùng"
     assert hub.tool_windows["data_normalizer"].windowTitle() == "Chuẩn hóa Họ tên & Ngày sinh"
     assert hub.tool_windows["duplicate_parcel"] is not hub.tool_windows["data_normalizer"]
+
+
+def test_excel_utilities_show_real_worker_completion_and_error_states(hub, app):
+    for launch, key in ((hub.launch_duplicate_parcel, "duplicate_parcel"), (hub.launch_data_normalizer, "data_normalizer")):
+        launch(); window = hub.tool_windows[key]
+        gate = threading.Event()
+        window._run(lambda: gate.wait(2) or "done", lambda _: window.statusBar().showMessage("Hoàn tất kiểm thử."))
+        app.processEvents()
+        assert window.progress.isVisible() and not window.isEnabled()
+        gate.set()
+        deadline = time.monotonic() + 3
+        while window.worker and time.monotonic() < deadline:
+            app.processEvents(); time.sleep(0.01)
+        assert window.worker is None and window.isEnabled() and not window.progress.isVisible()
+        assert window.statusBar().currentMessage().startswith("Hoàn tất")
+        with patch.object(QMessageBox, "warning"):
+            window._run(lambda: (_ for _ in ()).throw(ValueError("synthetic failure")), lambda _: None)
+            deadline = time.monotonic() + 3
+            while window.worker and time.monotonic() < deadline:
+                app.processEvents(); time.sleep(0.01)
+        assert "thất bại" in window.statusBar().currentMessage()
 
 
 def test_notice_builder_reuse_theme_and_offline_service(hub,app):

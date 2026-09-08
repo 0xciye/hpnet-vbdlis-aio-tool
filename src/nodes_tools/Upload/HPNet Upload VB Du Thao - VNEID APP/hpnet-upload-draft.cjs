@@ -97,6 +97,17 @@ function recordContainsKey(record, key) {
   return pattern.test(text);
 }
 
+function recordMatchesFile(record, file) {
+  if (!recordContainsKey(record, file.key)) return false;
+  const abstract = normalizeText(file.abstract);
+  if (!abstract) return true;
+  const title = normalizeText(record?.TrichYeu);
+  if (title === abstract) return true;
+  if (!title.startsWith(abstract)) return false;
+  const suffix = title.slice(abstract.length).trim();
+  return suffix === file.key || suffix.startsWith(`${file.key}.`);
+}
+
 function parseHpnetDate(value) {
   const text = String(value ?? "").trim();
   const asp = text.match(/^\/Date\((\d+)/i);
@@ -108,7 +119,7 @@ function parseHpnetDate(value) {
 }
 
 function recordIsCurrentVersion(record, file, reuploadModified) {
-  if (!recordContainsKey(record, file.key)) return false;
+  if (!recordMatchesFile(record, file)) return false;
   if (!reuploadModified) return true;
   const created = parseHpnetDate(record?.CreateDate);
   if (created === null) return false;
@@ -165,6 +176,16 @@ function runSelfTest() {
   const testFile = { key: local, mtimeMs: new Date(2026, 7, 30, 8, 56).getTime() };
   if (recordIsCurrentVersion(oldRecord, testFile, true)) throw new Error("Self-test: bản cũ chặn nhầm bản đã sửa.");
   if (!recordIsCurrentVersion(newRecord, testFile, true)) throw new Error("Self-test: không nhận ra bản mới đã up.");
+  const scopedFile = { ...testFile, abstract: "Trích yếu A" };
+  if (recordIsCurrentVersion({ TrichYeu: `Trích yếu B ${local}.pdf`, CreateDate: "30/08/2026 09:10" }, scopedFile, false)) {
+    throw new Error("Self-test: nhận nhầm bản ghi cùng tên nhưng khác trích yếu.");
+  }
+  if (!recordIsCurrentVersion({ TrichYeu: `Trích yếu A ${local}.pdf`, CreateDate: "30/08/2026 09:10" }, scopedFile, false)) {
+    throw new Error("Self-test: không nhận ra bản ghi đúng tên và trích yếu.");
+  }
+  if (recordIsCurrentVersion({ TrichYeu: `Trích yếu A bổ sung ${local}.pdf`, CreateDate: "30/08/2026 09:10" }, scopedFile, false)) {
+    throw new Error("Self-test: nhận nhầm trích yếu là tiền tố của trích yếu khác.");
+  }
   if (!isHpnetUrl("https://qlvb.hpnet.vn/?action=901") || isHpnetUrl("https://id.vneid.gov.vn/oauth2/authorize")) throw new Error("Self-test: nhận diện HPNet/VNeID không đúng.");
   if (!isHpnetLoginUrl("https://qlvb.hpnet.vn/Login.aspx?ReturnUrl=%2f") || isHpnetLoginUrl("https://id.vneid.gov.vn/Login.aspx")) throw new Error("Self-test: nhận diện trang đăng nhập không đúng.");
   if (!csvCell("=HYPERLINK(1)").startsWith("'=")) throw new Error("Self-test: CSV chưa chặn công thức Excel.");
@@ -328,20 +349,30 @@ async function main() {
   if (!configPath) throw new Error("Thiếu tệp cấu hình.");
   const config = JSON.parse(cleanJsonText(await fsp.readFile(configPath, "utf8")));
   const abstract = String(config.abstract ?? "").trim();
-  if (!abstract) throw new Error("Trích yếu đang trống.");
+  const batches = Array.isArray(config.batches) ? config.batches : [{ folder: config.sourceFolder, abstract }];
+  if (!batches.length) throw new Error("Chưa cấu hình thư mục upload.");
   const reviewerLevel1 = String(config.reviewerLevel1 ?? "").replace(/\s+/g, " ").trim();
   if (!normalizePersonName(reviewerLevel1)) throw new Error("Vui lòng nhập Người duyệt cấp 1 / lãnh đạo.");
-  const sourceFolder = path.resolve(String(config.sourceFolder ?? ""));
-  const sourceStat = await fsp.stat(sourceFolder).catch(() => null);
-  if (!sourceStat?.isDirectory()) throw new Error(`Không tìm thấy thư mục Word: ${sourceFolder}`);
-
-  const files = await listWordFiles(sourceFolder);
+  const resolvedBatches = batches.map((batch) => ({ folder: path.resolve(String(batch.folder ?? "")), abstract: String(batch.abstract ?? "").trim() }));
+  for (const batch of resolvedBatches) {
+    if (!batch.abstract) throw new Error(`Trích yếu đang trống ở thư mục: ${batch.folder}`);
+    const stat = await fsp.stat(batch.folder).catch(() => null);
+    if (!stat?.isDirectory()) throw new Error(`Không tìm thấy thư mục Word: ${batch.folder}`);
+  }
+  const files = (await Promise.all(resolvedBatches.map(async (batch) =>
+    (await listWordFiles(batch.folder)).map((file) => ({ ...file, abstract: batch.abstract }))
+  ))).flat();
   if (!files.length) throw new Error("Thư mục không có file .doc hoặc .docx.");
   const duplicateLocalKeys = new Set();
   for (const file of files) {
     if (!file.key) throw new Error(`Không tạo được khóa tên cho file: ${file.name}`);
-    if (duplicateLocalKeys.has(file.key)) throw new Error(`Trong thư mục có hai file trùng khóa tên: ${file.name}`);
-    duplicateLocalKeys.add(file.key);
+    const localKey = `${file.key}|${normalizeText(file.abstract)}`;
+    if (duplicateLocalKeys.has(localKey)) throw new Error(`Trong các thư mục có hai file trùng tên và trích yếu: ${file.name}`);
+    duplicateLocalKeys.add(localKey);
+  }
+  if (process.argv.includes("--validate-config")) {
+    console.log(JSON.stringify({ folderCount: resolvedBatches.length, fileCount: files.length, files: files.map(({ name, abstract }) => ({ name, abstract })) }));
+    return;
   }
 
   const toolRoot = path.dirname(configPath);
@@ -349,7 +380,7 @@ async function main() {
   let ledger = {};
   try { ledger = JSON.parse(cleanJsonText(await fsp.readFile(ledgerPath, "utf8"))); } catch { ledger = {}; }
   for (const file of files) file.sha256 = await sha256File(file.fullPath);
-  const ledgerKey = (file) => `${file.key}|${file.sha256}|${normalizeText(abstract)}|${normalizePersonName(reviewerLevel1)}`;
+  const ledgerKey = (file) => `${file.key}|${file.sha256}|${normalizeText(file.abstract)}|${normalizePersonName(reviewerLevel1)}`;
   const saveLedger = async () => {
     const temp = `${ledgerPath}.tmp`;
     await fsp.writeFile(temp, JSON.stringify(ledger, null, 2), "utf8");
@@ -390,8 +421,8 @@ async function main() {
   let page = context.pages()[0] || await context.newPage();
   let fatalError = null;
   try {
-    log(`Thư mục: ${sourceFolder}`);
-    log(`Trích yếu: ${abstract}`);
+    log(`Số thư mục: ${resolvedBatches.length}`);
+    resolvedBatches.forEach((batch, index) => log(`Thư mục ${index + 1}: ${batch.folder} | Trích yếu: ${batch.abstract}`));
     log(`Người duyệt cấp 1 / lãnh đạo: ${reviewerLevel1}`);
     log(`Chế độ up lại file đã sửa: ${config.reuploadModified ? "CÓ" : "KHÔNG"}`);
     log(`Tìm thấy ${files.length} file Word.`);
@@ -447,13 +478,13 @@ async function main() {
         continue;
       }
 
-      const result = await submitOne(page, context, file, abstract, reviewerLevel1, Boolean(config.reuploadModified), log);
+      const result = await submitOne(page, context, file, file.abstract, reviewerLevel1, Boolean(config.reuploadModified), log);
       if (!result.success) {
         addResult(file, "DỪNG - CHƯA XÁC NHẬN", result.matchedReviewer || "", result.message);
         throw new Error(`Dừng tại ${file.name}. Có thể HPNet đã nhận nhưng danh sách chưa xác nhận; hãy chạy lại để công cụ kiểm tra và bỏ qua nếu đã có.`);
       }
-      records.unshift({ TrichYeu: `${abstract} ${file.name}` });
-      ledger[ledgerKey(file)] = { fileName: file.name, sha256: file.sha256, abstract, reviewerLevel1, uploadedAt: new Date().toISOString() };
+      records.unshift({ TrichYeu: `${file.abstract} ${file.name}` });
+      ledger[ledgerKey(file)] = { fileName: file.name, sha256: file.sha256, abstract: file.abstract, reviewerLevel1, uploadedAt: new Date().toISOString() };
       await saveLedger();
       addResult(file, "ĐÃ UP", result.matchedReviewer || "", result.message);
       uploaded += 1;

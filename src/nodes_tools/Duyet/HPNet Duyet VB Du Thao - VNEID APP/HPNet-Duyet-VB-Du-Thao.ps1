@@ -1,9 +1,10 @@
-﻿param([switch]$SelfTest)
+﻿param([switch]$SelfTest, [switch]$UiSelfTest, [string]$TestImagePath)
 
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
 $toolRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+. (Join-Path (Split-Path -Parent (Split-Path -Parent $toolRoot)) 'hpnet_ui_common.ps1')
 $nodeScript = Join-Path $toolRoot 'hpnet-approve-draft.cjs'
 $configPath = Join-Path $toolRoot 'cau_hinh.json'
 $profilesPath = Join-Path $toolRoot 'profiles.json'
@@ -11,6 +12,7 @@ $scanPath = Join-Path $toolRoot 'ket_qua_quet_moi_nhat.json'
 $defaultTitle = 'Bản nháp Thông báo xác nhận'
 
 function Find-HPNetRuntime {
+    param([switch]$SkipBrowserCheck)
     # Runtime dùng chung tại nodes_tools/runtime/ — duy nhất, không fallback vào runtime riêng từng tool.
     $sharedRuntime = Join-Path (Split-Path -Parent (Split-Path -Parent $toolRoot)) 'runtime'
     if ((Test-Path -LiteralPath (Join-Path $sharedRuntime 'node.exe')) -and
@@ -27,12 +29,12 @@ function Find-HPNetRuntime {
         'C:\Program Files\Microsoft\Edge\Application\msedge.exe'
     )
     $edgeExe = $edgeCandidates | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
-    if (-not $edgeExe) { throw 'Không tìm thấy Microsoft Edge.' }
+    if (-not $edgeExe -and -not $SkipBrowserCheck) { throw 'Không tìm thấy Microsoft Edge.' }
     return [PSCustomObject]@{ NodeExe=$nodeExe; NodeModules=$nodeModules; EdgeExe=$edgeExe; Mode=$runtimeMode }
 }
 
-try { $runtime = Find-HPNetRuntime } catch {
-    if ($SelfTest) { throw }
+try { $runtime = Find-HPNetRuntime -SkipBrowserCheck:($SelfTest -or $UiSelfTest) } catch {
+    if ($SelfTest -or $UiSelfTest) { throw }
     [System.Windows.Forms.MessageBox]::Show($_.Exception.Message, 'HPNet Duyệt VB dự thảo', 'OK', 'Error') | Out-Null
     exit 1
 }
@@ -60,6 +62,10 @@ $scanPath = Join-Path $stateRoot 'ket_qua_quet_moi_nhat.json'
 function Read-JsonSafe([string]$path) {
     if (-not (Test-Path -LiteralPath $path)) { return $null }
     try { return Get-Content -LiteralPath $path -Raw -Encoding UTF8 | ConvertFrom-Json } catch { return $null }
+}
+
+function Get-TitleList([string]$text) {
+    return @($text -split "`r?`n" | ForEach-Object { $_.Normalize([System.Text.NormalizationForm]::FormC).Trim() } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
 }
 
 function Get-ProfileNames($store) {
@@ -120,10 +126,11 @@ $initialNextReviewer = if ($savedConfig -and $savedConfig.nextReviewer) { [strin
 $form = New-Object System.Windows.Forms.Form
 $form.Text = 'HPNet - Tự động duyệt VB dự thảo'
 $form.StartPosition = 'CenterScreen'
-$form.Size = New-Object System.Drawing.Size(900, 840)
-$form.MinimumSize = New-Object System.Drawing.Size(860, 780)
+$form.Size = New-Object System.Drawing.Size(1420, 920)
+$form.MinimumSize = New-Object System.Drawing.Size(1240, 840)
 $form.Font = New-Object System.Drawing.Font('Segoe UI', 9.75)
 $form.BackColor = [System.Drawing.Color]::FromArgb(245, 246, 248)
+Set-HPNetWindowIdentity -Form $form -ToolRoot $toolRoot -AppId 'HPNET.VBDLIS.Tools.Approve'
 
 $headerPanel = New-Object System.Windows.Forms.Panel
 $headerPanel.Dock = 'Top'
@@ -146,13 +153,14 @@ $subtitle.ForeColor = [System.Drawing.Color]::FromArgb(100, 100, 100)
 $subtitle.Text = 'Tự động hóa quy trình quét và duyệt hàng loạt văn bản'
 $headerPanel.Controls.Add($subtitle)
 
-$mainPanel = New-Object System.Windows.Forms.FlowLayoutPanel
+$mainPanel = New-Object System.Windows.Forms.Panel
 $mainPanel.Dock = 'Fill'
-$mainPanel.FlowDirection = 'TopDown'
-$mainPanel.WrapContents = $false
-$mainPanel.AutoScroll = $true
 $mainPanel.Padding = New-Object System.Windows.Forms.Padding(15)
-$form.Controls.Add($mainPanel)
+$contentPanel = New-Object System.Windows.Forms.Panel
+$contentPanel.Dock = 'Fill'
+$contentPanel.BackColor = [System.Drawing.Color]::FromArgb(245, 246, 248)
+$contentPanel.Controls.Add($mainPanel)
+$form.Controls.Add($contentPanel)
 $form.Controls.Add($headerPanel)
 
 $fontNormal = New-Object System.Drawing.Font('Segoe UI', 9.75)
@@ -321,6 +329,26 @@ $logLabel.AutoSize = $true
 $logLabel.Margin = New-Object System.Windows.Forms.Padding(0, 0, 0, 5)
 $mainPanel.Controls.Add($logLabel)
 
+$progressPanel = New-Object System.Windows.Forms.Panel
+$progressPanel.Size = New-Object System.Drawing.Size(830, 32)
+$progressPanel.Margin = New-Object System.Windows.Forms.Padding(0, 0, 0, 5)
+$mainPanel.Controls.Add($progressPanel)
+$progressLabel = New-Object System.Windows.Forms.Label
+$progressLabel.Text = 'Sẵn sàng'
+$progressLabel.Location = New-Object System.Drawing.Point(0, 7)
+$progressLabel.Size = New-Object System.Drawing.Size(185, 20)
+$progressLabel.Font = New-Object System.Drawing.Font('Segoe UI', 9)
+$progressPanel.Controls.Add($progressLabel)
+$progressBar = New-Object System.Windows.Forms.ProgressBar
+$progressBar.Location = New-Object System.Drawing.Point(190, 7)
+$progressBar.Size = New-Object System.Drawing.Size(640, 20)
+$progressBar.Minimum = 0
+$progressBar.Maximum = 1
+$progressBar.Value = 0
+$progressBar.Style = 'Continuous'
+$progressBar.AccessibleName = 'Tiến độ duyệt'
+$progressPanel.Controls.Add($progressBar)
+
 $statusBox = New-Object System.Windows.Forms.TextBox
 $statusBox.Size = New-Object System.Drawing.Size(830, 180)
 $statusBox.Multiline = $true
@@ -332,13 +360,18 @@ $statusBox.ForeColor = [System.Drawing.Color]::FromArgb(200, 200, 200)
 $statusBox.Text = "Sẵn sàng."
 $mainPanel.Controls.Add($statusBox)
 
+$footerLabel = New-HPNetFooter -Form $form -Text 'Sẵn sàng'
+$uiWorkspace = New-HPNetSplitWorkspace -MainPanel $mainPanel -InputControls @($group1, $group2, $safetyLabel, $actionBar) -ProgressPanel $progressPanel -LogLabel $logLabel -StatusBox $statusBox -ActivityTitle 'PHIÊN DUYỆT' -ActivityHint 'Quét trước, xác nhận kết quả rồi mới mở khóa bước duyệt.'
+
 $script:activeProcess = $null
 $script:stopRequested = $false
 
 function Stop-ActiveWorker {
     if (-not $script:activeProcess -or $script:activeProcess.HasExited) { return }
     $script:stopRequested = $true
+    Set-HPNetFooterState $footerLabel 'Đang dừng tiến trình…' 'Stopped'
     $statusBox.Text = 'Đang dừng tiến trình và Edge do công cụ mở...'
+    Set-HPNetProgressStopped $progressBar $progressLabel 'Đang dừng…'
     $form.Refresh()
     try {
         $stopInfo = New-Object System.Diagnostics.ProcessStartInfo
@@ -404,11 +437,12 @@ $nextReviewerBox.Add_TextChanged({ Update-WorkflowPreview; Invalidate-ScanResult
 Update-WorkflowPreview
 
 function Invoke-HPNetTool([string]$mode) {
-    $exactTitle = $abstractBox.Text.Trim()
-    if ([string]::IsNullOrWhiteSpace($exactTitle)) {
-        [System.Windows.Forms.MessageBox]::Show('Hãy nhập trích yếu cần khớp chính xác.', 'Thiếu trích yếu', 'OK', 'Warning') | Out-Null
+    $exactTitles = @(Get-TitleList $abstractBox.Text)
+    if ($exactTitles.Count -eq 0) {
+        [System.Windows.Forms.MessageBox]::Show('Hãy nhập ít nhất một trích yếu, mỗi trích yếu một dòng.', 'Thiếu trích yếu', 'OK', 'Warning') | Out-Null
         return $false
     }
+    $exactTitle = $exactTitles -join "`n"
     $profileName = $profileBox.Text.Trim()
     $submitter = $submitterBox.Text.Trim()
     $nextReviewer = $nextReviewerBox.Text.Trim()
@@ -420,7 +454,7 @@ function Invoke-HPNetTool([string]$mode) {
         [System.Windows.Forms.MessageBox]::Show('Vui lòng nhập Người nhận chuyển tiếp.', 'Thiếu người nhận', 'OK', 'Warning') | Out-Null
         return $false
     }
-    $config = [ordered]@{ mode=$mode; profileName=$profileName; exactTitle=$exactTitle; submitter=$submitter; nextReviewer=$nextReviewer; listPageSize=100 }
+    $config = [ordered]@{ mode=$mode; profileName=$profileName; exactTitle=$exactTitle; exactTitles=$exactTitles; submitter=$submitter; nextReviewer=$nextReviewer; listPageSize=100 }
     $config | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $configPath -Encoding UTF8
     $scanButton.Enabled = $false
     $approveButton.Enabled = $false
@@ -431,6 +465,8 @@ function Invoke-HPNetTool([string]$mode) {
     $saveProfileButton.Enabled = $false
     $script:stopRequested = $false
     $stopButton.Enabled = $true
+    Set-HPNetFooterState $footerLabel 'Đang xử lý — khóa bước duyệt' 'Running'
+    Set-HPNetProgressRunning $progressBar $progressLabel 'Đang quét HPNet…'
     $statusBox.Text = if ($mode -eq 'scan') { 'Đang quét toàn bộ các trang. Nếu Edge hiện trang đăng nhập, hãy chọn VNeID và hoàn tất xác thực; công cụ sẽ tự chạy tiếp.' } else { 'Đang duyệt lần lượt các văn bản đã xác nhận. Nếu được hỏi, hãy đăng nhập bằng VNeID. Không đóng Edge cho đến khi công cụ báo hoàn tất.' }
     $form.Refresh()
     try {
@@ -450,27 +486,41 @@ function Invoke-HPNetTool([string]$mode) {
         $process.StartInfo = $psi
         $process.Start() | Out-Null
         $script:activeProcess = $process
-        $stdoutTask = $process.StandardOutput.ReadToEndAsync()
-        $stderrTask = $process.StandardError.ReadToEndAsync()
+        $script:liveOutput = New-Object System.Collections.Concurrent.ConcurrentQueue[string]
+        $process.add_OutputDataReceived({ param($sender, $event); if ($null -ne $event.Data) { [void]$script:liveOutput.Enqueue($event.Data) } })
+        $process.add_ErrorDataReceived({ param($sender, $event); if ($null -ne $event.Data) { [void]$script:liveOutput.Enqueue("[LỖI] $($event.Data)") } })
+        $process.BeginOutputReadLine()
+        $process.BeginErrorReadLine()
         while (-not $process.HasExited) {
             [System.Windows.Forms.Application]::DoEvents()
+            $statusBox.Lines = @($script:liveOutput.ToArray())
+            foreach ($line in @($script:liveOutput.ToArray())) { Update-HPNetProgressFromLine $progressBar $progressLabel $line }
+            $statusBox.SelectionStart = $statusBox.TextLength
+            $statusBox.ScrollToCaret()
             Start-Sleep -Milliseconds 150
         }
-        $stdout = $stdoutTask.Result
-        $stderr = $stderrTask.Result
-        $statusText = ($stdout + [Environment]::NewLine + $stderr).Trim()
+        $process.WaitForExit()
+        $statusText = (@($script:liveOutput.ToArray()) -join [Environment]::NewLine).Trim()
         if ($script:stopRequested) {
+            Set-HPNetProgressStopped $progressBar $progressLabel 'Đã dừng theo yêu cầu'
+            Set-HPNetFooterState $footerLabel 'Đã dừng theo yêu cầu' 'Stopped'
             $statusBox.Text = if ($statusText) { "Đã dừng theo yêu cầu.`r`n$statusText" } else { 'Đã dừng theo yêu cầu.' }
             [System.Windows.Forms.MessageBox]::Show('Tiến trình đã được dừng theo yêu cầu.', 'Đã dừng', 'OK', 'Information') | Out-Null
             return $false
         }
         $statusBox.Text = $statusText
         if ($process.ExitCode -ne 0) {
+            Set-HPNetProgressStopped $progressBar $progressLabel 'Chưa hoàn tất — xem lỗi'
+            Set-HPNetFooterState $footerLabel 'Chưa hoàn tất — xem nhật ký' 'Warning'
             [System.Windows.Forms.MessageBox]::Show('Công cụ đã dừng an toàn. Không tự bấm duyệt văn bản chưa xác nhận. Xem chi tiết ở khung nhật ký.', 'Đã dừng an toàn', 'OK', 'Warning') | Out-Null
             return $false
         }
+        Set-HPNetProgressCompleted $progressBar $progressLabel 'Hoàn tất'
+        Set-HPNetFooterState $footerLabel 'Hoàn tất bước hiện tại' 'Success'
         return $true
     } catch {
+        Set-HPNetProgressStopped $progressBar $progressLabel 'Lỗi — xem chi tiết'
+        Set-HPNetFooterState $footerLabel 'Lỗi — xem chi tiết' 'Error'
         $statusBox.Text = $_.Exception.ToString()
         [System.Windows.Forms.MessageBox]::Show($_.Exception.Message, 'Lỗi', 'OK', 'Error') | Out-Null
         return $false
@@ -512,9 +562,11 @@ $approveButton.Add_Click({
     }
     $count = [int]$report.candidateCount
     if ($count -le 0) { return }
-    $reportTitle = ([string]$report.exactTitle).Normalize([System.Text.NormalizationForm]::FormC).Trim()
-    $currentTitle = $abstractBox.Text.Normalize([System.Text.NormalizationForm]::FormC).Trim()
-    if ($reportTitle -ne $currentTitle) {
+    $reportTitles = if ($report.exactTitles) { @($report.exactTitles) } else { @(Get-TitleList ([string]$report.exactTitle)) }
+    $currentTitles = @(Get-TitleList $abstractBox.Text)
+    $sameTitles = ($reportTitles.Count -eq $currentTitles.Count)
+    if ($sameTitles) { for ($i = 0; $i -lt $reportTitles.Count; $i++) { if ($reportTitles[$i].Normalize([System.Text.NormalizationForm]::FormC).Trim() -ne $currentTitles[$i]) { $sameTitles = $false; break } } }
+    if (-not $sameTitles) {
         [System.Windows.Forms.MessageBox]::Show('Trích yếu đã thay đổi. Hãy quét lại trước khi duyệt.', 'Cần quét lại', 'OK', 'Warning') | Out-Null
         return
     }
@@ -537,7 +589,7 @@ $approveButton.Add_Click({
 })
 
 $openLogButton.Add_Click({
-    $logDir = Join-Path $toolRoot 'nhat_ky'
+    $logDir = Join-Path $stateRoot 'nhat_ky'
     if (-not (Test-Path -LiteralPath $logDir)) { [System.IO.Directory]::CreateDirectory($logDir) | Out-Null }
     Start-Process explorer.exe -ArgumentList @($logDir)
 })
@@ -547,5 +599,27 @@ $stopButton.Add_Click({ Stop-ActiveWorker })
 $form.Add_FormClosing({
     if ($script:activeProcess -and -not $script:activeProcess.HasExited) { Stop-ActiveWorker }
 })
+
+if ($UiSelfTest) {
+    $testTitles = @(Get-TitleList "Trích yếu 1`r`nTrích yếu 2`r`nTrích yếu X")
+    if ($testTitles.Count -ne 3 -or $testTitles[1] -ne 'Trích yếu 2') { throw 'UI test: không phân tích đúng nhiều trích yếu.' }
+    if (-not $abstractBox.Multiline -or $abstractBox.Height -lt 50 -or $approveButton.Enabled) { throw 'UI test: ô trích yếu hoặc khóa bước duyệt không đúng.' }
+    $form.StartPosition = 'Manual'; $form.Location = New-Object Drawing.Point(-32000,-32000); $form.ShowInTaskbar = $false
+    $form.Show(); $form.PerformLayout(); [Windows.Forms.Application]::DoEvents()
+    if ($null -eq $form.Icon) { throw 'UI test: cửa sổ chưa có icon riêng.' }
+    if (-not $uiWorkspace -or $uiWorkspace.Workspace.ColumnCount -ne 2 -or $uiWorkspace.ActivityPanel.RowCount -ne 5 -or $statusBox.Dock -ne 'Fill' -or $progressPanel.Dock -ne 'Fill' -or [string]::IsNullOrWhiteSpace($footerLabel.Text)) { throw 'UI test: workspace hoạt động/footer chưa hoàn chỉnh.' }
+    foreach ($control in @($group1, $group2, $actionBar, $progressPanel, $statusBox)) {
+        if ($control.Right -gt $mainPanel.ClientSize.Width + 2) { throw "UI test: điều khiển vượt chiều rộng: $($control.Name)" }
+    }
+    if ($progressBar.Style -ne 'Continuous' -or $progressBar.Maximum -lt 1) { throw 'UI test: thanh tiến độ chưa được cấu hình.' }
+    if ($TestImagePath) {
+        $bitmap = New-Object Drawing.Bitmap($form.Width, $form.Height)
+        try { $form.DrawToBitmap($bitmap, (New-Object Drawing.Rectangle(0,0,$form.Width,$form.Height))); $bitmap.Save($TestImagePath, [Drawing.Imaging.ImageFormat]::Png) }
+        finally { $bitmap.Dispose() }
+    }
+    $form.Dispose()
+    Write-Output 'UI_SELF_TEST_OK: nhiều trích yếu, khóa duyệt an toàn và bố cục; không mở Edge và không duyệt.'
+    exit 0
+}
 
 [void]$form.ShowDialog()

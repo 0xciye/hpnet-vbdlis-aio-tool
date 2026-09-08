@@ -110,6 +110,20 @@ function exactCandidate(record, exactTitle, expectedStatus) {
     && normalizeText(record?.TinhTrangXuly) === normalizeText(expectedStatus);
 }
 
+function normalizeTitles(value) {
+  const values = Array.isArray(value) ? value : String(value ?? "").split(/\r?\n/);
+  return [...new Set(values.map((item) => String(item ?? "").normalize("NFC").trim()).filter(Boolean))];
+}
+
+function selectCandidates(records, exactTitles, expectedStatus) {
+  return exactTitles.flatMap((exactTitle) => records.filter((record) => exactCandidate(record, exactTitle, expectedStatus)).map((record) => ({
+    id: getRecordId(record), exactTitle,
+    title: String(record.TrichYeu ?? "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim(),
+    status: String(record.TinhTrangXuly ?? "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim(),
+    createDate: String(record.CreateDate ?? ""),
+  })));
+}
+
 function runSelfTest() {
   const title = "THÔNG BÁO KẾT QUẢ XÁC NHẬN ĐĂNG KÝ ĐẤT ĐAI - CẨM ĐÔNG";
   const submitter = "  Nguyễn   Văn A ";
@@ -126,6 +140,10 @@ function runSelfTest() {
   if (isHpnetUrl("https://id.vneid.gov.vn/oauth2/authorize") || isHpnetLoginUrl("https://id.vneid.gov.vn/Login.aspx")) throw new Error("Self-test: nhận nhầm trang VNeID là HPNet.");
   if (!isHpnetLoginUrl("https://qlvb.hpnet.vn/Login.aspx?ReturnUrl=%2f")) throw new Error("Self-test: không nhận ra trang đăng nhập HPNet.");
   if (!csvCell("=HYPERLINK(1)").startsWith("'=")) throw new Error("Self-test: CSV chưa chặn công thức Excel.");
+  if (normalizeTitles(`${title}\n${title}\n`).length !== 1) throw new Error("Self-test: chuẩn hóa nhiều trích yếu không đúng.");
+  const secondTitle = "Bản nháp Thông báo xác nhận 2";
+  const selected = selectCandidates([good, { ...good, VanbanDiId: "def", TrichYeu: secondTitle }], [title, secondTitle], expectedStatus);
+  if (selected.length !== 2 || selected[1].exactTitle !== secondTitle) throw new Error("Self-test: không lọc đúng nhiều trích yếu.");
   console.log("NODE_SELF_TEST_OK");
 }
 
@@ -267,8 +285,8 @@ async function main() {
   const config = JSON.parse(cleanJsonText(await fsp.readFile(configPath, "utf8")));
   const mode = String(config.mode ?? "scan").toLowerCase();
   if (!new Set(["scan", "approve"]).has(mode)) throw new Error("Chế độ không hợp lệ.");
-  const exactTitle = String(config.exactTitle ?? "").trim();
-  if (!exactTitle) throw new Error("Trích yếu đang trống.");
+  const exactTitles = normalizeTitles(config.exactTitles ?? config.exactTitle);
+  if (!exactTitles.length) throw new Error("Trích yếu đang trống.");
   const submitter = String(config.submitter ?? "").replace(/\s+/g, " ").trim();
   const nextReviewer = String(config.nextReviewer ?? "").replace(/\s+/g, " ").trim();
   if (!normalizePersonName(submitter)) throw new Error("Vui lòng nhập Người trình duyệt hiện tại.");
@@ -307,7 +325,7 @@ async function main() {
   let fatalError = null;
   try {
     log(`Chế độ: ${mode === "scan" ? "CHỈ QUÉT - KHÔNG DUYỆT" : "DUYỆT CÁC MỤC ĐÃ XÁC NHẬN"}`);
-    log(`Trích yếu khớp chính xác: ${exactTitle}`);
+    log(`Trích yếu khớp chính xác (${exactTitles.length}): ${exactTitles.join(" | ")}`);
     log(`Người trình duyệt hiện tại: ${submitter}`);
     log(`Tình trạng bắt buộc: ${expectedStatus}`);
     log(`Người nhận chuyển tiếp: ${nextReviewer}`);
@@ -319,12 +337,7 @@ async function main() {
       pageSize: 100,
       onPage: (done, total) => log(`Đã kiểm tra ${done}/${total} văn bản...`),
     });
-    const candidates = records.filter((record) => exactCandidate(record, exactTitle, expectedStatus)).map((record) => ({
-      id: getRecordId(record),
-      title: String(record.TrichYeu ?? "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim(),
-      status: String(record.TinhTrangXuly ?? "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim(),
-      createDate: String(record.CreateDate ?? ""),
-    }));
+    const candidates = selectCandidates(records, exactTitles, expectedStatus);
     const unique = [];
     const seen = new Set();
     for (const item of candidates) {
@@ -334,7 +347,7 @@ async function main() {
 
     if (mode === "scan") {
       const report = {
-        createdAt: new Date().toISOString(), exactTitle, expectedStatus,
+        createdAt: new Date().toISOString(), exactTitle: exactTitles.join("\n"), exactTitles, expectedStatus,
         submitter, nextReviewer, totalRecordsScanned: records.length,
         candidateCount: unique.length, candidates: unique,
       };
@@ -349,7 +362,8 @@ async function main() {
       console.log(`SCAN_REPORT=${scanReportPath}`);
     } else {
       const report = JSON.parse(cleanJsonText(await fsp.readFile(scanReportPath, "utf8")));
-      if (normalizeText(report.exactTitle) !== normalizeText(exactTitle)
+      const reportTitles = normalizeTitles(report.exactTitles ?? report.exactTitle);
+      if (reportTitles.length !== exactTitles.length || reportTitles.some((title, index) => normalizeText(title) !== normalizeText(exactTitles[index]))
         || normalizeText(report.expectedStatus) !== normalizeText(expectedStatus)
         || normalizePersonName(report.submitter) !== normalizePersonName(submitter)
         || normalizePersonName(report.nextReviewer) !== normalizePersonName(nextReviewer)) {
@@ -362,7 +376,7 @@ async function main() {
       for (let index = 0; index < approvedCandidates.length; index += 1) {
         const candidate = approvedCandidates[index];
         log(`(${index + 1}/${approvedCandidates.length}) Kiểm tra lại ${candidate.id}`);
-        const result = await approveOne(page, context, candidate, exactTitle, expectedStatus, nextReviewer, log);
+        const result = await approveOne(page, context, candidate, candidate.exactTitle, expectedStatus, nextReviewer, log);
         resultRows.push([new Date().toISOString(), resultRows.length + 1, candidate.id, candidate.title, candidate.status, submitter, nextReviewer, result.matchedReviewer || "", result.result, result.newStatus, result.note]);
         if (result.result === "ĐÃ DUYỆT") completed += 1;
         log(`[${result.result}] ${candidate.id} - ${result.newStatus}`);

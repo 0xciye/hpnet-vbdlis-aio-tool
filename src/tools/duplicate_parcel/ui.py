@@ -5,9 +5,10 @@ import os
 from pathlib import Path
 
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QHeaderView
 from PySide6.QtWidgets import (QCheckBox, QComboBox, QFileDialog, QFormLayout, QHBoxLayout, QLabel,
-    QLineEdit, QMainWindow, QMessageBox, QPushButton, QSpinBox, QTableWidget, QTableWidgetItem,
+    QLineEdit, QMainWindow, QMessageBox, QPushButton, QSpinBox, QTableWidget, QTableWidgetItem, QProgressBar,
     QVBoxLayout, QWidget)
 from openpyxl.utils import get_column_letter, column_index_from_string
 
@@ -23,6 +24,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Kiểm tra & Làm sạch thửa trùng")
+        self.setWindowIcon(QIcon(str(Path(__file__).resolve().parent / "assets" / "app_icon.ico")))
         self.resize(1180, 760); self.setMinimumSize(900, 620)
         self.setStyleSheet(STYLE); self.setPalette(palette())
         self.result = None; self.visible_records = []; self.worker = None
@@ -52,6 +54,7 @@ class MainWindow(QMainWindow):
         self.apply_button = QPushButton("Áp dụng làm sạch"); self.apply_button.clicked.connect(self.apply); self.apply_button.setEnabled(False)
         actions.addWidget(self.scan_button); actions.addStretch(); actions.addWidget(self.report_button); actions.addWidget(self.apply_button); box.addLayout(actions)
         self.summary = QLabel("Chưa quét dữ liệu."); box.addWidget(self.summary)
+        self.progress = QProgressBar(); self.progress.setRange(0, 0); self.progress.setVisible(False); self.progress.setAccessibleName("Tiến độ xử lý"); box.addWidget(self.progress)
         self.table = QTableWidget(0, 11); self.table.setHorizontalHeaderLabels(["Chọn", "Hộ", "Chủ hộ", "Dòng", "Số tờ", "Số thửa", "Diện tích", "Xứ đồng", "Trạng thái", "Hành động", "Trùng với"])
         header = self.table.horizontalHeader()
         header.setStretchLastSection(True)
@@ -108,13 +111,21 @@ class MainWindow(QMainWindow):
 
     def _run(self, function, done):
         if self.worker: return
-        self.setEnabled(False); self.statusBar().showMessage("Đang xử lý…")
-        self.worker = Worker(function, self); self.worker.succeeded.connect(done); self.worker.failed.connect(self._error)
+        self._operation_failed = False
+        self.setEnabled(False); self.progress.setVisible(True); self.statusBar().showMessage("Đang xử lý…")
+        self.worker = Worker(function, self); self.worker.succeeded.connect(done); self.worker.failed.connect(self._worker_error)
         self.worker.finished.connect(self._finished); self.worker.start()
 
     def _finished(self):
-        worker = self.worker; self.worker = None; self.setEnabled(True); self.statusBar().showMessage("Sẵn sàng.")
+        worker = self.worker; self.worker = None; self.progress.setVisible(False); self.setEnabled(True)
+        if not self._operation_failed and self.statusBar().currentMessage().startswith("Đang xử lý"):
+            self.statusBar().showMessage("Hoàn tất.")
         if worker: worker.deleteLater()
+
+    def _worker_error(self, error):
+        self._operation_failed = True
+        self.statusBar().showMessage("Xử lý thất bại. Xem thông báo và nhật ký.")
+        self._error(error)
 
     def scan_file(self):
         try: config = self.config()
@@ -157,6 +168,7 @@ class MainWindow(QMainWindow):
             for column, value in enumerate(values, 1):
                 self.table.setItem(index, column, QTableWidgetItem(str(value)))
         self.report_button.setEnabled(True); self.apply_button.setEnabled(bool(result.clear_rows))
+        self.statusBar().showMessage(f"Quét hoàn tất: {result.rows_scanned} dòng, {len(result.clear_rows)} dòng có thể làm sạch.")
         self._log("scan=" + repr(result.counts()) + "\n")
 
     def selected_rows(self):
@@ -178,6 +190,7 @@ class MainWindow(QMainWindow):
 
     def _applied(self, value):
         output, backup = value; self._log(f"output={output}\nbackup={backup}\n")
+        self.statusBar().showMessage("Làm sạch hoàn tất. File mới và backup đã được tạo.")
         QMessageBox.information(self, "Đã làm sạch", f"File mới: {output}\nBackup: {backup}")
 
     def _log(self, text):

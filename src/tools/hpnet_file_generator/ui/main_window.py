@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (
     QTabWidget, QFormLayout, QGroupBox, QSplitter
 )
 from PySide6.QtCore import Qt, QThread, Signal
-from PySide6.QtGui import QColor
+from PySide6.QtGui import QColor, QIcon
 
 from tools.hpnet_file_generator.models.data_models import ProfileConfig, ActionStatus
 from tools.hpnet_file_generator.core.excel_reader import ExcelReader
@@ -17,6 +17,7 @@ from tools.hpnet_file_generator.core.person_matcher import PersonMatcher
 from tools.hpnet_file_generator.core.action_planner import ActionPlanner
 from tools.hpnet_file_generator.core.file_generator import FileGenerator
 from tools.runtime_paths import tool_settings_path
+from launcher_ui.theme import STYLE, palette
 
 CONFIG_FILE = "settings.json"
 
@@ -47,7 +48,10 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("HPNet Excel File Generator")
+        self.setWindowIcon(QIcon(str(Path(__file__).resolve().parents[1] / "assets" / "app_icon.ico")))
         self.resize(1000, 700)
+        self.setStyleSheet(STYLE)
+        self.setPalette(palette())
         
         self.config = ProfileConfig()
         self.excel_records = []

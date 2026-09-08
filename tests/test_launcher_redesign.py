@@ -9,7 +9,7 @@ from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QPushButton
 from launcher import ToolLauncher
 from launcher_ui.help_page import guide_sources,guide_html
-from launcher_ui.theme import COLORS, STYLE
+from launcher_ui.theme import COLORS, RADIUS, SPACING, STYLE, TYPOGRAPHY
 
 
 @pytest.fixture(scope="module")
@@ -22,6 +22,14 @@ def hub(app,tmp_path,monkeypatch):
     yield window
     for tool in window.open_tools: tool.close()
     window.close(); window.deleteLater(); app.processEvents()
+
+
+def test_shared_design_tokens_are_complete_and_resolved():
+    assert {"canvas", "surface", "surface_elevated", "primary", "secondary", "success", "warning", "error", "text", "muted", "border"} <= COLORS.keys()
+    assert tuple(SPACING) == ("xs", "sm", "md", "lg", "xl")
+    assert {"display", "heading", "body", "caption", "monospace"} <= TYPOGRAPHY.keys()
+    assert tuple(RADIUS) == ("small", "medium", "large")
+    assert "@" not in STYLE
 
 
 def test_guides_complete_and_read_inside_app(hub,app):

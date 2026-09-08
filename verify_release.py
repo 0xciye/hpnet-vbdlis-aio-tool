@@ -4,9 +4,11 @@ import hashlib
 import json
 from pathlib import Path
 import subprocess
+from tempfile import TemporaryDirectory
 from zipfile import ZipFile
 
 ROOT = Path(__file__).resolve().parent
+ICON_SIZES = {16, 20, 24, 32, 48, 64, 128, 256}
 
 
 def digest(path):
@@ -14,17 +16,28 @@ def digest(path):
         return hashlib.file_digest(stream, "sha256").hexdigest()
 
 
-def verify(folder, archive=None):
+def assert_executable_icon(executable):
     import pefile
-    executable = folder / "HPNET & VBDLIS Tools.exe"
     pe = pefile.PE(str(executable))
     try:
         resource_types = {entry.id for entry in pe.DIRECTORY_ENTRY_RESOURCE.entries}
-        assert {3, 14}.issubset(resource_types), "Missing embedded EXE icon"
+        assert {3, 14}.issubset(resource_types), f"Missing embedded EXE icon: {executable}"
     finally:
         pe.close()
+
+
+def verify(folder, archive=None):
+    executable = folder / "HPNET & VBDLIS Tools.exe"
+    assert_executable_icon(executable)
     source_nodes = ROOT / "src/nodes_tools"
     packaged_nodes = folder / "_internal/nodes_tools"
+    launchers = [
+        packaged_nodes / "Downloader/HPNet PDF Downloader - VNEID APP/HPNet PDF Downloader.exe",
+        packaged_nodes / "Upload/HPNet Upload VB Du Thao - VNEID APP/HPNet Upload VB Du Thao.exe",
+        packaged_nodes / "Duyet/HPNet Duyet VB Du Thao - VNEID APP/HPNet Duyet VB Du Thao.exe",
+    ]
+    for launcher in launchers:
+        assert_executable_icon(launcher)
     originals = {p.relative_to(source_nodes).as_posix(): p for p in source_nodes.rglob("*") if p.is_file()}
     packaged = {p.relative_to(packaged_nodes).as_posix(): p for p in packaged_nodes.rglob("*") if p.is_file()}
     assert originals.keys() == packaged.keys(), "Packaged HPNet files missing or unexpected"
@@ -52,6 +65,20 @@ def verify(folder, archive=None):
         )
         assert result.returncode == 0 and marker in result.stdout, result.stdout + result.stderr
         print(f"HPNet-PDF-Downloader.ps1 {flag}: PASS")
+    ui_scripts = [
+        (packaged_nodes / "Upload/HPNet Upload VB Du Thao - VNEID APP/HPNet-Upload-VB-Du-Thao.ps1", "HPNet-Upload-VB-Du-Thao.ps1"),
+        (packaged_nodes / "Duyet/HPNet Duyet VB Du Thao - VNEID APP/HPNet-Duyet-VB-Du-Thao.ps1", "HPNet-Duyet-VB-Du-Thao.ps1"),
+    ]
+    with TemporaryDirectory(prefix="hpnet-ui-release-") as temporary:
+        for script, name in ui_scripts:
+            image = Path(temporary) / f"{name}.png"
+            result = subprocess.run(
+                ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(script), "-UiSelfTest", "-TestImagePath", str(image)],
+                cwd=script.parent, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60,
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+            )
+            assert result.returncode == 0 and "UI_SELF_TEST_OK" in result.stdout and image.is_file(), result.stdout + result.stderr
+            print(f"{name} -UiSelfTest: PASS")
     for relative in ('template/MAU_22_THONG_BAO_XAC_NHAN_KET_QUA_DANG_KY_DAT_DAI.docx','config/legal_defaults.json','assets/app_icon.ico',
                      'assets/template_placeholder_preview.png',
                      'assets/ui-chevron-down.svg','assets/ui-chevron-up.svg','assets/ui-check.svg'):
@@ -68,7 +95,14 @@ def verify(folder, archive=None):
                 and path.as_posix().endswith('/runtime/node_modules/playwright/lib/mcp/test')):
             continue
         assert path.name.lower() not in forbidden, f"User/cache file in release: {path}"
-    result = {"status": "PASS", "hpnet_files_identical": len(originals), "node_workers": 3, "pdf_downloader_powershell_tests": 2, "exe_icon": True, "embedded_guides":3,"clean_runtime_only":True}
+    icon_assets = list((folder / "_internal").rglob("app_icon.ico"))
+    from PIL import Image
+    for icon in icon_assets:
+        with Image.open(icon) as image:
+            sizes = {width for width, height in image.info.get("sizes", set()) if width == height}
+        assert ICON_SIZES.issubset(sizes), f"Icon size set incomplete: {icon} ({sorted(sizes)})"
+    assert len(icon_assets) == 9, f"Expected 9 application icons, found {len(icon_assets)}"
+    result = {"status": "PASS", "hpnet_files_identical": len(originals), "node_workers": 3, "pdf_downloader_powershell_tests": 2, "hpnet_ui_tests": 3, "exe_icons": 4, "icon_assets": 9, "embedded_guides":3,"clean_runtime_only":True}
     if archive:
         expected = {folder.name + "/" + p.relative_to(folder).as_posix(): p for p in folder.rglob("*") if p.is_file()}
         with ZipFile(archive) as zf:

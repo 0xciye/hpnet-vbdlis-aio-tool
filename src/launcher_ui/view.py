@@ -132,29 +132,21 @@ class LauncherView(QWidget):
     def __init__(self,hub):
         super().__init__(hub); self.hub=hub; self.setObjectName("launcherView")
         self.category="all"; self.cards={}; self.groups={}; self.grid_columns=0
-        outer=QHBoxLayout(self); outer.setContentsMargins(0,0,0,0); outer.setSpacing(0)
-        sidebar=QFrame(); sidebar.setObjectName("navigation"); sidebar.setFixedWidth(230)
-        side=QVBoxLayout(sidebar); side.setContentsMargins(16,28,16,20); side.setSpacing(8)
-        branding=QHBoxLayout(); logo=QLabel(); logo.setPixmap(hub.windowIcon().pixmap(40,40)); branding.addWidget(logo)
-        brand_text=QVBoxLayout(); brand_text.setSpacing(2); brand_text.addWidget(label("HPNET","brand")); brand_text.addWidget(label("& VBDLIS Tools","muted"))
-        branding.addLayout(brand_text,1); side.addLayout(branding); side.addSpacing(32)
-        side.addWidget(label("KHÔNG GIAN LÀM VIỆC","navigationLabel")); side.addSpacing(6)
+        outer=QVBoxLayout(self); outer.setContentsMargins(0,0,0,0); outer.setSpacing(0)
         self.nav_group=QButtonGroup(self); self.nav_buttons={}
+        self.pages=QStackedWidget(); outer.addWidget(self.pages,1)
+        self.tools_page=QWidget(); page=QVBoxLayout(self.tools_page); page.setContentsMargins(30,26,30,22); page.setSpacing(14)
+        self.eyebrow=label("BỘ CÔNG CỤ XỬ LÝ HỒ SƠ","eyebrow"); page.addWidget(self.eyebrow)
+        self.heading=label("Chọn công cụ. Bắt đầu công việc.","pageTitle"); page.addWidget(self.heading)
+        self.description=label("Chuẩn bị hồ sơ và làm việc với HPNet trong các cửa sổ riêng quen thuộc.","muted"); page.addWidget(self.description)
+        category_row=QHBoxLayout(); category_row.setSpacing(8); category_row.setContentsMargins(0,4,0,4)
         for key,text,symbol in (("all","Tất cả công cụ","grid"),("prepare","Chuẩn bị hồ sơ","folder"),
                                 ("hpnet","Làm việc với HPNet","approve"),("help","Hướng dẫn sử dụng","help")):
-            if key=="help":
-                side.addSpacing(24); side.addWidget(label("TRỢ GIÚP","navigationLabel")); side.addSpacing(6)
             button=QPushButton(text); button.setObjectName("navButton"); button.setCheckable(True)
             button.setIcon(icon(symbol)); button.setIconSize(QSize(20,20)); button.setCursor(Qt.PointingHandCursor)
             button.setAccessibleName(text); button.clicked.connect(lambda checked=False,k=key:self.navigate(k))
-            self.nav_group.addButton(button); self.nav_buttons[key]=button; side.addWidget(button)
-        side.addStretch(1)
-        outer.addWidget(sidebar)
-        self.pages=QStackedWidget(); outer.addWidget(self.pages,1)
-        self.tools_page=QWidget(); page=QVBoxLayout(self.tools_page); page.setContentsMargins(28,26,28,20); page.setSpacing(16)
-        self.eyebrow=label("BỘ CÔNG CỤ XỬ LÝ HỒ SƠ","eyebrow"); page.addWidget(self.eyebrow)
-        self.heading=label("Chọn công cụ. Bắt đầu công việc.","pageTitle"); page.addWidget(self.heading)
-        self.description=label("Chuẩn bị hồ sơ và làm việc với HPNet, trong các cửa sổ riêng quen thuộc.","muted"); page.addWidget(self.description)
+            self.nav_group.addButton(button); self.nav_buttons[key]=button; category_row.addWidget(button)
+        category_row.addStretch(1); page.addLayout(category_row)
         search_row=QHBoxLayout(); search_row.setSpacing(12); search_row.setContentsMargins(0,0,0,10); search_row.addStretch(1)
         self.search=QLineEdit(); self.search.setPlaceholderText("Tìm công cụ, ví dụ: Excel, Word, PDF, duyệt…")
         self.search.setMaximumWidth(680)

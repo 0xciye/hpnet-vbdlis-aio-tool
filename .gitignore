@@ -87,6 +87,7 @@ Xem_truoc/
 !/docs/REQUIREMENTS_BUILD.txt
 !/docs/HUONG_DAN_BAN_SUA.txt
 !/docs/PDF_DOWNLOADER_PLAN.md
+!/docs/HPNET_UI_DESIGN_SYSTEM.md
 /src/tools/vbdlis_excel_builder/docs/verification-report.md
 /tools/cleanup_approved_launcher.ps1
 

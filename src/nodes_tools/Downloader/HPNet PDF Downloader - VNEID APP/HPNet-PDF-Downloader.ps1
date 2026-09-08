@@ -4,6 +4,7 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
 $toolRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+. (Join-Path (Split-Path -Parent (Split-Path -Parent $toolRoot)) 'hpnet_ui_common.ps1')
 $nodeScript = Join-Path $toolRoot 'hpnet-downloader.cjs'
 $configPath = Join-Path $toolRoot 'cau_hinh.json'
 
@@ -148,12 +149,14 @@ function New-Label($parent,[string]$text,[int]$x,[int]$y,[int]$w,[int]$h,$font) 
 $fontNormal = New-Object System.Drawing.Font('Segoe UI',9.75)
 $fontBold = New-Object System.Drawing.Font('Segoe UI',9.75,[System.Drawing.FontStyle]::Bold)
 $form = New-Object System.Windows.Forms.Form
-$form.Text='HPNet PDF Downloader - Lọc và đối soát PDF'; $form.StartPosition='CenterScreen'; $form.Size=New-Object System.Drawing.Size(930,1000); $form.MinimumSize=New-Object System.Drawing.Size(890,900); $form.Font=$fontNormal; $form.BackColor=[Drawing.Color]::FromArgb(245,246,248)
+$form.Text='HPNet PDF Downloader - Lọc và đối soát PDF'; $form.StartPosition='CenterScreen'; $form.Size=New-Object System.Drawing.Size(1500,1040); $form.MinimumSize=New-Object System.Drawing.Size(1280,920); $form.Font=$fontNormal; $form.BackColor=[Drawing.Color]::FromArgb(245,246,248)
+Set-HPNetWindowIdentity -Form $form -ToolRoot $toolRoot -AppId 'HPNET.VBDLIS.Tools.Downloader'
 $header = New-Object System.Windows.Forms.Panel; $header.Dock='Top'; $header.Height=65; $header.BackColor=[Drawing.Color]::White
 $headTitle=New-Label $header 'HPNet PDF Downloader' 16 8 500 28 (New-Object Drawing.Font('Segoe UI',14,[Drawing.FontStyle]::Bold))
 $headSub=New-Label $header 'Chọn phạm vi văn bản, quy tắc tên PDF và thư mục lưu' 18 38 700 22 $fontNormal; $headSub.ForeColor=[Drawing.Color]::DimGray
-$main = New-Object System.Windows.Forms.FlowLayoutPanel; $main.Dock='Fill'; $main.FlowDirection='TopDown'; $main.WrapContents=$false; $main.AutoScroll=$true; $main.Padding=New-Object Windows.Forms.Padding(15)
-$form.Controls.Add($main); $form.Controls.Add($header)
+$main = New-Object System.Windows.Forms.Panel; $main.Dock='Fill'; $main.Padding=New-Object Windows.Forms.Padding(15)
+$contentPanel=New-Object Windows.Forms.Panel; $contentPanel.Dock='Fill'; $contentPanel.BackColor=[Drawing.Color]::FromArgb(245,246,248); $contentPanel.Controls.Add($main)
+$form.Controls.Add($contentPanel); $form.Controls.Add($header)
 
 $group1=New-Object Windows.Forms.GroupBox; $group1.Text=' PHẠM VI VÀ QUY TẮC TÊN FILE '; $group1.Font=$fontBold; $group1.Size=New-Object Drawing.Size(860,300); $group1.Margin=New-Object Windows.Forms.Padding(0,0,0,12); $group1.BackColor=[Drawing.Color]::White; $main.Controls.Add($group1)
 [void](New-Label $group1 'Phạm vi văn bản:' 20 32 150 25 $fontNormal)
@@ -212,12 +215,17 @@ $resetButton=New-Object Windows.Forms.Button; $resetButton.Text='Đặt lại b�
 $stopButton=New-Object Windows.Forms.Button; $stopButton.Text='DỪNG AN TOÀN'; $stopButton.Location=New-Object Drawing.Point(590,0); $stopButton.Size=New-Object Drawing.Size(155,40); $stopButton.FlatStyle='Flat'; $stopButton.Enabled=$false
 $actions.Controls.AddRange(@($startButton,$openFolderButton,$resetButton,$stopButton))
 $logLabel=New-Object Windows.Forms.Label; $logLabel.Text='Nhật ký hoạt động:'; $logLabel.Font=$fontBold; $logLabel.AutoSize=$true; $logLabel.Margin=New-Object Windows.Forms.Padding(0,0,0,5); $main.Controls.Add($logLabel)
+$progressPanel=New-Object Windows.Forms.Panel; $progressPanel.Size=New-Object Drawing.Size(860,32); $progressPanel.Margin=New-Object Windows.Forms.Padding(0,0,0,5); $main.Controls.Add($progressPanel)
+$progressLabel=New-Object Windows.Forms.Label; $progressLabel.Text='Sẵn sàng'; $progressLabel.Location=New-Object Drawing.Point(0,7); $progressLabel.Size=New-Object Drawing.Size(185,20); $progressPanel.Controls.Add($progressLabel)
+$progressBar=New-Object Windows.Forms.ProgressBar; $progressBar.Location=New-Object Drawing.Point(190,7); $progressBar.Size=New-Object Drawing.Size(670,20); $progressBar.Minimum=0; $progressBar.Maximum=1; $progressBar.Value=0; $progressBar.Style='Continuous'; $progressBar.AccessibleName='Tiến độ tải PDF'; $progressPanel.Controls.Add($progressBar)
 $statusBox=New-Object Windows.Forms.TextBox; $statusBox.Size=New-Object Drawing.Size(860,170); $statusBox.Multiline=$true; $statusBox.ScrollBars='Vertical'; $statusBox.ReadOnly=$true; $statusBox.Font=New-Object Drawing.Font('Consolas',9); $statusBox.BackColor=[Drawing.Color]::FromArgb(30,30,30); $statusBox.ForeColor=[Drawing.Color]::Gainsboro; $statusBox.Text="Sẵn sàng.`r`nBật các bộ lọc cần dùng; các nhóm đã bật được kết hợp theo AND."; $main.Controls.Add($statusBox)
+$footerLabel=New-HPNetFooter -Form $form -Text 'Sẵn sàng'
+$uiWorkspace=New-HPNetSplitWorkspace -MainPanel $main -InputControls @($group1,$group2,$group3,$actions) -ProgressPanel $progressPanel -LogLabel $logLabel -StatusBox $statusBox -ActivityTitle 'PHIÊN TẢI PDF' -ActivityHint 'Theo dõi bộ lọc, tiến độ tải và đối soát file ngay trong cùng một vùng.'
 
 $script:activeProcess=$null; $script:stopRequested=$false
 function Stop-ActiveWorker {
     if (-not $script:activeProcess -or $script:activeProcess.HasExited) { return }
-    $script:stopRequested=$true; $statusBox.Text='Đang dừng tiến trình và Edge do công cụ mở...'; $form.Refresh()
+    $script:stopRequested=$true; Set-HPNetProgressStopped $progressBar $progressLabel 'Đang dừng…'; Set-HPNetFooterState $footerLabel 'Đang dừng tiến trình…' 'Stopped'; $statusBox.Text='Đang dừng tiến trình và Edge do công cụ mở...'; $form.Refresh()
     try {
         $stopInfo=New-Object Diagnostics.ProcessStartInfo; $stopInfo.FileName=Join-Path $env:SystemRoot 'System32\taskkill.exe'; $stopInfo.Arguments="/PID $($script:activeProcess.Id) /T /F"; $stopInfo.UseShellExecute=$false; $stopInfo.CreateNoWindow=$true
         $stopProcess=[Diagnostics.Process]::Start($stopInfo); $stopProcess.WaitForExit()
@@ -297,16 +305,21 @@ $startButton.Add_Click({
         if($answer -ne [Windows.Forms.DialogResult]::OK){return}
         $configToSave|ConvertTo-Json -Depth 5|Set-Content -LiteralPath $configPath -Encoding UTF8
         $allInputs=@($startButton,$browseButton,$resetButton,$scopeBox,$fileNameModeBox,$signedCheck,$ldsignedCheck,$lsignedCheck,$customSuffixBox,$titleCheck,$numberCheck,$symbolCheck,$dateCheck,$exactRadio,$rangeRadio,$readFilterBox,$titlesBox,$numbersBox,$symbolBox,$exactPicker,$startPicker,$endPicker,$communeCodeBox,$missingCodeCheck,$folderBox)
-        $allInputs|ForEach-Object{$_.Enabled=$false};$stopButton.Enabled=$true;$script:stopRequested=$false;$statusBox.Text='Đang chạy... Nếu Edge hiện trang đăng nhập, hãy chọn VNeID và hoàn tất xác thực.';$form.Refresh()
+        $allInputs|ForEach-Object{$_.Enabled=$false};$stopButton.Enabled=$true;Set-HPNetProgressRunning $progressBar $progressLabel 'Đang quét và tải…';Set-HPNetFooterState $footerLabel 'Đang xử lý — các bộ lọc đã khóa' 'Running';$script:stopRequested=$false;$statusBox.Text='Đang chạy... Nếu Edge hiện trang đăng nhập, hãy chọn VNeID và hoàn tất xác thực.';$form.Refresh()
         $psi=New-Object Diagnostics.ProcessStartInfo;$psi.FileName=$runtime.NodeExe;$psi.Arguments=('"{0}" "{1}"' -f $nodeScript,$configPath);$psi.UseShellExecute=$false;$psi.CreateNoWindow=$true;$psi.RedirectStandardOutput=$true;$psi.RedirectStandardError=$true;$psi.EnvironmentVariables['HPNET_NODE_MODULES']=$runtime.NodeModules;$psi.EnvironmentVariables['HPNET_EDGE_EXE']=$runtime.EdgeExe
         $utf8NoBom=New-Object System.Text.UTF8Encoding($false);$psi.StandardOutputEncoding=$utf8NoBom;$psi.StandardErrorEncoding=$utf8NoBom
-        $process=New-Object Diagnostics.Process;$process.StartInfo=$psi;$process.Start()|Out-Null;$script:activeProcess=$process;$stdoutTask=$process.StandardOutput.ReadToEndAsync();$stderrTask=$process.StandardError.ReadToEndAsync()
-        while(-not $process.HasExited){[Windows.Forms.Application]::DoEvents();Start-Sleep -Milliseconds 150}
-        $statusText=($stdoutTask.Result+[Environment]::NewLine+$stderrTask.Result).Trim()
-        if($script:stopRequested){$statusBox.Text="Đã dừng theo yêu cầu.`r`n$statusText";[Windows.Forms.MessageBox]::Show('Tiến trình đã được dừng theo yêu cầu.','Đã dừng','OK','Information')|Out-Null}
-        elseif($process.ExitCode -eq 0){$statusBox.Text=$statusText;[Windows.Forms.MessageBox]::Show('Đã quét xong. Xem kết quả và nhật ký trong thư mục đã chọn.','Hoàn tất','OK','Information')|Out-Null}
-        else{$statusBox.Text=$statusText;[Windows.Forms.MessageBox]::Show('Công cụ chưa hoàn tất. Xem nội dung lỗi ở khung phía dưới.','Chưa hoàn tất','OK','Warning')|Out-Null}
-    }catch{$statusBox.Text=$_.Exception.ToString();[Windows.Forms.MessageBox]::Show($_.Exception.Message,'Lỗi','OK','Error')|Out-Null}
+        $process=New-Object Diagnostics.Process;$process.StartInfo=$psi;$process.Start()|Out-Null;$script:activeProcess=$process
+        $script:liveOutput=New-Object System.Collections.Concurrent.ConcurrentQueue[string]
+        $process.add_OutputDataReceived({param($sender,$event);if($null -ne $event.Data){[void]$script:liveOutput.Enqueue($event.Data)}})
+        $process.add_ErrorDataReceived({param($sender,$event);if($null -ne $event.Data){[void]$script:liveOutput.Enqueue("[LỖI] $($event.Data)")}})
+        $process.BeginOutputReadLine();$process.BeginErrorReadLine()
+        while(-not $process.HasExited){[Windows.Forms.Application]::DoEvents();$statusBox.Lines=@($script:liveOutput.ToArray());foreach($line in @($script:liveOutput.ToArray())){Update-HPNetProgressFromLine $progressBar $progressLabel $line};$statusBox.SelectionStart=$statusBox.TextLength;$statusBox.ScrollToCaret();Start-Sleep -Milliseconds 150}
+        $process.WaitForExit()
+        $statusText=(@($script:liveOutput.ToArray()) -join [Environment]::NewLine).Trim()
+        if($script:stopRequested){Set-HPNetProgressStopped $progressBar $progressLabel 'Đã dừng theo yêu cầu';Set-HPNetFooterState $footerLabel 'Đã dừng theo yêu cầu' 'Stopped';$statusBox.Text="Đã dừng theo yêu cầu.`r`n$statusText";[Windows.Forms.MessageBox]::Show('Tiến trình đã được dừng theo yêu cầu.','Đã dừng','OK','Information')|Out-Null}
+        elseif($process.ExitCode -eq 0){Set-HPNetProgressCompleted $progressBar $progressLabel 'Hoàn tất';Set-HPNetFooterState $footerLabel 'Hoàn tất' 'Success';$statusBox.Text=$statusText;[Windows.Forms.MessageBox]::Show('Đã quét xong. Xem kết quả và nhật ký trong thư mục đã chọn.','Hoàn tất','OK','Information')|Out-Null}
+        else{Set-HPNetProgressStopped $progressBar $progressLabel 'Chưa hoàn tất — xem lỗi';Set-HPNetFooterState $footerLabel 'Chưa hoàn tất — xem nhật ký' 'Warning';$statusBox.Text=$statusText;[Windows.Forms.MessageBox]::Show('Công cụ chưa hoàn tất. Xem nội dung lỗi ở khung phía dưới.','Chưa hoàn tất','OK','Warning')|Out-Null}
+    }catch{Set-HPNetProgressStopped $progressBar $progressLabel 'Lỗi — xem chi tiết';Set-HPNetFooterState $footerLabel 'Lỗi — xem chi tiết' 'Error';$statusBox.Text=$_.Exception.ToString();[Windows.Forms.MessageBox]::Show($_.Exception.Message,'Lỗi','OK','Error')|Out-Null}
     finally{$script:activeProcess=$null;$stopButton.Enabled=$false;foreach($control in @($startButton,$browseButton,$resetButton,$folderBox)){$control.Enabled=$true};Update-FilterUi;Update-FileNameFormat}
 })
 
@@ -327,9 +340,12 @@ if ($UiSelfTest) {
     $scopeBox.SelectedIndex=0;$fileNameModeBox.SelectedIndex=0;Update-FilterUi;Update-FileNameFormat
     $form.StartPosition='Manual'; $form.Location=New-Object Drawing.Point(-32000,-32000); $form.ShowInTaskbar=$false
     $form.Show(); $form.PerformLayout(); [Windows.Forms.Application]::DoEvents()
+    if ($null -eq $form.Icon) { throw 'UI test: cửa sổ chưa có icon riêng.' }
+    if (-not $uiWorkspace -or $uiWorkspace.Workspace.ColumnCount -ne 2 -or $uiWorkspace.ActivityPanel.RowCount -ne 5 -or $statusBox.Dock -ne 'Fill' -or $progressPanel.Dock -ne 'Fill' -or [string]::IsNullOrWhiteSpace($footerLabel.Text)) { throw 'UI test: workspace hoạt động/footer chưa hoàn chỉnh.' }
     if ($missingCodeCheck.Right -gt $group1.ClientSize.Width) { throw 'UI test: checkbox tràn khung.' }
     if ($formatLabel.Top -lt $missingCodeCheck.Bottom) { throw 'UI test: hướng dẫn chồng checkbox.' }
     if ($customSuffixBox.Right -gt $group1.ClientSize.Width -or $formatLabel.Bottom -gt $group1.ClientSize.Height) { throw 'UI test: nhóm hậu tố tràn khung.' }
+    if ($progressBar.Style -ne 'Continuous' -or $progressBar.Maximum -lt 1 -or $progressPanel.Right -gt $main.ClientSize.Width + 2) { throw 'UI test: thanh tiến độ chưa được cấu hình.' }
     if ($TestImagePath) {
         $bitmap=New-Object Drawing.Bitmap($form.Width,$form.Height)
         try { $form.DrawToBitmap($bitmap,(New-Object Drawing.Rectangle(0,0,$form.Width,$form.Height))); $bitmap.Save($TestImagePath,[Drawing.Imaging.ImageFormat]::Png) }

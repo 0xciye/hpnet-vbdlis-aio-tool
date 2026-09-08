@@ -23,6 +23,10 @@ datas = [
     ('tools/vbdlis_excel_builder/resources', 'tools/vbdlis_excel_builder/resources'),
     ('tools/vbdlis_excel_builder/config', 'tools/vbdlis_excel_builder/config'),
     ('tools/signed_pdf_cleaner/icon.ico', 'tools/signed_pdf_cleaner'),
+    ('tools/signed_pdf_cleaner/app_icon.ico', 'tools/signed_pdf_cleaner'),
+    ('tools/hpnet_file_generator/assets', 'tools/hpnet_file_generator/assets'),
+    ('tools/duplicate_parcel/assets', 'tools/duplicate_parcel/assets'),
+    ('tools/data_normalizer/assets', 'tools/data_normalizer/assets'),
 ]
 if os.environ.get('SUITE_BUILD_INFO'):
     datas.append((os.environ['SUITE_BUILD_INFO'], '.'))

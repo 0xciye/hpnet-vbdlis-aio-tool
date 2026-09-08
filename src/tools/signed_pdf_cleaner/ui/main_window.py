@@ -56,7 +56,7 @@ class MainWindow(QMainWindow):
         
         # Mod: Use __file__ resolution for unified onedir building instead of MEIPASS (Behavior preserved)
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        icon_path = os.path.join(base_dir, 'icon.ico')
+        icon_path = os.path.join(base_dir, 'app_icon.ico')
         
         if os.path.exists(icon_path):
             self.setWindowIcon(QIcon(icon_path))
