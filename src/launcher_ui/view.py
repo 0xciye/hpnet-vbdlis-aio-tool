@@ -186,7 +186,7 @@ class LauncherView(QWidget):
         reset=QPushButton("Hiện tất cả công cụ"); reset.clicked.connect(self.reset_search); empty_box.addWidget(reset,0,Qt.AlignLeft)
         body.addWidget(self.empty); self.empty.hide(); body.addStretch(1)
         self.scroll.setWidget(content); page.addWidget(self.scroll,1)
-        self.pages.addWidget(self.tools_page); self.help_page=HelpPage(); self.pages.addWidget(self.help_page)
+        self.pages.addWidget(self.tools_page); self.help_page=HelpPage(); self.help_page.back_requested.connect(lambda:self.navigate("all")); self.pages.addWidget(self.help_page)
         self.toast=Toast(self); self.toast.hide()
         self.scroll.viewport().installEventFilter(self)
         self.nav_buttons["all"].setChecked(True); self.filter_tools()

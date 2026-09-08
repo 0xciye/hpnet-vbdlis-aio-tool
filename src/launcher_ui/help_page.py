@@ -3,7 +3,7 @@ from html import escape
 from pathlib import Path
 import re
 import sys
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QTextCursor, QTextDocument
 from PySide6.QtWidgets import (QWidget,QVBoxLayout,QHBoxLayout,QLabel,QLineEdit,QPushButton,
                              QTextBrowser,QListWidget,QListWidgetItem,QSplitter,QStackedWidget)
@@ -46,10 +46,19 @@ def guide_html(sources):
 
 
 class HelpPage(QWidget):
+    back_requested = Signal()
+
     def __init__(self,parent=None):
         super().__init__(parent)
         box=QVBoxLayout(self); box.setContentsMargins(28,24,28,24); box.setSpacing(16)
-        title=QLabel("Hướng dẫn sử dụng"); title.setObjectName("pageTitle"); box.addWidget(title)
+        title_row=QHBoxLayout(); title_row.setSpacing(12)
+        title=QLabel("Hướng dẫn sử dụng"); title.setObjectName("pageTitle"); title_row.addWidget(title); title_row.addStretch(1)
+        home_button=QPushButton("Về trang chính")
+        home_button.setAccessibleName("Về trang chính")
+        home_button.setToolTip("Quay lại danh sách công cụ")
+        home_button.clicked.connect(self.back_requested.emit)
+        title_row.addWidget(home_button)
+        box.addLayout(title_row)
         description=QLabel("Chọn một mục bên trái để mở trang riêng. Tìm kiếm chỉ trong trang đang đọc.")
         description.setWordWrap(True); description.setObjectName("muted"); box.addWidget(description)
         search_row=QHBoxLayout(); search_row.setSpacing(8)
