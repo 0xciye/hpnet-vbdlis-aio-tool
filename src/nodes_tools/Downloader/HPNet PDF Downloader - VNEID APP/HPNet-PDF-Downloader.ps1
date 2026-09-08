@@ -149,11 +149,11 @@ function New-Label($parent,[string]$text,[int]$x,[int]$y,[int]$w,[int]$h,$font) 
 $fontNormal = New-Object System.Drawing.Font('Segoe UI',9.75)
 $fontBold = New-Object System.Drawing.Font('Segoe UI',9.75,[System.Drawing.FontStyle]::Bold)
 $form = New-Object System.Windows.Forms.Form
-$form.Text='HPNet PDF Downloader - Lọc và đối soát PDF'; $form.StartPosition='CenterScreen'; $form.Size=New-Object System.Drawing.Size(1500,1040); $form.MinimumSize=New-Object System.Drawing.Size(1280,920); $form.Font=$fontNormal; $form.BackColor=[Drawing.Color]::FromArgb(245,246,248)
+$form.Text='HPNet PDF Downloader - Lọc và kiểm tra văn bản PDF'; $form.StartPosition='CenterScreen'; $form.Size=New-Object System.Drawing.Size(1500,1040); $form.MinimumSize=New-Object System.Drawing.Size(1280,920); $form.Font=$fontNormal; $form.BackColor=[Drawing.Color]::FromArgb(245,246,248)
 Set-HPNetWindowIdentity -Form $form -ToolRoot $toolRoot -AppId 'HPNET.VBDLIS.Tools.Downloader'
 $header = New-Object System.Windows.Forms.Panel; $header.Dock='Top'; $header.Height=65; $header.BackColor=[Drawing.Color]::White
 $headTitle=New-Label $header 'HPNet PDF Downloader' 16 8 500 28 (New-Object Drawing.Font('Segoe UI',14,[Drawing.FontStyle]::Bold))
-$headSub=New-Label $header 'Chọn phạm vi văn bản, quy tắc tên PDF và thư mục lưu' 18 38 700 22 $fontNormal; $headSub.ForeColor=[Drawing.Color]::DimGray
+$headSub=New-Label $header 'Thiết lập phạm vi, quy tắc đặt tên và thư mục lưu văn bản PDF' 18 38 700 22 $fontNormal; $headSub.ForeColor=[Drawing.Color]::DimGray
 $main = New-Object System.Windows.Forms.Panel; $main.Dock='Fill'; $main.Padding=New-Object Windows.Forms.Padding(15)
 $contentPanel=New-Object Windows.Forms.Panel; $contentPanel.Dock='Fill'; $contentPanel.BackColor=[Drawing.Color]::FromArgb(245,246,248); $contentPanel.Controls.Add($main)
 $form.Controls.Add($contentPanel); $form.Controls.Add($header)
@@ -184,7 +184,7 @@ $lsignedCheck=New-Object Windows.Forms.CheckBox; $lsignedCheck.Text='.lsigned'; 
 $customSuffixBox=New-Object Windows.Forms.TextBox; $customSuffixBox.Location=New-Object Drawing.Point(580,199); $customSuffixBox.Size=New-Object Drawing.Size(255,25); $customSuffixBox.Text=@($savedFileSuffixes|Where-Object{$_ -notin @('.signed','.ldsigned','.lsigned')}) -join ', '; $group1.Controls.Add($customSuffixBox)
 $formatLabel=New-Label $group1 '' 20 236 815 52 (New-Object Drawing.Font('Segoe UI',8.5,[Drawing.FontStyle]::Italic)); $formatLabel.ForeColor=[Drawing.Color]::DarkGreen
 
-$group2=New-Object Windows.Forms.GroupBox; $group2.Text=' BỘ LỌC TÌM KIẾM - AND '; $group2.Font=$fontBold; $group2.Size=New-Object Drawing.Size(860,445); $group2.Margin=New-Object Windows.Forms.Padding(0,0,0,12); $group2.BackColor=[Drawing.Color]::White; $main.Controls.Add($group2)
+$group2=New-Object Windows.Forms.GroupBox; $group2.Text=' BỘ LỌC TÌM KIẾM '; $group2.Font=$fontBold; $group2.Size=New-Object Drawing.Size(860,445); $group2.Margin=New-Object Windows.Forms.Padding(0,0,0,12); $group2.BackColor=[Drawing.Color]::White; $main.Controls.Add($group2)
 $titleCheck=New-Object Windows.Forms.CheckBox; $titleCheck.Text='Lọc trích yếu chứa:'; $titleCheck.Location=New-Object Drawing.Point(20,34); $titleCheck.Size=New-Object Drawing.Size(205,25); $titleCheck.Checked=$savedTitleEnabled; $titleCheck.Font=$fontNormal; $group2.Controls.Add($titleCheck)
 $titlesBox=New-Object Windows.Forms.TextBox; $titlesBox.Location=New-Object Drawing.Point(235,28); $titlesBox.Size=New-Object Drawing.Size(600,68); $titlesBox.Multiline=$true; $titlesBox.ScrollBars='Vertical'; $titlesBox.Text=if($savedConfig.allowedTitles){$savedConfig.allowedTitles -join [Environment]::NewLine}else{''}; $group2.Controls.Add($titlesBox)
 $numberCheck=New-Object Windows.Forms.CheckBox; $numberCheck.Text='Lọc số thông báo:'; $numberCheck.Location=New-Object Drawing.Point(20,114); $numberCheck.Size=New-Object Drawing.Size(205,25); $numberCheck.Checked=$savedNumberEnabled; $numberCheck.Font=$fontNormal; $group2.Controls.Add($numberCheck)
@@ -209,18 +209,18 @@ $folderBox=New-Object Windows.Forms.TextBox; $folderBox.Location=New-Object Draw
 $browseButton=New-Object Windows.Forms.Button; $browseButton.Text='Chọn thư mục'; $browseButton.Location=New-Object Drawing.Point(685,30); $browseButton.Size=New-Object Drawing.Size(150,30); $browseButton.FlatStyle='Flat'; $browseButton.BackColor=[Drawing.Color]::White; $group3.Controls.Add($browseButton)
 
 $actions=New-Object Windows.Forms.Panel; $actions.Size=New-Object Drawing.Size(860,45); $actions.Margin=New-Object Windows.Forms.Padding(0,0,0,12); $main.Controls.Add($actions)
-$startButton=New-Object Windows.Forms.Button; $startButton.Text='BẮT ĐẦU QUÉT VÀ TẢI'; $startButton.Location=New-Object Drawing.Point(0,0); $startButton.Size=New-Object Drawing.Size(215,40); $startButton.Font=$fontBold; $startButton.BackColor=[Drawing.Color]::FromArgb(25,118,210); $startButton.ForeColor=[Drawing.Color]::White; $startButton.FlatStyle='Flat'; $startButton.FlatAppearance.BorderSize=0
+$startButton=New-Object Windows.Forms.Button; $startButton.Text='BẮT ĐẦU RÀ SOÁT VÀ TẢI'; $startButton.Location=New-Object Drawing.Point(0,0); $startButton.Size=New-Object Drawing.Size(215,40); $startButton.Font=$fontBold; $startButton.BackColor=[Drawing.Color]::FromArgb(25,118,210); $startButton.ForeColor=[Drawing.Color]::White; $startButton.FlatStyle='Flat'; $startButton.FlatAppearance.BorderSize=0
 $openFolderButton=New-Object Windows.Forms.Button; $openFolderButton.Text='Mở thư mục kết quả'; $openFolderButton.Location=New-Object Drawing.Point(230,0); $openFolderButton.Size=New-Object Drawing.Size(180,40); $openFolderButton.FlatStyle='Flat'; $openFolderButton.BackColor=[Drawing.Color]::White
 $resetButton=New-Object Windows.Forms.Button; $resetButton.Text='Đặt lại bộ lọc'; $resetButton.Location=New-Object Drawing.Point(425,0); $resetButton.Size=New-Object Drawing.Size(150,40); $resetButton.FlatStyle='Flat'; $resetButton.BackColor=[Drawing.Color]::White
-$stopButton=New-Object Windows.Forms.Button; $stopButton.Text='DỪNG AN TOÀN'; $stopButton.Location=New-Object Drawing.Point(590,0); $stopButton.Size=New-Object Drawing.Size(155,40); $stopButton.FlatStyle='Flat'; $stopButton.Enabled=$false
+$stopButton=New-Object Windows.Forms.Button; $stopButton.Text='DỪNG TÁC VỤ'; $stopButton.Location=New-Object Drawing.Point(590,0); $stopButton.Size=New-Object Drawing.Size(155,40); $stopButton.FlatStyle='Flat'; $stopButton.Enabled=$false
 $actions.Controls.AddRange(@($startButton,$openFolderButton,$resetButton,$stopButton))
 $logLabel=New-Object Windows.Forms.Label; $logLabel.Text='Nhật ký hoạt động:'; $logLabel.Font=$fontBold; $logLabel.AutoSize=$true; $logLabel.Margin=New-Object Windows.Forms.Padding(0,0,0,5); $main.Controls.Add($logLabel)
 $progressPanel=New-Object Windows.Forms.Panel; $progressPanel.Size=New-Object Drawing.Size(860,32); $progressPanel.Margin=New-Object Windows.Forms.Padding(0,0,0,5); $main.Controls.Add($progressPanel)
 $progressLabel=New-Object Windows.Forms.Label; $progressLabel.Text='Sẵn sàng'; $progressLabel.Location=New-Object Drawing.Point(0,7); $progressLabel.Size=New-Object Drawing.Size(185,20); $progressPanel.Controls.Add($progressLabel)
 $progressBar=New-Object Windows.Forms.ProgressBar; $progressBar.Location=New-Object Drawing.Point(190,7); $progressBar.Size=New-Object Drawing.Size(670,20); $progressBar.Minimum=0; $progressBar.Maximum=1; $progressBar.Value=0; $progressBar.Style='Continuous'; $progressBar.AccessibleName='Tiến độ tải PDF'; $progressPanel.Controls.Add($progressBar)
-$statusBox=New-Object Windows.Forms.TextBox; $statusBox.Size=New-Object Drawing.Size(860,170); $statusBox.Multiline=$true; $statusBox.ScrollBars='Vertical'; $statusBox.ReadOnly=$true; $statusBox.Font=New-Object Drawing.Font('Consolas',9); $statusBox.BackColor=[Drawing.Color]::FromArgb(30,30,30); $statusBox.ForeColor=[Drawing.Color]::Gainsboro; $statusBox.Text="Sẵn sàng.`r`nBật các bộ lọc cần dùng; các nhóm đã bật được kết hợp theo AND."; $main.Controls.Add($statusBox)
-$footerLabel=New-HPNetFooter -Form $form -Text 'Sẵn sàng'
-$uiWorkspace=New-HPNetSplitWorkspace -MainPanel $main -InputControls @($group1,$group2,$group3,$actions) -ProgressPanel $progressPanel -LogLabel $logLabel -StatusBox $statusBox -ActivityTitle 'PHIÊN TẢI PDF' -ActivityHint 'Theo dõi bộ lọc, tiến độ tải và đối soát file ngay trong cùng một vùng.'
+$statusBox=New-Object Windows.Forms.TextBox; $statusBox.Size=New-Object Drawing.Size(860,170); $statusBox.Multiline=$true; $statusBox.ScrollBars='Vertical'; $statusBox.ReadOnly=$true; $statusBox.Font=New-Object Drawing.Font('Consolas',9); $statusBox.BackColor=[Drawing.Color]::FromArgb(30,30,30); $statusBox.ForeColor=[Drawing.Color]::Gainsboro; $statusBox.Text="Sẵn sàng thực hiện.`r`nCác bộ lọc được kết hợp theo điều kiện AND."; $main.Controls.Add($statusBox)
+$footerLabel=New-HPNetFooter -Form $form -Text 'Sẵn sàng thực hiện'
+$uiWorkspace=New-HPNetSplitWorkspace -MainPanel $main -InputControls @($group1,$group2,$group3,$actions) -ProgressPanel $progressPanel -LogLabel $logLabel -StatusBox $statusBox -ActivityTitle 'TIẾN ĐỘ XỬ LÝ' -ActivityHint 'Theo dõi bộ lọc, tiến độ tải và kết quả kiểm tra trong cùng một vùng.'
 
 $script:activeProcess=$null; $script:stopRequested=$false
 function Stop-ActiveWorker {

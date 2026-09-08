@@ -15,9 +15,9 @@ TOOLS = (
     ("data_normalizer","prepare","EXCEL TIỆN ÍCH","Chuẩn hóa Họ tên & Ngày sinh","Chuẩn hóa định dạng tên và ngày sinh độc lập, không đoán dữ liệu mơ hồ."),
     ("rename","prepare","TỆP HỒ SƠ","Auto Rename","Nhân bản và đặt tên Word, PDF theo thông tin hộ và thửa đất."),
     ("cleaner","prepare","PDF ĐÃ KÝ","PDF Cleaner","Quét, xem trước và xử lý tệp PDF; chuẩn hóa tên văn bản đã ký."),
-    ("downloader","hpnet","TẢI XUỐNG","PDF Downloader","Lọc, đối soát và tải PDF đã ký từ mục Văn bản đi trên HPNet."),
-    ("upload","hpnet","TẢI LÊN","Upload Dự Thảo","Kiểm tra trùng và tải tệp Word vào Văn bản dự thảo trên HPNet."),
-    ("approve","hpnet","CHUYỂN DUYỆT","Duyệt Dự Thảo","Quét hồ sơ, kiểm tra người nhận và xác nhận chuyển duyệt."),
+    ("downloader","hpnet","TẢI XUỐNG","PDF Downloader","Lọc, đối soát và tải văn bản PDF đã ký từ mục Văn bản đi trên HPNet."),
+    ("upload","hpnet","TẢI LÊN","Upload Dự Thảo","Kiểm tra trùng và tải tệp Word vào mục Văn bản dự thảo trên HPNet."),
+    ("approve","hpnet","CHUYỂN DUYỆT","Duyệt Dự Thảo","Quét hồ sơ, kiểm tra người nhận và xác nhận chuyển duyệt theo quy trình."),
 )
 
 
@@ -138,7 +138,14 @@ class LauncherView(QWidget):
         self.tools_page=QWidget(); page=QVBoxLayout(self.tools_page); page.setContentsMargins(30,26,30,22); page.setSpacing(14)
         self.eyebrow=label("BỘ CÔNG CỤ XỬ LÝ HỒ SƠ","eyebrow"); page.addWidget(self.eyebrow)
         self.heading=label("Chọn công cụ. Bắt đầu công việc.","pageTitle"); page.addWidget(self.heading)
-        self.description=label("Chuẩn bị hồ sơ và làm việc với HPNet trong các cửa sổ riêng quen thuộc.","muted"); page.addWidget(self.description)
+        self.description=label("Chuẩn bị hồ sơ, kiểm tra dữ liệu và làm việc với HPNet trong các cửa sổ riêng.","muted"); page.addWidget(self.description)
+        version_row=QHBoxLayout(); version_row.setSpacing(18); version_row.setContentsMargins(0,2,0,0)
+        self.current_version_label=label(f"Phiên bản hiện tại: {hub.current_version}","versionLabel")
+        self.latest_version_label=label("Phiên bản mới nhất: đang kiểm tra…","versionLabel")
+        self.current_version_label.setAccessibleName("Phiên bản hiện tại")
+        self.latest_version_label.setAccessibleName("Phiên bản mới nhất")
+        version_row.addWidget(self.current_version_label); version_row.addWidget(self.latest_version_label); version_row.addStretch(1)
+        page.addLayout(version_row)
         category_row=QHBoxLayout(); category_row.setSpacing(8); category_row.setContentsMargins(0,4,0,4)
         for key,text,symbol in (("all","Tất cả công cụ","grid"),("prepare","Chuẩn bị hồ sơ","folder"),
                                 ("hpnet","Làm việc với HPNet","approve"),("help","Hướng dẫn sử dụng","help")):
@@ -161,8 +168,8 @@ class LauncherView(QWidget):
                   "duplicate_parcel":hub.launch_duplicate_parcel,"data_normalizer":hub.launch_data_normalizer,
                   "cleaner":hub.launch_pdf_cleaner,"downloader":lambda:hub.launch_external("downloader"),
                   "upload":lambda:hub.launch_external("upload"),"approve":lambda:hub.launch_external("approve")}
-        for key,title,description in (("prepare","Chuẩn bị dữ liệu & hồ sơ","Tạo biểu mẫu, chuẩn hóa dữ liệu và sắp xếp tệp."),
-                                      ("hpnet","Làm việc với HPNet","Tự đăng nhập VNeID trong cửa sổ của từng công cụ.")):
+        for key,title,description in (("prepare","Chuẩn bị dữ liệu và hồ sơ","Tạo biểu mẫu, kiểm tra dữ liệu và sắp xếp tệp."),
+                                      ("hpnet","Làm việc với HPNet","Đăng nhập VNeID và thực hiện công việc trong cửa sổ riêng.")):
             section=QWidget(); section_box=QVBoxLayout(section); section_box.setContentsMargins(0,0,0,0); section_box.setSpacing(12)
             section_box.setSizeConstraint(QLayout.SetMinimumSize)
             section_box.addWidget(label(title,"sectionTitle")); section_box.addWidget(label(description,"muted"))
@@ -192,6 +199,12 @@ class LauncherView(QWidget):
         super().resizeEvent(event)
         if hasattr(self,"toast") and self.toast.isVisible():
             self.toast.move(max(16,self.width()-self.toast.width()-24),max(16,self.height()-self.toast.height()-24))
+
+    def set_latest_version(self, version, error=False):
+        text = "Phiên bản mới nhất: " + (str(version) if version else "không xác định")
+        if error:
+            text += " (không thể kiểm tra)"
+        self.latest_version_label.setText(text)
 
     def show_launch_result(self,title,success,message):
         self.toast.show_message(title,success)

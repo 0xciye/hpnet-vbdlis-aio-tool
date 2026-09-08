@@ -124,7 +124,7 @@ $initialNextReviewer = if ($savedConfig -and $savedConfig.nextReviewer) { [strin
 
 [System.Windows.Forms.Application]::EnableVisualStyles()
 $form = New-Object System.Windows.Forms.Form
-$form.Text = 'HPNet - Tự động duyệt VB dự thảo'
+$form.Text = 'HPNet - Duyệt văn bản dự thảo'
 $form.StartPosition = 'CenterScreen'
 $form.Size = New-Object System.Drawing.Size(1420, 920)
 $form.MinimumSize = New-Object System.Drawing.Size(1240, 840)
@@ -142,7 +142,7 @@ $title.Location = New-Object System.Drawing.Point(15, 10)
 $title.AutoSize = $true
 $title.Font = New-Object System.Drawing.Font('Segoe UI', 14, [System.Drawing.FontStyle]::Bold)
 $title.ForeColor = [System.Drawing.Color]::FromArgb(41, 50, 60)
-$title.Text = 'HPNet Duyệt VB Dự Thảo'
+$title.Text = 'HPNet Duyệt văn bản dự thảo'
 $headerPanel.Controls.Add($title)
 
 $subtitle = New-Object System.Windows.Forms.Label
@@ -150,7 +150,7 @@ $subtitle.Location = New-Object System.Drawing.Point(17, 35)
 $subtitle.AutoSize = $true
 $subtitle.Font = New-Object System.Drawing.Font('Segoe UI', 9)
 $subtitle.ForeColor = [System.Drawing.Color]::FromArgb(100, 100, 100)
-$subtitle.Text = 'Tự động hóa quy trình quét và duyệt hàng loạt văn bản'
+$subtitle.Text = 'Tự động hóa việc kiểm tra và chuyển duyệt văn bản dự thảo'
 $headerPanel.Controls.Add($subtitle)
 
 $mainPanel = New-Object System.Windows.Forms.Panel
@@ -219,7 +219,7 @@ $group1.Controls.Add($abstractBox)
 
 # CARD 2: LUỒNG DUYỆT
 $group2 = New-Object System.Windows.Forms.GroupBox
-$group2.Text = ' THÔNG TIN LUỒNG DUYỆT '
+$group2.Text = ' THÔNG TIN CHUYỂN DUYỆT '
 $group2.Font = $fontBold
 $group2.Size = New-Object System.Drawing.Size(830, 130)
 $group2.Margin = New-Object System.Windows.Forms.Padding(0, 0, 0, 15)
@@ -268,7 +268,7 @@ $safetyLabel.Size = New-Object System.Drawing.Size(830, 45)
 $safetyLabel.Font = $fontNormal
 $safetyLabel.ForeColor = [System.Drawing.Color]::FromArgb(198, 40, 40)
 $safetyLabel.Margin = New-Object System.Windows.Forms.Padding(0, 0, 0, 15)
-$safetyLabel.Text = 'LƯU Ý: Bước 1 chỉ quét toàn bộ các trang, không bấm duyệt. Bước 2 chỉ mở sau khi quét xong; phần mềm sẽ yêu cầu xác nhận lần cuối trước khi tự động duyệt hàng loạt.'
+$safetyLabel.Text = 'LƯU Ý: Bước 1 chỉ kiểm tra dữ liệu trên toàn bộ các trang và không chuyển duyệt. Bước 2 chỉ mở sau khi kiểm tra xong; phần mềm sẽ hỏi lại trước khi chuyển nhiều văn bản cùng lúc.'
 $mainPanel.Controls.Add($safetyLabel)
 
 
@@ -279,30 +279,30 @@ $actionBar.Margin = New-Object System.Windows.Forms.Padding(0, 0, 0, 15)
 $mainPanel.Controls.Add($actionBar)
 
 $scanButton = New-Object System.Windows.Forms.Button
-$scanButton.Text = 'BƯỚC 1: QUÉT VĂN BẢN'
+$scanButton.Text = 'BƯỚC 1: KIỂM TRA VĂN BẢN'
 $scanButton.Location = New-Object System.Drawing.Point(0, 0)
 $scanButton.Size = New-Object System.Drawing.Size(200, 40)
 $scanButton.Font = $fontBold
-$scanButton.BackColor = [System.Drawing.Color]::FromArgb(255, 193, 7)
-$scanButton.ForeColor = [System.Drawing.Color]::Black
+$scanButton.BackColor = [System.Drawing.Color]::FromArgb(36, 88, 197)
+$scanButton.ForeColor = [System.Drawing.Color]::White
 $scanButton.FlatStyle = 'Flat'
 $scanButton.FlatAppearance.BorderSize = 0
 $actionBar.Controls.Add($scanButton)
 
 $approveButton = New-Object System.Windows.Forms.Button
-$approveButton.Text = 'BƯỚC 2: DUYỆT (CHƯA CÓ DỮ LIỆU QUÉT)'
+$approveButton.Text = 'BƯỚC 2: CHUYỂN DUYỆT (CHƯA CÓ KẾT QUẢ)'
 $approveButton.Location = New-Object System.Drawing.Point(215, 0)
 $approveButton.Size = New-Object System.Drawing.Size(340, 40)
 $approveButton.Font = $fontBold
 $approveButton.Enabled = $false
-$approveButton.BackColor = [System.Drawing.Color]::FromArgb(198, 40, 40)
+$approveButton.BackColor = [System.Drawing.Color]::FromArgb(229, 231, 235)
 $approveButton.ForeColor = [System.Drawing.Color]::White
 $approveButton.FlatStyle = 'Flat'
 $approveButton.FlatAppearance.BorderSize = 0
 $actionBar.Controls.Add($approveButton)
 
 $openLogButton = New-Object System.Windows.Forms.Button
-$openLogButton.Text = 'Mở thư mục Nhật ký'
+$openLogButton.Text = 'Mở thư mục nhật ký'
 $openLogButton.Location = New-Object System.Drawing.Point(570, 0)
 $openLogButton.Size = New-Object System.Drawing.Size(160, 40)
 $openLogButton.Font = $fontNormal
@@ -311,9 +311,9 @@ $openLogButton.FlatStyle = 'Flat'
 $actionBar.Controls.Add($openLogButton)
 
 $stopButton = New-Object System.Windows.Forms.Button
-$stopButton.Text = 'DỪNG'
-$stopButton.Location = New-Object System.Drawing.Point(745, 0)
-$stopButton.Size = New-Object System.Drawing.Size(85, 40)
+$stopButton.Text = 'DỪNG TÁC VỤ'
+$stopButton.Location = New-Object System.Drawing.Point(730, 0)
+$stopButton.Size = New-Object System.Drawing.Size(95, 40)
 $stopButton.Font = $fontNormal
 $stopButton.BackColor = [System.Drawing.Color]::FromArgb(230, 230, 230)
 $stopButton.FlatStyle = 'Flat'
@@ -334,7 +334,7 @@ $progressPanel.Size = New-Object System.Drawing.Size(830, 32)
 $progressPanel.Margin = New-Object System.Windows.Forms.Padding(0, 0, 0, 5)
 $mainPanel.Controls.Add($progressPanel)
 $progressLabel = New-Object System.Windows.Forms.Label
-$progressLabel.Text = 'Sẵn sàng'
+$progressLabel.Text = 'Sẵn sàng thực hiện'
 $progressLabel.Location = New-Object System.Drawing.Point(0, 7)
 $progressLabel.Size = New-Object System.Drawing.Size(185, 20)
 $progressLabel.Font = New-Object System.Drawing.Font('Segoe UI', 9)
@@ -357,11 +357,11 @@ $statusBox.ReadOnly = $true
 $statusBox.Font = New-Object System.Drawing.Font('Consolas', 9.5)
 $statusBox.BackColor = [System.Drawing.Color]::FromArgb(30, 30, 30)
 $statusBox.ForeColor = [System.Drawing.Color]::FromArgb(200, 200, 200)
-$statusBox.Text = "Sẵn sàng."
+$statusBox.Text = "Sẵn sàng thực hiện. Vui lòng kiểm tra thông tin trước khi bắt đầu."
 $mainPanel.Controls.Add($statusBox)
 
-$footerLabel = New-HPNetFooter -Form $form -Text 'Sẵn sàng'
-$uiWorkspace = New-HPNetSplitWorkspace -MainPanel $mainPanel -InputControls @($group1, $group2, $safetyLabel, $actionBar) -ProgressPanel $progressPanel -LogLabel $logLabel -StatusBox $statusBox -ActivityTitle 'PHIÊN DUYỆT' -ActivityHint 'Quét trước, xác nhận kết quả rồi mới mở khóa bước duyệt.'
+$footerLabel = New-HPNetFooter -Form $form -Text 'Sẵn sàng thực hiện'
+$uiWorkspace = New-HPNetSplitWorkspace -MainPanel $mainPanel -InputControls @($group1, $group2, $safetyLabel, $actionBar) -ProgressPanel $progressPanel -LogLabel $logLabel -StatusBox $statusBox -ActivityTitle 'TIẾN ĐỘ XỬ LÝ' -ActivityHint 'Kiểm tra kết quả, xác nhận thông tin rồi mới chuyển duyệt.'
 
 $script:activeProcess = $null
 $script:stopRequested = $false
@@ -390,7 +390,22 @@ function Stop-ActiveWorker {
 # EVENT HANDLERS
 function Invalidate-ScanResult {
     $approveButton.Enabled = $false
-    $approveButton.Text = 'BƯỚC 2 - CHƯA CÓ KẾT QUẢ QUÉT'
+    $approveButton.Text = 'BƯỚC 2: CHƯA CÓ KẾT QUẢ RÀ SOÁT'
+    Set-ApprovalButtonStyles
+}
+
+function Set-ApprovalButtonStyles {
+    $scanButton.BackColor = [System.Drawing.Color]::FromArgb(36, 88, 197)
+    $scanButton.ForeColor = [System.Drawing.Color]::White
+    if ($approveButton.Enabled) {
+        $approveButton.BackColor = [System.Drawing.Color]::FromArgb(46, 125, 50)
+        $approveButton.ForeColor = [System.Drawing.Color]::White
+    } else {
+        $approveButton.BackColor = [System.Drawing.Color]::FromArgb(229, 231, 235)
+        $approveButton.ForeColor = [System.Drawing.Color]::FromArgb(107, 119, 136)
+    }
+    $stopButton.BackColor = [System.Drawing.Color]::FromArgb(198, 61, 69)
+    $stopButton.ForeColor = [System.Drawing.Color]::White
 }
 
 function Update-WorkflowPreview {
@@ -466,8 +481,8 @@ function Invoke-HPNetTool([string]$mode) {
     $script:stopRequested = $false
     $stopButton.Enabled = $true
     Set-HPNetFooterState $footerLabel 'Đang xử lý — khóa bước duyệt' 'Running'
-    Set-HPNetProgressRunning $progressBar $progressLabel 'Đang quét HPNet…'
-    $statusBox.Text = if ($mode -eq 'scan') { 'Đang quét toàn bộ các trang. Nếu Edge hiện trang đăng nhập, hãy chọn VNeID và hoàn tất xác thực; công cụ sẽ tự chạy tiếp.' } else { 'Đang duyệt lần lượt các văn bản đã xác nhận. Nếu được hỏi, hãy đăng nhập bằng VNeID. Không đóng Edge cho đến khi công cụ báo hoàn tất.' }
+    Set-HPNetProgressRunning $progressBar $progressLabel 'Đang kiểm tra trên HPNet…'
+    $statusBox.Text = if ($mode -eq 'scan') { 'Đang kiểm tra toàn bộ các trang. Nếu Edge hiển thị trang đăng nhập, vui lòng chọn VNeID và hoàn tất xác thực; công cụ sẽ tự động tiếp tục.' } else { 'Đang chuyển duyệt lần lượt các văn bản đã xác nhận. Nếu được yêu cầu, vui lòng đăng nhập bằng VNeID. Không đóng Edge cho đến khi công cụ thông báo hoàn tất.' }
     $form.Refresh()
     try {
         $psi = New-Object System.Diagnostics.ProcessStartInfo
@@ -512,7 +527,7 @@ function Invoke-HPNetTool([string]$mode) {
         if ($process.ExitCode -ne 0) {
             Set-HPNetProgressStopped $progressBar $progressLabel 'Chưa hoàn tất — xem lỗi'
             Set-HPNetFooterState $footerLabel 'Chưa hoàn tất — xem nhật ký' 'Warning'
-            [System.Windows.Forms.MessageBox]::Show('Công cụ đã dừng an toàn. Không tự bấm duyệt văn bản chưa xác nhận. Xem chi tiết ở khung nhật ký.', 'Đã dừng an toàn', 'OK', 'Warning') | Out-Null
+            [System.Windows.Forms.MessageBox]::Show('Tác vụ đã dừng an toàn. Không có văn bản nào được chuyển duyệt nếu chưa được xác nhận. Vui lòng xem chi tiết trong nhật ký.', 'Đã dừng an toàn', 'OK', 'Warning') | Out-Null
             return $false
         }
         Set-HPNetProgressCompleted $progressBar $progressLabel 'Hoàn tất'
@@ -545,19 +560,21 @@ $scanButton.Add_Click({
         try {
             $report = Get-Content -LiteralPath $scanPath -Raw -Encoding UTF8 | ConvertFrom-Json
             $count = [int]$report.candidateCount
-            $approveButton.Text = "BƯỚC 2 - DUYỆT $count VĂN BẢN"
+            $approveButton.Text = "BƯỚC 2: CHUYỂN DUYỆT $count VĂN BẢN"
             $approveButton.Enabled = ($count -gt 0)
-            [System.Windows.Forms.MessageBox]::Show("Đã quét $($report.totalRecordsScanned) văn bản trên tất cả các trang.`r`nTìm thấy $count văn bản khớp chính xác.`r`n`r`nChưa duyệt văn bản nào.", 'Quét hoàn tất', 'OK', 'Information') | Out-Null
+            Set-ApprovalButtonStyles
+            [System.Windows.Forms.MessageBox]::Show("Đã kiểm tra $($report.totalRecordsScanned) văn bản trên toàn bộ các trang.`r`nTìm thấy $count văn bản khớp chính xác.`r`n`r`nChưa có văn bản nào được chuyển duyệt.", 'Kiểm tra hoàn tất', 'OK', 'Information') | Out-Null
         } catch {
             $approveButton.Enabled = $false
-            [System.Windows.Forms.MessageBox]::Show('Không đọc được kết quả quét. Hãy quét lại.', 'Lỗi kết quả quét', 'OK', 'Warning') | Out-Null
+            Set-ApprovalButtonStyles
+            [System.Windows.Forms.MessageBox]::Show('Không thể đọc kết quả rà soát. Vui lòng thực hiện lại bước 1.', 'Lỗi kết quả rà soát', 'OK', 'Warning') | Out-Null
         }
     }
 })
 
 $approveButton.Add_Click({
     try { $report = Get-Content -LiteralPath $scanPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch {
-        [System.Windows.Forms.MessageBox]::Show('Không có kết quả quét hợp lệ. Hãy bấm BƯỚC 1.', 'Cần quét lại', 'OK', 'Warning') | Out-Null
+        [System.Windows.Forms.MessageBox]::Show('Chưa có kết quả rà soát hợp lệ. Vui lòng thực hiện bước 1 trước.', 'Cần rà soát lại', 'OK', 'Warning') | Out-Null
         return
     }
     $count = [int]$report.candidateCount
@@ -567,14 +584,14 @@ $approveButton.Add_Click({
     $sameTitles = ($reportTitles.Count -eq $currentTitles.Count)
     if ($sameTitles) { for ($i = 0; $i -lt $reportTitles.Count; $i++) { if ($reportTitles[$i].Normalize([System.Text.NormalizationForm]::FormC).Trim() -ne $currentTitles[$i]) { $sameTitles = $false; break } } }
     if (-not $sameTitles) {
-        [System.Windows.Forms.MessageBox]::Show('Trích yếu đã thay đổi. Hãy quét lại trước khi duyệt.', 'Cần quét lại', 'OK', 'Warning') | Out-Null
+        [System.Windows.Forms.MessageBox]::Show('Trích yếu đã thay đổi. Vui lòng rà soát lại trước khi chuyển duyệt.', 'Cần rà soát lại', 'OK', 'Warning') | Out-Null
         return
     }
     $currentSubmitter = $submitterBox.Text.Trim()
     $currentNextReviewer = $nextReviewerBox.Text.Trim()
     if (([string]$report.submitter).Normalize([System.Text.NormalizationForm]::FormC).Trim().ToUpperInvariant() -ne $currentSubmitter.Normalize([System.Text.NormalizationForm]::FormC).Trim().ToUpperInvariant() -or
         ([string]$report.nextReviewer).Normalize([System.Text.NormalizationForm]::FormC).Trim().ToUpperInvariant() -ne $currentNextReviewer.Normalize([System.Text.NormalizationForm]::FormC).Trim().ToUpperInvariant()) {
-        [System.Windows.Forms.MessageBox]::Show('Thông tin người xử lý đã thay đổi. Hãy quét lại trước khi duyệt.', 'Cần quét lại', 'OK', 'Warning') | Out-Null
+        [System.Windows.Forms.MessageBox]::Show('Thông tin người xử lý đã thay đổi. Vui lòng rà soát lại trước khi chuyển duyệt.', 'Cần rà soát lại', 'OK', 'Warning') | Out-Null
         return
     }
     $expectedStatus = "Đang trình [$currentSubmitter] duyệt"
@@ -583,8 +600,9 @@ $approveButton.Add_Click({
     if ($answer -ne [System.Windows.Forms.DialogResult]::Yes) { return }
     if (Invoke-HPNetTool 'approve') {
         $approveButton.Enabled = $false
-        $approveButton.Text = 'BƯỚC 2 - ĐÃ HOÀN TẤT, HÃY QUÉT LẠI'
-        [System.Windows.Forms.MessageBox]::Show('Đã xử lý hết các mục trong lần quét được xác nhận và tự động dừng. Hãy xem nhật ký để biết từng văn bản đã duyệt hoặc được bỏ qua.', 'Hoàn tất', 'OK', 'Information') | Out-Null
+        $approveButton.Text = 'BƯỚC 2: ĐÃ HOÀN TẤT, VUI LÒNG RÀ SOÁT LẠI'
+        Set-ApprovalButtonStyles
+        [System.Windows.Forms.MessageBox]::Show('Đã xử lý toàn bộ mục trong phạm vi đã xác nhận và tự động dừng. Vui lòng xem nhật ký để biết chi tiết từng văn bản được chuyển duyệt hoặc bỏ qua.', 'Hoàn tất', 'OK', 'Information') | Out-Null
     }
 })
 
@@ -595,6 +613,7 @@ $openLogButton.Add_Click({
 })
 
 $stopButton.Add_Click({ Stop-ActiveWorker })
+Set-ApprovalButtonStyles
 
 $form.Add_FormClosing({
     if ($script:activeProcess -and -not $script:activeProcess.HasExited) { Stop-ActiveWorker }

@@ -32,6 +32,7 @@ QLabel#pageTitle { font-size: @font_display; font-weight: 600; }
 QLabel#sectionTitle { font-size: @font_heading; font-weight: 700; }
 QLabel#cardTitle { font-size: @font_heading; font-weight: 650; }
 QLabel#eyebrow { font-size: 9pt; font-weight: 700; color: @primary; }
+QLabel#versionLabel { color: @muted; font-size: 9pt; padding: 4px 10px; background: @surface; border: 1px solid @border; border-radius: @radius_small; }
 QLabel#badge { color: @primary; background: @tint; border-radius: 5px; padding: 4px 8px; font-size: 9pt; }
 QPushButton#toolCard { background: @surface; border: 1px solid @border; border-radius: @radius_large; padding: 0; text-align: left; }
 QPushButton#toolCard:hover, QPushButton#toolCard[hovered="true"] { border-color: @primary; background: #FBFCFF; }

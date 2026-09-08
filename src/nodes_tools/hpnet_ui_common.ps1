@@ -136,7 +136,7 @@ function New-HPNetSplitWorkspace {
 }
 
 function New-HPNetFooter {
-    param([Parameter(Mandatory=$true)]$Form, [string]$Text = 'Sẵn sàng')
+    param([Parameter(Mandatory=$true)]$Form, [string]$Text = 'Sẵn sàng thực hiện')
     $footer = New-Object System.Windows.Forms.Panel
     $footer.Dock = 'Bottom'
     $footer.Height = 28

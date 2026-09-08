@@ -131,7 +131,7 @@ $initialReviewer = if ($savedConfig -and $savedConfig.reviewerLevel1) { [string]
 
 [System.Windows.Forms.Application]::EnableVisualStyles()
 $form = New-Object System.Windows.Forms.Form
-$form.Text = 'HPNet - Tự động up VB dự thảo'
+$form.Text = 'HPNet - Tự động tải lên văn bản dự thảo'
 $form.StartPosition = 'CenterScreen'
 $form.Size = New-Object System.Drawing.Size(1420, 900)
 $form.MinimumSize = New-Object System.Drawing.Size(1240, 820)
@@ -149,7 +149,7 @@ $title.Location = New-Object System.Drawing.Point(15, 10)
 $title.AutoSize = $true
 $title.Font = New-Object System.Drawing.Font('Segoe UI', 14, [System.Drawing.FontStyle]::Bold)
 $title.ForeColor = [System.Drawing.Color]::FromArgb(41, 50, 60)
-$title.Text = 'HPNet Upload VB Dự Thảo'
+$title.Text = 'HPNet Upload văn bản dự thảo'
 $headerPanel.Controls.Add($title)
 
 $subtitle = New-Object System.Windows.Forms.Label
@@ -157,7 +157,7 @@ $subtitle.Location = New-Object System.Drawing.Point(17, 35)
 $subtitle.AutoSize = $true
 $subtitle.Font = New-Object System.Drawing.Font('Segoe UI', 9)
 $subtitle.ForeColor = [System.Drawing.Color]::FromArgb(100, 100, 100)
-$subtitle.Text = 'Tự động hóa quy trình tải văn bản dự thảo'
+$subtitle.Text = 'Tự động hóa quy trình tải văn bản dự thảo lên HPNet'
 $headerPanel.Controls.Add($subtitle)
 
 $mainPanel = New-Object System.Windows.Forms.Panel
@@ -289,7 +289,7 @@ $group3.BackColor = [System.Drawing.Color]::White
 $mainPanel.Controls.Add($group3)
 
 $reuploadModified = New-Object System.Windows.Forms.CheckBox
-$reuploadModified.Text = 'Upload lại file đã sửa (Bỏ qua file cũ, không up lặp)'
+$reuploadModified.Text = 'Tải lại tệp đã chỉnh sửa (bỏ qua tệp cũ, không tải trùng)'
 $reuploadModified.Location = New-Object System.Drawing.Point(20, 30)
 $reuploadModified.AutoSize = $true
 $reuploadModified.Font = $fontNormal
@@ -297,7 +297,7 @@ $reuploadModified.Checked = if ($savedConfig -and $null -ne $savedConfig.reuploa
 $group3.Controls.Add($reuploadModified)
 
 $dryRun = New-Object System.Windows.Forms.CheckBox
-$dryRun.Text = 'Chế độ Chạy Thử (Chỉ kiểm tra, không upload)'
+$dryRun.Text = 'Chế độ kiểm tra (chỉ xác thực, không tải lên)'
 $dryRun.Location = New-Object System.Drawing.Point(20, 55)
 $dryRun.AutoSize = $true
 $dryRun.Font = $fontNormal
@@ -312,7 +312,7 @@ $actionBar.Margin = New-Object System.Windows.Forms.Padding(0, 0, 0, 15)
 $mainPanel.Controls.Add($actionBar)
 
 $startButton = New-Object System.Windows.Forms.Button
-$startButton.Text = 'BẮT ĐẦU UPLOAD'
+$startButton.Text = 'BẮT ĐẦU TẢI LÊN'
 $startButton.Location = New-Object System.Drawing.Point(0, 0)
 $startButton.Size = New-Object System.Drawing.Size(200, 40)
 $startButton.Font = New-Object System.Drawing.Font('Segoe UI', 10, [System.Drawing.FontStyle]::Bold)
@@ -323,7 +323,7 @@ $startButton.FlatAppearance.BorderSize = 0
 $actionBar.Controls.Add($startButton)
 
 $openLogButton = New-Object System.Windows.Forms.Button
-$openLogButton.Text = 'Mở thư mục Nhật ký'
+$openLogButton.Text = 'Mở thư mục nhật ký'
 $openLogButton.Location = New-Object System.Drawing.Point(215, 0)
 $openLogButton.Size = New-Object System.Drawing.Size(160, 40)
 $openLogButton.Font = $fontNormal
@@ -332,7 +332,7 @@ $openLogButton.FlatStyle = 'Flat'
 $actionBar.Controls.Add($openLogButton)
 
 $stopButton = New-Object System.Windows.Forms.Button
-$stopButton.Text = 'DỪNG AN TOÀN'
+$stopButton.Text = 'DỪNG TÁC VỤ'
 $stopButton.Location = New-Object System.Drawing.Point(390, 0)
 $stopButton.Size = New-Object System.Drawing.Size(160, 40)
 $stopButton.Font = $fontNormal
@@ -378,10 +378,10 @@ $statusBox.ReadOnly = $true
 $statusBox.Font = New-Object System.Drawing.Font('Consolas', 9.5)
 $statusBox.BackColor = [System.Drawing.Color]::FromArgb(30, 30, 30)
 $statusBox.ForeColor = [System.Drawing.Color]::FromArgb(200, 200, 200)
-$statusBox.Text = "Sẵn sàng.`r`nCông cụ sẽ quét toàn bộ danh sách HPNet trước, bỏ qua file đã có rồi mới up lần lượt các file còn lại."
+$statusBox.Text = "Sẵn sàng thực hiện.`r`nCông cụ sẽ rà soát toàn bộ danh sách HPNet, bỏ qua tệp đã tồn tại và lần lượt tải lên các tệp còn lại."
 $mainPanel.Controls.Add($statusBox)
 
-$footerLabel = New-HPNetFooter -Form $form -Text 'Sẵn sàng'
+$footerLabel = New-HPNetFooter -Form $form -Text 'Sẵn sàng thực hiện'
 $uiWorkspace = New-HPNetSplitWorkspace -MainPanel $mainPanel -InputControls @($group1, $group2, $group3, $actionBar) -ProgressPanel $progressPanel -LogLabel $logLabel -StatusBox $statusBox -ActivityTitle 'PHIÊN UPLOAD' -ActivityHint 'Theo dõi tiến độ, thông báo và nhật ký của phiên upload hiện tại.'
 
 $script:activeProcess = $null

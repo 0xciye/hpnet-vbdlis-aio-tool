@@ -72,6 +72,21 @@ def check_for_update():
     return parse_release(payload, build_info().get("version", "development"))
 
 
+def fetch_latest_version():
+    """Return the latest published tag for display in the desktop launcher."""
+    request = Request(API_URL, headers={
+        "Accept": "application/vnd.github+json",
+        "User-Agent": "HPNet-VBDLIS-AIO-Updater",
+        "X-GitHub-Api-Version": "2022-11-28",
+    })
+    with urlopen(request, timeout=8) as response:
+        payload = json.loads(response.read(2_000_000))
+    tag = str(payload.get("tag_name", "")).strip()
+    if not tag or payload.get("draft") or payload.get("prerelease"):
+        return None
+    return tag
+
+
 def _download(url, target, limit=MAX_DOWNLOAD_BYTES):
     request = Request(url, headers={"User-Agent": "HPNet-VBDLIS-AIO-Updater"})
     total = 0
