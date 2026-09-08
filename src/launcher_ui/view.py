@@ -9,12 +9,12 @@ from .icons import icon
 from .help_page import HelpPage
 
 TOOLS = (
-    ("notice","prepare","MẪU 22","Tạo thông báo đất đai","Từ Excel đến thông báo Word. Kiểm tra dữ liệu, xem trước rồi xác nhận tạo."),
-    ("excel","prepare","VBDLIS","Excel Builder","Chuẩn hóa dữ liệu, ánh xạ cột và xuất biểu mẫu hồ sơ VBDLIS."),
-    ("duplicate_parcel","prepare","EXCEL AN TOÀN","Kiểm tra & Làm sạch thửa trùng","Tách hộ theo Tổng DT, xem trước và chỉ clear các bản ghi trùng hoàn toàn."),
-    ("data_normalizer","prepare","EXCEL TIỆN ÍCH","Chuẩn hóa Họ tên & Ngày sinh","Chuẩn hóa định dạng tên và ngày sinh độc lập, không đoán dữ liệu mơ hồ."),
-    ("rename","prepare","TỆP HỒ SƠ","Auto Rename","Nhân bản và đặt tên Word, PDF theo thông tin hộ và thửa đất."),
-    ("cleaner","prepare","PDF ĐÃ KÝ","PDF Cleaner","Quét, xem trước và xử lý tệp PDF; chuẩn hóa tên văn bản đã ký."),
+    ("notice","prepare","MẪU 22","Tạo thông báo đất đai","Nhập dữ liệu từ Excel để tạo thông báo Word. Kiểm tra nội dung, xem trước và xác nhận khi đã đúng."),
+    ("excel","prepare","VBDLIS","Chuẩn bị hồ sơ VBDLIS","Sắp xếp dữ liệu Excel và đưa vào đúng cột để tạo hồ sơ VBDLIS."),
+    ("duplicate_parcel","prepare","EXCEL AN TOÀN","Kiểm tra thửa đất trùng","Tìm và xử lý các thửa đất bị trùng. Xem trước kết quả trước khi xóa dữ liệu."),
+    ("data_normalizer","prepare","EXCEL TIỆN ÍCH","Chuẩn hóa họ tên và ngày sinh","Đưa họ tên và ngày sinh về cùng một định dạng, đồng thời giữ nguyên dữ liệu chưa đủ thông tin."),
+    ("rename","prepare","TỆP HỒ SƠ","Đặt tên hồ sơ tự động","Sao chép và đặt tên file Word, PDF theo thông tin hộ dân và thửa đất."),
+    ("cleaner","prepare","PDF ĐÃ KÝ","Làm sạch tệp PDF","Kiểm tra file PDF, xem trước nội dung và chuẩn hóa tên văn bản đã ký."),
     ("downloader","hpnet","TẢI XUỐNG","PDF Downloader","Lọc, đối soát và tải văn bản PDF đã ký từ mục Văn bản đi trên HPNet."),
     ("upload","hpnet","TẢI LÊN","Upload Dự Thảo","Kiểm tra trùng và tải tệp Word vào mục Văn bản dự thảo trên HPNet."),
     ("approve","hpnet","CHUYỂN DUYỆT","Duyệt Dự Thảo","Quét hồ sơ, kiểm tra người nhận và xác nhận chuyển duyệt theo quy trình."),
