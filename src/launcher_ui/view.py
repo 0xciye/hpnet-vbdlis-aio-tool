@@ -139,13 +139,6 @@ class LauncherView(QWidget):
         self.eyebrow=label("BỘ CÔNG CỤ XỬ LÝ HỒ SƠ","eyebrow"); page.addWidget(self.eyebrow)
         self.heading=label("Chọn công cụ. Bắt đầu công việc.","pageTitle"); page.addWidget(self.heading)
         self.description=label("Chuẩn bị hồ sơ, kiểm tra dữ liệu và làm việc với HPNet trong các cửa sổ riêng.","muted"); page.addWidget(self.description)
-        version_row=QHBoxLayout(); version_row.setSpacing(18); version_row.setContentsMargins(0,2,0,0)
-        self.current_version_label=label(f"Phiên bản hiện tại: {hub.current_version}","versionLabel")
-        self.latest_version_label=label("Phiên bản mới nhất: đang kiểm tra…","versionLabel")
-        self.current_version_label.setAccessibleName("Phiên bản hiện tại")
-        self.latest_version_label.setAccessibleName("Phiên bản mới nhất")
-        version_row.addWidget(self.current_version_label); version_row.addWidget(self.latest_version_label); version_row.addStretch(1)
-        page.addLayout(version_row)
         category_row=QHBoxLayout(); category_row.setSpacing(8); category_row.setContentsMargins(0,4,0,4)
         for key,text,symbol in (("all","Tất cả công cụ","grid"),("prepare","Chuẩn bị hồ sơ","folder"),
                                 ("hpnet","Làm việc với HPNet","approve"),("help","Hướng dẫn sử dụng","help")):
@@ -201,10 +194,7 @@ class LauncherView(QWidget):
             self.toast.move(max(16,self.width()-self.toast.width()-24),max(16,self.height()-self.toast.height()-24))
 
     def set_latest_version(self, version, error=False):
-        text = "Phiên bản mới nhất: " + (str(version) if version else "không xác định")
-        if error:
-            text += " (không thể kiểm tra)"
-        self.latest_version_label.setText(text)
+        self.hub.set_latest_version(version, error)
 
     def show_launch_result(self,title,success,message):
         self.toast.show_message(title,success)

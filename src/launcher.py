@@ -43,6 +43,7 @@ class ToolLauncher(QMainWindow):
         self.current_version = str(build_info().get("version", "development"))
         self.setup_ui()
         self.statusBar().showMessage("Chọn công cụ để bắt đầu. Việc mở công cụ không tự động tải lên, duyệt hoặc xóa dữ liệu.")
+        self._setup_version_status()
 
     @staticmethod
     def label(text, name=None):
@@ -55,6 +56,27 @@ class ToolLauncher(QMainWindow):
     def setup_ui(self):
         self.launcher_view = LauncherView(self)
         self.setCentralWidget(self.launcher_view)
+
+    def _setup_version_status(self):
+        self.current_version_status = QLabel(f"Đang dùng: {self.current_version}")
+        self.current_version_status.setObjectName("versionStatus")
+        self.current_version_status.setAccessibleName("Phiên bản hiện tại")
+        self.latest_version_status = QLabel("Mới nhất: đang kiểm tra…")
+        self.latest_version_status.setObjectName("versionStatus")
+        self.latest_version_status.setAccessibleName("Phiên bản mới nhất")
+        self.update_now_button = QPushButton("Cập nhật ngay")
+        self.update_now_button.setObjectName("updateNow")
+        self.update_now_button.setAccessibleName("Cập nhật ngay")
+        self.update_now_button.clicked.connect(self.check_for_updates)
+        self.statusBar().addPermanentWidget(self.current_version_status)
+        self.statusBar().addPermanentWidget(self.latest_version_status)
+        self.statusBar().addPermanentWidget(self.update_now_button)
+
+    def set_latest_version(self, version, error=False):
+        text = f"Mới nhất: {version or 'không xác định'}"
+        if error:
+            text += " (chưa kiểm tra được)"
+        self.latest_version_status.setText(text)
 
     def _open_python(self, key, factory):
         window = self.tool_windows.get(key)
@@ -173,26 +195,34 @@ class ToolLauncher(QMainWindow):
         self.launcher_view.show_help()
 
     def check_for_updates(self):
+        if self.update_worker is not None and self.update_worker.isRunning():
+            return
         if not getattr(sys, "frozen", False):
-            self.launcher_view.set_latest_version("chỉ hiển thị trong bản phát hành")
+            self.set_latest_version("chỉ có trong bản phát hành")
+            self.statusBar().showMessage("Bản phát triển không thể kiểm tra cập nhật tự động.", 5000)
             return
         from auto_update import check_for_update, fetch_latest_version
         from tools.qt_worker import Worker
+        self.update_now_button.setEnabled(False)
         self.latest_worker = Worker(fetch_latest_version, self)
-        self.latest_worker.succeeded.connect(lambda version: self.launcher_view.set_latest_version(version))
-        self.latest_worker.failed.connect(lambda _message: self.launcher_view.set_latest_version(None, error=True))
+        self.latest_worker.succeeded.connect(lambda version: self.set_latest_version(version))
+        self.latest_worker.failed.connect(lambda _message: self.set_latest_version(None, error=True))
         self.latest_worker.start()
         self.update_worker = Worker(check_for_update, self)
         self.update_worker.succeeded.connect(self._offer_update)
+        self.update_worker.failed.connect(self._update_failed)
         self.update_worker.start()
 
     def _offer_update(self, release):
         if not release:
+            self.update_now_button.setEnabled(True)
+            self.statusBar().showMessage("Bạn đang sử dụng phiên bản mới nhất.", 5000)
             return
         answer = QMessageBox.question(self, "Có phiên bản mới",
             f"Phiên bản {release['version']} đã sẵn sàng. Bạn có muốn tải xuống và cài đặt ngay không?",
             QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
         if answer != QMessageBox.Yes:
+            self.update_now_button.setEnabled(True)
             return
         from auto_update import download_update
         from tools.qt_worker import Worker
@@ -205,6 +235,7 @@ class ToolLauncher(QMainWindow):
 
     def _update_failed(self, message):
         self.setEnabled(True)
+        self.update_now_button.setEnabled(True)
         QMessageBox.warning(self, "Không thể cập nhật", f"Phiên bản hiện tại vẫn được giữ nguyên.\n\n{message}")
 
     def _install_update(self, new_app):
