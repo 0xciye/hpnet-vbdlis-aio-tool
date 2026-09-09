@@ -327,6 +327,18 @@ def main() -> int:
 
 
 def light_palette() -> QPalette:
+    import winreg
+    dark = False
+    try:
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize") as key:
+            dark = int(winreg.QueryValueEx(key, "AppsUseLightTheme")[0]) == 0
+    except (OSError, ValueError): pass
+    if dark:
+        palette = QPalette()
+        for role, color in ((QPalette.Window,"#202124"),(QPalette.WindowText,"#F2F4F7"),(QPalette.Base,"#2B2D31"),(QPalette.AlternateBase,"#303338"),(QPalette.Text,"#F2F4F7"),(QPalette.Button,"#35383E"),(QPalette.ButtonText,"#F2F4F7"),(QPalette.Highlight,"#355A9C"),(QPalette.HighlightedText,"#FFFFFF"),(QPalette.PlaceholderText,"#AAB3C0")):
+            palette.setColor(role, QColor(color))
+        return palette
+
     palette = QPalette()
     for role, color in (
         (QPalette.Window, "#f1f5f9"), (QPalette.WindowText, "#1e293b"),
@@ -358,7 +370,7 @@ def configure_appearance(app: QApplication) -> None:
     app.setApplicationName("VBDLIS Excel Builder")
     app.setOrganizationName("VBDLIS Tools")
     app.setStyle("Fusion")
-    app.styleHints().setColorScheme(Qt.ColorScheme.Light)
+    app.styleHints().setColorScheme(Qt.ColorScheme.Dark if light_palette().color(QPalette.Window).value() < 100 else Qt.ColorScheme.Light)
     palette = light_palette()
     app.setPalette(palette)
     app.setStyleSheet(window_stylesheet())
