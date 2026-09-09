@@ -19,12 +19,13 @@ def extract_stt_and_name(filename_without_ext: str):
     'Nguyễn Văn A' -> (None, 'Nguyễn Văn A')
     """
     # Regex to capture optional leading numbers followed by delimiters (. - or spaces)
-    match = re.match(r'^(\d+)(?:\s*[\.\-]\s*|\s+)(.+)$', filename_without_ext.strip())
+    name = re.sub(r'(?:[\s_.-]+\d+)+$', '', filename_without_ext.strip())
+    match = re.match(r'^(\d+)(?:\s*[._\-]\s*|\s+)(.+)$', name)
     if match:
         stt = match.group(1).strip()
         name_part = match.group(2).strip()
         return stt, name_part
-    return None, filename_without_ext.strip()
+    return None, name
 
 def normalize_excel_identifier(val) -> str:
     """

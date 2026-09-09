@@ -7,6 +7,25 @@ from tools.hpnet_file_generator.core.person_matcher import PersonMatcher
 from tools.hpnet_file_generator.core.naming_engine import NamingEngine
 from tools.hpnet_file_generator.core.action_planner import ActionPlanner
 from tools.hpnet_file_generator.core.excel_reader import ExcelReader
+from tools.hpnet_file_generator.core.source_scanner import SourceScanner
+
+
+@pytest.mark.parametrize('filename,name', [
+    ('1.Nguyễn Thị Hảo_0001.pdf', 'Nguyễn Thị Hảo'),
+    ('10. Nguyễn Thị Ngọt_0001.pdf', 'Nguyễn Thị Ngọt'),
+    ('102 Lê Văn Thuận_0001.pdf', 'Lê Văn Thuận'),
+    ('110 Lê Văn Thời 0001.pdf', 'Lê Văn Thời'),
+    ('Nguyễn Văn A.pdf', 'Nguyễn Văn A'),
+    ('Nguyễn Văn A_0001_002.pdf', 'Nguyễn Văn A'),
+])
+def test_scan_matches_only_person_name(tmp_path, filename, name):
+    (tmp_path / filename).write_bytes(b'pdf')
+    sources = SourceScanner(str(tmp_path), ['.pdf']).scan()
+    record = PersonRecord(name, normalize_person_name(name))
+    PersonMatcher([record], sources).match()
+    assert sources[0].normalized_name == normalize_person_name(name)
+    assert sources[0].matched_person is record
+    assert sources[0].filename == filename
 
 def test_normalize_person_name():
     assert normalize_person_name(" NGUYỄN   VĂN A ") == "nguyễn văn a"

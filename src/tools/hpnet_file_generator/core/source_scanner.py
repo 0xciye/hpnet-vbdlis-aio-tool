@@ -5,11 +5,10 @@ from tools.hpnet_file_generator.models.data_models import SourceFile
 from tools.hpnet_file_generator.utils.text_normalizer import normalize_person_name, extract_stt_and_name
 
 class SourceScanner:
-    def __init__(self, folder_path: str, extensions: List[str], remove_prefix: bool = True):
+    def __init__(self, folder_path: str, extensions: List[str]):
         self.folder_path = Path(folder_path)
         # Normalize extensions to always have dot and lowercase
         self.extensions = [ext.lower() if ext.startswith('.') else f".{ext.lower()}" for ext in extensions]
-        self.remove_prefix = remove_prefix
 
     def scan(self) -> List[SourceFile]:
         if not self.folder_path.exists() or not self.folder_path.is_dir():
@@ -26,13 +25,7 @@ class SourceScanner:
                 
             filename_without_ext = file_path.stem
             
-            stt = None
-            if self.remove_prefix:
-                extracted_stt, name_part = extract_stt_and_name(filename_without_ext)
-                stt = extracted_stt
-                raw_name = name_part
-            else:
-                raw_name = filename_without_ext
+            stt, raw_name = extract_stt_and_name(filename_without_ext)
                 
             normalized = normalize_person_name(raw_name)
             

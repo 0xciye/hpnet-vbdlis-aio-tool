@@ -126,9 +126,7 @@ class MainWindow(QMainWindow):
         h1.addWidget(btn_browse)
         layout.addLayout(h1)
         
-        self.chk_remove_prefix = QCheckBox("Bỏ STT đầu tên file (VD: '1. Nguyễn Văn A' -> 'Nguyễn Văn A')")
-        self.chk_remove_prefix.setChecked(True)
-        layout.addWidget(self.chk_remove_prefix)
+        layout.addWidget(QLabel("Chỉ lấy họ tên để đối chiếu. Ví dụ: 1.Nguyễn Thị Hảo_0001.pdf → Nguyễn Thị Hảo"))
         
         btn_scan = QPushButton("Quét thư mục")
         btn_scan.clicked.connect(self.scan_source)
@@ -296,7 +294,7 @@ class MainWindow(QMainWindow):
         if not folder:
             return
             
-        scanner = SourceScanner(folder, self.config.extensions, self.chk_remove_prefix.isChecked())
+        scanner = SourceScanner(folder, self.config.extensions)
         self.source_files = scanner.scan()
         
         self.tbl_source.setRowCount(0)
