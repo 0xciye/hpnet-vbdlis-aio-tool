@@ -291,8 +291,12 @@ async function submitOne(page, context, file, abstract, reviewerLevel1, reupload
   page.on("dialog", dialogHandler);
   let submitError = null;
   try {
-    await page.goto(MAIN_URL, { waitUntil: "domcontentloaded", timeout: 60000 });
     const createButton = page.locator("a.btn.btn-danger", { hasText: "Dự thảo VB" }).first();
+    // Giữ lại trang danh sách sau lần upload trước. Chỉ tải lại khi phiên
+    // đăng nhập vừa chuyển sang trang khác hoặc nút tạo văn bản không còn.
+    if (!(await createButton.isVisible().catch(() => false))) {
+      await page.goto(MAIN_URL, { waitUntil: "domcontentloaded", timeout: 60000 });
+    }
     await createButton.waitFor({ state: "visible", timeout: 30000 });
     await createButton.click();
 
@@ -462,11 +466,16 @@ async function main() {
       }
       const uploadedByThisTool = Boolean(ledger[ledgerKey(file)]);
       let currentOnHpnet = records.some((record) => recordIsCurrentVersion(record, file, Boolean(config.reuploadModified)));
-      // Đọc lại 100 bản mới nhất ngay trước mỗi file để tránh trùng nếu người dùng vừa up thủ công.
+      // Kiểm tra theo mã tệp thay vì tải lại 100 văn bản mới nhất cho từng
+      // tệp. Phản hồi nhỏ hơn đáng kể và vẫn giữ nguyên chặn trùng theo mã.
       if (!uploadedByThisTool && !currentOnHpnet) {
-        const newestNow = await queryRecords(context, { key: "", allPages: false, pageSize: 100 });
-        currentOnHpnet = newestNow.some((record) => recordIsCurrentVersion(record, file, Boolean(config.reuploadModified)));
-        if (currentOnHpnet) records.unshift(...newestNow);
+        let latestMatches = await queryRecords(context, { key: file.key, allPages: false, pageSize: 100 });
+        currentOnHpnet = latestMatches.some((record) => recordIsCurrentVersion(record, file, Boolean(config.reuploadModified)));
+        if (!currentOnHpnet && file.name !== file.key) {
+          latestMatches = await queryRecords(context, { key: file.name, allPages: false, pageSize: 100 });
+          currentOnHpnet = latestMatches.some((record) => recordIsCurrentVersion(record, file, Boolean(config.reuploadModified)));
+        }
+        if (currentOnHpnet) records.unshift(...latestMatches);
       }
       if (uploadedByThisTool || currentOnHpnet) {
         const reason = uploadedByThisTool

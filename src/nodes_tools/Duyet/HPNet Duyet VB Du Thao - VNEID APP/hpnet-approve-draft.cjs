@@ -203,17 +203,21 @@ async function ensureLoggedIn(page, context, log) {
   }
 }
 
-async function findRecordById(context, id, exactTitle) {
+async function findRecordById(context, id, exactTitle, { skipFullScan = false } = {}) {
   const byTitle = await queryRecords(context, { key: exactTitle, allPages: true, pageSize: 100 });
   let record = byTitle.find((item) => getRecordId(item) === id);
   if (record) return record;
+  // Sau khi chuyển duyệt, văn bản thường rời khỏi danh sách đang xử lý.
+  // Khi đó kết quả tìm theo trích yếu rỗng đã đủ xác nhận thay đổi trạng thái;
+  // không cần tải lại toàn bộ danh sách nhiều trang.
+  if (skipFullScan && byTitle.length === 0) return null;
   const all = await queryRecords(context, { key: "", allPages: true, pageSize: 100 });
   return all.find((item) => getRecordId(item) === id) || null;
 }
 
 async function waitForStatusChange(context, id, exactTitle, expectedStatus, attempts = 12) {
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
-    const record = await findRecordById(context, id, exactTitle);
+    const record = await findRecordById(context, id, exactTitle, { skipFullScan: true });
     if (!record) return { changed: true, newStatus: "Không còn trong danh sách đang xử lý" };
     const newStatus = String(record.TinhTrangXuly ?? "").trim();
     if (normalizeText(newStatus) !== normalizeText(expectedStatus)) return { changed: true, newStatus };
@@ -233,7 +237,11 @@ async function approveOne(page, context, candidate, exactTitle, expectedStatus, 
     return { result: "BỎ QUA", newStatus: current.TinhTrangXuly, note: "Tình trạng không còn đúng; có thể văn bản đã được duyệt." };
   }
 
-  await page.goto(MAIN_URL, { waitUntil: "domcontentloaded", timeout: 60000 });
+  const hasApprovalPage = /[?&]action=901(?:&|$)/i.test(page.url())
+    && await page.evaluate(() => typeof window.TrinhDuyetVanbanDi === "function").catch(() => false);
+  if (!hasApprovalPage) {
+    await page.goto(MAIN_URL, { waitUntil: "domcontentloaded", timeout: 60000 });
+  }
   await page.waitForFunction(() => typeof window.TrinhDuyetVanbanDi === "function", null, { timeout: 30000 });
   await page.evaluate((recordId) => window.TrinhDuyetVanbanDi(recordId), id);
   const modal = page.locator("#myModal");
