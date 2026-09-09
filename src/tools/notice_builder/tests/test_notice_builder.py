@@ -863,9 +863,19 @@ def test_cam_giang_template_contract_is_separate_from_mau_22():
 def test_mao_defaults_ignore_old_inputs_and_location_fallback(tmp_path, service, config, fallback, expected):
     row = workbook(tmp_path / "defaults.xlsx", [("HỘ A", 1, 1, 100, None)]).records[0]
     cfg = replace(config, village="Thôn thử", empty_location=fallback, optional_empty="dots",
-                  template_fields=dict.fromkeys((*OPTIONAL_COMMON, "NGUOI_KY", "CO_QUAN_THUE", "DON_VI_LUU", "CHI_NHANH_VP_DKDD"), "giá trị cũ"))
+                  template_fields={**config.template_fields, **dict.fromkeys((*OPTIONAL_COMMON, "NGUOI_KY", "CO_QUAN_THUE", "DON_VI_LUU", "CHI_NHANH_VP_DKDD"), "giá trị cũ")})
     values = service.values(row, cfg, 1)
     assert values["XU_DONG"] == expected
+    from tools.notice_builder.core.renderer import paragraphs, paragraph_nodes, node_text
+    rendered = NoticeService(default_template_path(), service.legal).template.render(values)
+    with ZipFile(BytesIO(rendered)) as archive:
+        document = minidom.parseString(archive.read("word/document.xml"))
+        lines = ["".join(node_text(n) for n in paragraph_nodes(p)) for p in paragraphs(document)]
+        address = next(line for line in lines if line.startswith("c) Địa chỉ:") and cfg.administrative_address.strip() in line)
+        location = f"xứ đồng {expected}, " if expected else ""
+        assert address == f"c) Địa chỉ: {location}thôn Thôn thử, {cfg.administrative_address.strip()}"
+        assert "..." not in address
+        document.unlink()
     assert values["CO_QUAN_THUE"] == "Thuế Cơ sở 11 TP Hải Phòng"
     assert values["DON_VI_LUU"] == "XDNN&MT"
     assert values["CHI_NHANH_VP_DKDD"] == "Cẩm Giàng"
