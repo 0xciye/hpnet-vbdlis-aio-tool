@@ -1,192 +1,136 @@
-# HPNet VBDLIS AIO Tool
+# 🏢 HPNet VBDLIS AIO Tool
 
-Bộ công cụ desktop dành cho Windows, hợp nhất các quy trình chuẩn bị hồ sơ đất đai, tạo dữ liệu VBDLIS và hỗ trợ xử lý văn bản trên HPNet trong một giao diện duy nhất.
+## 📄 Bộ công cụ hỗ trợ xử lý hồ sơ đất đai
 
-Ứng dụng được thiết kế cho người dùng nghiệp vụ: mỗi công cụ có hướng dẫn tích hợp, bước kiểm tra trước khi xuất hoặc thao tác thật, nhật ký dễ đối soát và phạm vi dữ liệu tách biệt. Bản phát hành là gói portable; máy sử dụng không cần cài Python hay Node.js.
+**HPNet VBDLIS AIO Tool** là ứng dụng dành cho cán bộ và người dùng nghiệp vụ cần chuẩn bị hồ sơ, xử lý Excel, tạo văn bản và làm việc với hệ thống HPNet.
 
-## Thành phần
+Ứng dụng tập hợp nhiều công cụ trong một giao diện duy nhất, giúp giảm thao tác thủ công và hạn chế sai sót khi xử lý hồ sơ.
 
-| Nhóm | Công cụ | Chức năng chính |
-| --- | --- | --- |
-| Hồ sơ đất đai | **Tạo thông báo đất đai** | Đọc toàn bộ Excel hoặc một khoảng dòng chỉ định, kiểm tra dữ liệu, xem trước và tạo Word theo Mẫu 22; tự lấy diện tích sử dụng chung bằng diện tích thửa, hỗ trợ cấp số, gán ngày theo từng nhóm số và xuất nhật ký. |
-| Hồ sơ đất đai | **Kiểm tra & Làm sạch thửa trùng** | Tách hộ bằng dòng Tổng DT, gom mọi dòng trùng cùng Số tờ + Số thửa kể cả khác hộ, xem trước rồi clear vùng dữ liệu của toàn bộ nhóm. |
-| Tiện ích Excel | **Chuẩn hóa Họ tên & Ngày sinh** | Chuẩn hóa độc lập một hoặc hai cột; giữ nguyên công thức, ngày mơ hồ, ngày lỗi và ngày thiếu. |
-| Dữ liệu VBDLIS | **VBDLIS Excel Builder** | Ánh xạ cột, xử lý hộ/người/thửa, kiểm tra quy tắc nghiệp vụ và xuất Excel theo biểu mẫu VBDLIS. |
-| Quản lý tệp | **Auto Rename** | Đối chiếu Excel để nhân bản và đặt tên PDF/Word theo thông tin thửa đất. |
-| Quản lý PDF | **PDF Cleaner** | Ghép cặp PDF thường với bản có hậu tố ký, dọn bản thường và chuẩn hóa tên file. |
-| HPNet | **HPNet PDF Downloader** | Lọc hoặc quét toàn bộ Văn bản đi được quyền xem, tải PDF và tạo báo cáo đối soát. |
-| HPNet | **HPNet Upload dự thảo** | Tải Word lên HPNet, chọn người duyệt, kiểm tra trùng và hỗ trợ chạy thử trước khi thao tác thật. |
-| HPNet | **HPNet Duyệt dự thảo** | Quét danh sách, xác nhận điều kiện và chuyển duyệt văn bản theo người nhận đã chọn. |
+> ✅ Không cần cài Python hoặc Node.js  
+> ✅ Chạy trực tiếp trên Windows  
+> ✅ Có hướng dẫn sử dụng tích hợp  
+> ✅ Có bước kiểm tra trước khi thực hiện thao tác thật  
+> ✅ Có thể cập nhật phiên bản ngay trong ứng dụng  
 
-Launcher hỗ trợ tìm kiếm công cụ, mở hướng dẫn bằng phím **F1** và hiển thị trạng thái khởi chạy. Ba công cụ HPNet dùng chung một bộ Node.js/Playwright để giảm dung lượng release và tránh đóng gói trùng lặp.
+---
 
-## Điểm nổi bật
+## 🧰 Các công cụ có trong ứng dụng
 
-- Một giao diện thống nhất cho chín công cụ nghiệp vụ.
-- Bản Windows portable, không yêu cầu cài Python hoặc Node.js trên máy sử dụng.
-- Kiểm tra và xem trước dữ liệu trước khi xuất hoặc thực hiện thao tác HPNet.
-- Tạo thông báo đọc được STT dạng `=MAX($B$7:B11)+1` khi Excel chưa lưu kết quả công thức (đúng cột STT đã chọn, từ dòng dữ liệu đầu đến một dòng phía trên). Tên và giấy tờ luôn lấy từ đúng dòng chủ hộ; công thức khác chưa có kết quả vẫn được báo lỗi tại ô nguồn.
-- Diện tích hỗ trợ phép trừ hai số trực tiếp như `=755-678` (77 m²), kể cả khi chưa có kết quả lưu sẵn. Kết quả phải dương; công thức tham chiếu ô hoặc hàm khác vẫn cần Excel tính và lưu trước.
-- Mẫu Word được chuẩn hóa cục bộ tại các dòng placeholder, giữ nguyên cấu trúc và định dạng pháp lý còn lại.
-- Nhật ký TXT/CSV và đầu ra Node.js dùng UTF-8, tương thích tiếng Việt trên Windows.
-- Runtime HPNet dùng chung nhưng cấu hình, nhật ký và phiên đăng nhập vẫn tách theo từng công cụ.
-- Quy trình build tự chạy test, smoke test, kiểm tra tài nguyên và xác minh từng tệp trong ZIP trước khi công bố.
+### 📁 Chuẩn bị hồ sơ và dữ liệu
 
-## Cài đặt bản phát hành
+| Công cụ | Công dụng |
+| --- | --- |
+| 📝 **Tạo thông báo đất đai** | Nhập dữ liệu từ Excel, kiểm tra nội dung và tạo thông báo Word theo Mẫu 22. |
+| 📊 **Chuẩn bị hồ sơ VBDLIS** | Sắp xếp dữ liệu Excel vào đúng cột để tạo hồ sơ VBDLIS. |
+| 🔍 **Kiểm tra thửa đất trùng** | Tìm các thửa đất bị trùng và xem trước dữ liệu trước khi xử lý. |
+| 👤 **Chuẩn hóa họ tên và ngày sinh** | Đưa họ tên, ngày sinh về cùng một cách ghi để dữ liệu dễ sử dụng hơn. |
+| 🗂️ **Đặt tên hồ sơ tự động** | Đặt tên file Word và PDF theo thông tin hộ dân, tờ bản đồ và thửa đất. |
+| 📄 **Làm sạch tệp PDF** | Kiểm tra, ghép cặp và chuẩn hóa tên các file PDF đã ký. |
 
-### Yêu cầu sử dụng
+### 🌐 Làm việc với HPNet
 
-- Windows 10 hoặc Windows 11 x64.
-- Microsoft Edge cho ba công cụ HPNet.
-- Kết nối mạng và tài khoản có đúng quyền nghiệp vụ trên HPNet.
-- Microsoft Word hoặc ứng dụng tương thích DOCX nếu cần mở bản xem trước/tài liệu đã tạo.
+| Công cụ | Công dụng |
+| --- | --- |
+| ⬇️ **Tải văn bản PDF** | Tìm và tải các văn bản PDF từ mục Văn bản đi trên HPNet. |
+| ⬆️ **Tải văn bản dự thảo** | Tải nhiều thư mục và nhiều file dự thảo lên HPNet, chọn người duyệt và kiểm tra file trùng. |
+| ✅ **Duyệt văn bản dự thảo** | Kiểm tra danh sách văn bản và chuyển duyệt theo người nhận đã chọn. |
 
-### Khởi chạy
+---
 
-1. Tải `HPNet VBDLIS AIO Tool.zip` từ trang [GitHub Releases](https://github.com/0xciye/hpnet-vbdlis-aio-tool/releases).
-2. Giải nén **toàn bộ** ZIP vào một thư mục riêng.
-3. Chạy `HPNET & VBDLIS Tools.exe`.
-4. Giữ nguyên thư mục `_internal` bên cạnh file EXE.
-5. Mở **Hướng dẫn sử dụng** trong ứng dụng hoặc nhấn **F1** trước khi dùng công cụ lần đầu.
+## 🚀 Cách cài đặt và sử dụng
 
-Không chạy trực tiếp EXE bên trong cửa sổ xem ZIP vì ứng dụng cần các tài nguyên trong `_internal`.
+### 1. Tải ứng dụng
 
-## An toàn dữ liệu và đăng nhập
+Truy cập trang [Releases](https://github.com/0xciye/hpnet-vbdlis-aio-tool/releases) và tải file:
 
-- Đăng nhập VNeID được thực hiện tương tác trực tiếp trong Microsoft Edge. Công cụ không yêu cầu người dùng cung cấp mật khẩu hoặc OTP cho mã nguồn/script.
-- Phiên trình duyệt được lưu cục bộ trong thư mục riêng của từng công cụ để người vận hành chủ động quản lý. Thư mục này không được đưa vào source hoặc ZIP phát hành.
-- Không commit hoặc chia sẻ hồ sơ cá nhân, CCCD, token, khóa ký số, cookies, nhật ký nghiệp vụ hay dữ liệu đăng nhập.
-- Luôn kiểm tra dữ liệu đầu vào, người nhận, phạm vi tài khoản và danh sách xem trước trước khi xác nhận thao tác thật.
-- Sao lưu dữ liệu trước các thao tác dọn, đổi tên hoặc ghi đè hàng loạt.
+`HPNet VBDLIS AIO Tool.zip`
 
-> **Lưu ý về PDF:** PDF Cleaner chỉ xử lý bản `.signed.pdf` khi tìm thấy cấu trúc chữ ký nhúng trong PDF. Kiểm tra này ngăn file thường bị đổi tên giả, nhưng chưa xác minh chuỗi chứng thư hoặc hiệu lực pháp lý của chữ ký. Bộ lọc hậu tố của HPNet Downloader vẫn chỉ dùng để chọn tên file cần tải.
+### 2. Giải nén
 
-## Phát triển từ source
+Giải nén **toàn bộ file ZIP** vào một thư mục riêng.
 
-### Yêu cầu môi trường
+Không chạy ứng dụng trực tiếp bên trong cửa sổ ZIP.
 
-- Windows x64.
-- Python **3.14.x** và Python Launcher (`py`).
-- Windows PowerShell 5.1 hoặc PowerShell 7.
-- Microsoft Edge để kiểm tra các luồng HPNet.
-- Runtime HPNet được khôi phục từ release sạch cùng phiên bản source.
+### 3. Mở ứng dụng
 
-### 1. Clone repository
+Chạy file:
+
+`HPNET & VBDLIS Tools.exe`
+
+Giữ nguyên thư mục `_internal` bên cạnh file EXE.
+
+### 4. Đọc hướng dẫn
+
+Mở mục **Hướng dẫn sử dụng** trong ứng dụng hoặc nhấn phím **F1**.
+
+---
+
+## 💻 Yêu cầu máy tính
+
+- Windows 10 hoặc Windows 11 bản 64-bit.
+- Microsoft Edge đối với các công cụ HPNet.
+- Kết nối Internet khi sử dụng HPNet hoặc cập nhật phần mềm.
+- Tài khoản HPNet có đúng quyền nghiệp vụ.
+- Microsoft Word hoặc phần mềm có thể mở file DOCX.
+
+---
+
+## 🔄 Cập nhật phần mềm
+
+Ứng dụng có nút **Cập nhật ngay** ở góc dưới màn hình.
+
+Khi bấm nút:
+
+1. Ứng dụng kiểm tra phiên bản mới trên GitHub.
+2. Nếu đã là phiên bản mới nhất, ứng dụng sẽ thông báo rõ ràng.
+3. Nếu có phiên bản mới, ứng dụng hỏi trước khi tải xuống.
+4. Thanh tiến độ hiển thị trong lúc tải và cài đặt.
+5. Dữ liệu cá nhân, cấu hình và lịch sử làm việc được giữ lại.
+
+> Lần đầu tiên cần tải và giải nén ứng dụng thủ công. Các phiên bản sau có thể cập nhật ngay trong ứng dụng.
+
+---
+
+## 🔐 An toàn dữ liệu
+
+- Ứng dụng không yêu cầu nhập mật khẩu hoặc mã OTP vào mã nguồn.
+- Việc đăng nhập HPNet được thực hiện trực tiếp trên Microsoft Edge.
+- Cấu hình, lịch sử và phiên đăng nhập được lưu riêng trên máy tính.
+- Không chia sẻ các file chứa thông tin cá nhân, token, cookies hoặc dữ liệu nghiệp vụ.
+- Luôn kiểm tra dữ liệu và danh sách xem trước trước khi xác nhận.
+- Nên sao lưu dữ liệu trước khi đổi tên, xóa hoặc ghi đè nhiều file.
+
+---
+
+## ⚠️ Một số lưu ý
+
+- Không đổi tên hoặc di chuyển riêng file EXE ra khỏi thư mục ứng dụng.
+- Khi chuyển ứng dụng sang máy khác, hãy sao chép toàn bộ thư mục đã giải nén.
+- Không tắt Microsoft Edge trong khi công cụ HPNet đang hoạt động.
+- Không thực hiện thao tác thật nếu chưa kiểm tra dữ liệu xem trước.
+- PDF Cleaner kiểm tra cấu trúc chữ ký trong file PDF, nhưng không thay thế việc kiểm tra giá trị pháp lý của chữ ký.
+
+---
+
+## 🆘 Khi gặp lỗi
+
+Bạn có thể thực hiện các bước sau:
+
+1. Đóng ứng dụng và mở lại.
+2. Kiểm tra kết nối Internet.
+3. Kiểm tra Microsoft Edge đã được cài đặt chưa.
+4. Đảm bảo đã giải nén đầy đủ file ZIP.
+5. Mở lại hướng dẫn sử dụng trong ứng dụng.
+6. Gửi thông tin lỗi kèm ảnh chụp màn hình tại mục [Issues](https://github.com/0xciye/hpnet-vbdlis-aio-tool/issues).
+
+Không gửi kèm mật khẩu, mã OTP, cookies hoặc dữ liệu cá nhân.
+
+---
+
+## 👨‍💻 Dành cho người phát triển
+
+Nếu bạn muốn chạy phần mềm từ source:
 
 ```powershell
 git clone https://github.com/0xciye/hpnet-vbdlis-aio-tool.git
 Set-Location hpnet-vbdlis-aio-tool
-```
-
-### 2. Tạo môi trường Python 3.14
-
-```powershell
-py -3.14 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install --upgrade pip
-.\.venv\Scripts\python.exe -m pip install -r docs\REQUIREMENTS_BUILD.txt
-```
-
-Dependencies chạy ứng dụng nằm trong `docs/REQUIREMENTS.txt`; dependencies kiểm thử và đóng gói nằm trong `docs/REQUIREMENTS_BUILD.txt`. `build_release.ps1` kiểm tra phiên bản và dừng ngay nếu `.venv` không dùng Python 3.14.
-
-### 3. Khôi phục runtime HPNet
-
-Repository không lưu Node.js/Playwright portable hoặc các EXE launcher đã biên dịch. Giải nén release sạch cùng phiên bản, sau đó chạy:
-
-```powershell
-.\tools\restore_runtime.ps1 -ReleaseFolder 'C:\Tools\HPNET & VBDLIS Tools'
-```
-
-Thay đường dẫn ví dụ bằng thư mục chứa `HPNET & VBDLIS Tools.exe` và `_internal`. Script chỉ khôi phục runtime cùng ba launcher HPNet; không sao chép cấu hình cá nhân, nhật ký hoặc phiên đăng nhập. File đã tồn tại nhưng khác nội dung sẽ không bị ghi đè.
-
-Runtime hiện tại sử dụng Node.js 24.19.0 và Playwright 1.62.1. Script hỗ trợ cả release mới dùng runtime chung và release cũ còn đặt một runtime trong từng công cụ.
-
-### 4. Chạy từ source
-
-```powershell
-$env:PYTHONPATH = Join-Path (Get-Location) 'src'
-.\.venv\Scripts\python.exe -X utf8 src\launcher.py
-```
-
-### 5. Chạy kiểm thử
-
-```powershell
-.\.venv\Scripts\python.exe -X utf8 run_tests.py
-```
-
-Các workbook tham chiếu riêng có thể được khai báo qua `NOTICE_REAL_WORKBOOK` và `VBDLIS_GOLDEN_WORKBOOK`. Không đưa dữ liệu nghiệp vụ thật vào repository.
-
-Bộ test ngoại tuyến không tải lên, tải xuống hoặc duyệt văn bản thật trên HPNet. Việc kiểm thử live phải được thực hiện riêng bằng tài khoản và dữ liệu thử có quyền phù hợp.
-
-## Build release Windows
-
-Sau khi cài dependencies và khôi phục runtime:
-
-```powershell
-.\build_release.ps1
-```
-
-Có thể đặt nhãn riêng cho lần build:
-
-```powershell
-.\build_release.ps1 -ReleaseId 2026.09.01
-```
-
-Quy trình build thực hiện tuần tự:
-
-1. Xác nhận `.venv` đang dùng Python 3.14.
-2. Biên dịch ba launcher HPNet dạng Windows GUI.
-3. Chạy toàn bộ test Python và kiểm tra ngoại tuyến.
-4. Đóng gói bằng PyInstaller.
-5. Chạy smoke test trên EXE đã đóng gói.
-6. Đối chiếu tài nguyên, Node workers, PowerShell self-test và icon EXE.
-7. Tạo ZIP và xác minh tên, số lượng, nội dung, hash của từng tệp.
-8. Chỉ thay ZIP công khai sau khi mọi kiểm tra đạt.
-9. Xóa các thư mục build/release staging cũ và sao chép bản mới nhất ra Desktop.
-
-Kết quả:
-
-```text
-release/
-└── HPNet VBDLIS AIO Tool.zip
-```
-
-ZIP chỉ chứa ứng dụng và tài nguyên cần chạy; không kèm source test, môi trường phát triển, cấu hình đã sử dụng hoặc phiên đăng nhập. Sau khi build thành công, script xóa toàn bộ thư mục staging cũ trong `build\` và `release\`, giữ một ZIP chuẩn tên `HPNet VBDLIS AIO Tool.zip` trong `release\` và sao chép đúng ZIP đó ra Desktop. Build thất bại không chạy bước publish/cleanup này.
-
-## Cập nhật tự động
-
-Mỗi commit được push vào `main` kích hoạt workflow `Build and publish Windows update`. GitHub chỉ phát hành bản cập nhật sau khi test, build, smoke test và kiểm tra ZIP đều đạt. Khi mở bản ứng dụng đã đóng gói, launcher kiểm tra GitHub Release ở chế độ nền; nếu có bản mới, người dùng có thể xác nhận tải và cài đặt. ZIP phải đi kèm file SHA-256 hợp lệ, nếu không bản hiện tại được giữ nguyên. Dữ liệu và cấu hình trong `%APPDATA%` không bị thay thế.
-
-Lần đầu tiên cần cài thủ công một release có updater. Từ release đó trở đi, ứng dụng tự nhận biết các release mới tạo từ `main`.
-
-Nếu phần mềm bảo mật cảnh báo nhầm PyInstaller hoặc Python chính thức, không nên tắt bảo vệ trên toàn máy. Hãy gửi yêu cầu false-positive, thêm đúng executable đã xác minh vào danh sách tin cậy hoặc build trên máy phát hành được quản lý riêng.
-
-## Checklist trước khi phát hành
-
-- Test suite hoàn tất không có lỗi.
-- Smoke test của EXE trả về `PASS`.
-- Ba Node worker qua `--check` và `--self-test`.
-- PowerShell self-test của PDF Downloader đạt.
-- ZIP giải nén được và không có entry trùng.
-- ZIP không chứa `du_lieu_dang_nhap_vneid`, cookies, cấu hình đã dùng, log, PDF tải về hoặc dữ liệu nghiệp vụ.
-- Thử mở launcher và chín trang công cụ trên máy Windows sạch.
-- Ghi nhận SHA-256 của ZIP trước khi tải lên GitHub Releases.
-
-## Cấu trúc repository
-
-```text
-src/
-  launcher.py                    # Điểm vào ứng dụng
-  launcher_ui/                   # Giao diện launcher và hướng dẫn
-  tools/                         # Bốn công cụ Python
-  nodes_tools/                   # Ba công cụ HPNet và runtime cục bộ
-  HPNET_VBDLIS_Tools.spec        # Cấu hình PyInstaller
-tests/                           # Kiểm thử tích hợp
-tools/                           # Build launcher và khôi phục runtime
-docs/                            # Dependencies, hướng dẫn và tài liệu kỹ thuật
-research/notice_template/        # Bằng chứng mẫu phục vụ regression test
-run_tests.py                     # Điểm chạy test thống nhất
-verify_release.py                # Kiểm tra thư mục/ZIP release
-build_release.ps1                # Quy trình build Windows
-```
-- SHA-256 của `HPNet VBDLIS AIO Tool.zip`.
-- Hướng dẫn sao lưu và nâng cấp cho người dùng hiện tại.
