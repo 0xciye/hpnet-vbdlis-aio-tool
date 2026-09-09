@@ -67,7 +67,7 @@ class ToolLauncher(QMainWindow):
         self.update_now_button = QPushButton("Cập nhật ngay")
         self.update_now_button.setObjectName("updateNow")
         self.update_now_button.setAccessibleName("Cập nhật ngay")
-        self.update_now_button.clicked.connect(self.check_for_updates)
+        self.update_now_button.clicked.connect(lambda: self.check_for_updates(manual=True))
         self.statusBar().addPermanentWidget(self.current_version_status)
         self.statusBar().addPermanentWidget(self.latest_version_status)
         self.statusBar().addPermanentWidget(self.update_now_button)
@@ -194,7 +194,8 @@ class ToolLauncher(QMainWindow):
     def open_help(self):
         self.launcher_view.show_help()
 
-    def check_for_updates(self):
+    def check_for_updates(self, manual=False):
+        self.manual_update_check = manual
         if self.update_worker is not None and self.update_worker.isRunning():
             return
         if not getattr(sys, "frozen", False):
@@ -217,11 +218,9 @@ class ToolLauncher(QMainWindow):
         if not release:
             self.update_now_button.setEnabled(True)
             self.statusBar().showMessage("Bạn đang sử dụng phiên bản mới nhất.", 5000)
-            QMessageBox.information(
-                self,
-                "Đã là phiên bản mới nhất",
-                f"Bạn đang sử dụng phiên bản mới nhất ({self.current_version}).",
-            )
+            if getattr(self, "manual_update_check", False):
+                QMessageBox.information(self, "Đã là phiên bản mới nhất",
+                    f"Bạn đang sử dụng phiên bản mới nhất ({self.current_version}).")
             return
         answer = QMessageBox.question(self, "Có phiên bản mới",
             f"Phiên bản {release['version']} đã sẵn sàng. Bạn có muốn tải xuống và cài đặt ngay không?",
@@ -300,7 +299,7 @@ def main():
         return 0 if report["status"] == "PASS" else 1
     else:
         window.show()
-        QTimer.singleShot(1500, window.check_for_updates)
+    QTimer.singleShot(1500, lambda: window.check_for_updates(manual=False))
     return app.exec()
 
 if __name__ == "__main__":
