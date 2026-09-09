@@ -8,7 +8,7 @@ from PySide6.QtCore import Qt, QTimer, QSettings
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (QApplication, QAbstractItemView, QFrame, QGridLayout, QHBoxLayout, QLabel,
     QMainWindow, QMessageBox, QProgressDialog, QPushButton, QScrollArea, QVBoxLayout, QWidget)
-from auto_update import build_info
+from auto_update import build_info, cleanup_legacy_previous_dirs
 
 EXTERNAL_TOOLS = {
     "downloader": ("Downloader/HPNet PDF Downloader - VNEID APP", "HPNet PDF Downloader.exe"),
@@ -46,6 +46,9 @@ class ToolLauncher(QMainWindow):
         self.update_worker = None
         self.latest_worker = None
         self.current_version = str(build_info().get("version", "development"))
+        # Remove only backup directories created by legacy updater versions.
+        # The current updater replaces the app in place and never creates them.
+        cleanup_legacy_previous_dirs()
         self.setup_ui()
         self.statusBar().showMessage("Chọn công cụ để bắt đầu. Việc mở công cụ không tự động tải lên, duyệt hoặc xóa dữ liệu.")
         self._setup_version_status()

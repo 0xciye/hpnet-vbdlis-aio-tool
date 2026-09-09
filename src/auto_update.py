@@ -45,6 +45,40 @@ def build_info():
         return {"version": "development", "commit": ""}
 
 
+def cleanup_legacy_previous_dirs(current=None):
+    """Remove backup folders left by updater versions before direct replacement.
+
+    Older releases moved the installation directory to either
+    ``<folder>.previous`` or ``<folder>.previous-<uuid>``. The current updater
+    no longer creates those folders, but they can remain after upgrading from
+    an older release. Cleanup is limited to sibling directories using those
+    exact legacy names and ignores failures so startup is never blocked.
+    """
+    if current is None:
+        if not getattr(sys, "frozen", False):
+            return []
+        current = Path(sys.executable).resolve().parent
+    current = Path(current).resolve()
+    parent = current.parent
+    removed = []
+    try:
+        candidates = list(parent.iterdir())
+    except OSError:
+        return removed
+    prefix = f"{current.name}.previous"
+    for candidate in candidates:
+        if candidate == current or not candidate.is_dir() or candidate.is_symlink():
+            continue
+        if candidate.name != prefix and not re.fullmatch(re.escape(prefix) + r"-[0-9a-f]{32}", candidate.name, re.IGNORECASE):
+            continue
+        try:
+            shutil.rmtree(candidate)
+            removed.append(candidate)
+        except OSError:
+            continue
+    return removed
+
+
 def parse_release(payload, current_version):
     tag = str(payload.get("tag_name", "")).strip()
     remote = _semantic_version(tag)
