@@ -24,7 +24,7 @@ MAX_EXTRACTED_BYTES = 2_000_000_000
 
 
 def _semantic_version(value):
-    match = re.fullmatch(r"v(\d+)\.(\d+)\.(\d+)", str(value).strip())
+    match = re.fullmatch(r"v?(\d+)\.(\d+)\.(\d+)", str(value).strip(), re.IGNORECASE)
     return tuple(map(int, match.groups())) if match else None
 
 
