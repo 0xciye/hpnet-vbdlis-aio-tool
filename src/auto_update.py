@@ -7,7 +7,6 @@ import shutil
 import subprocess
 import sys
 import tempfile
-import uuid
 from pathlib import Path, PurePosixPath
 from urllib.request import Request, urlopen
 from zipfile import ZipFile
@@ -155,14 +154,13 @@ def launch_installer(new_app):
     parent = current.parent
     if current == parent or not (current / EXE_NAME).is_file() or not (current / "_internal").is_dir():
         raise RuntimeError("Thư mục ứng dụng thiếu file cần thiết. Hãy giải nén đầy đủ bản tải xuống rồi thử lại.")
-    previous = parent / f"{current.name}.previous-{uuid.uuid4().hex}"
     probe = parent / f".hpnet-update-write-test-{os.getpid()}"
     probe.write_text("ok", encoding="ascii")
     probe.unlink()
     script_fd, script_name = tempfile.mkstemp(prefix="hpnet-vbdlis-installer-", suffix=".ps1")
     os.close(script_fd)
     script_path = Path(script_name)
-    script_path.write_text(r'''param([int]$AppPid,[string]$Current,[string]$NewApp,[string]$Exe,[string]$Previous)
+    script_path.write_text(r'''param([int]$AppPid,[string]$Current,[string]$NewApp,[string]$Exe)
 $ErrorActionPreference = 'Stop'
 $parent = Split-Path -Parent $Current
 $log = Join-Path $env:TEMP 'hpnet-vbdlis-update.log'
@@ -188,27 +186,21 @@ function Copy-UserState([string]$OldApp) {
         }
     }
 }
-if ((Split-Path -Parent $previous) -ne $parent) { throw 'Unsafe update path.' }
 Write-UpdateLog "installer started pid=$AppPid current=$Current new=$NewApp"
 Wait-Process -Id $AppPid -ErrorAction SilentlyContinue
 Start-Sleep -Milliseconds 1200
 Copy-UserState $Current
 for ($attempt = 1; $attempt -le 20; $attempt++) {
-    $movedCurrent = $false
     try {
-        if (Test-Path -LiteralPath $previous) { throw 'Backup path already exists.' }
-        Move-Item -LiteralPath $Current -Destination $previous
-        $movedCurrent = $true
+        # Thay trực tiếp thư mục cài đặt; không tạo bản sao .previous.
+        if (Test-Path -LiteralPath $Current) { Remove-Item -LiteralPath $Current -Recurse -Force }
+        if (-not (Test-Path -LiteralPath $NewApp)) { throw 'Không còn thư mục cập nhật tạm.' }
         Move-Item -LiteralPath $NewApp -Destination $Current
         Write-UpdateLog "install succeeded attempt=$attempt"
         Start-Process -FilePath (Join-Path $Current $Exe) -WorkingDirectory $Current -WindowStyle Hidden
         exit 0
     } catch {
         Write-UpdateLog "attempt=$attempt error=$($_.Exception.Message)"
-        if ($movedCurrent -and (Test-Path -LiteralPath $Current)) { Remove-Item -LiteralPath $Current -Recurse -Force -ErrorAction SilentlyContinue }
-        if ($movedCurrent -and (Test-Path -LiteralPath $previous) -and -not (Test-Path -LiteralPath $Current)) {
-            Move-Item -LiteralPath $previous -Destination $Current -Force -ErrorAction SilentlyContinue
-        }
         Start-Sleep -Milliseconds 750
     }
 }
@@ -218,5 +210,5 @@ throw 'Không thể thay thế bản cài đặt sau 20 lần thử.'
     subprocess.Popen([
         "powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden",
         "-File", str(script_path), "-AppPid", str(os.getpid()), "-Current", str(current),
-        "-NewApp", str(new_app), "-Exe", EXE_NAME, "-Previous", str(previous),
+        "-NewApp", str(new_app), "-Exe", EXE_NAME,
     ], cwd=str(parent), creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))

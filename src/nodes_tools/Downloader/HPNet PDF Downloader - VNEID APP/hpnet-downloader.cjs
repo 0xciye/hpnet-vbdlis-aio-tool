@@ -963,7 +963,9 @@ async function main({ configPath = process.argv[2], chromium: suppliedChromium }
     log(`Có ${uniqueEntries.length} văn bản khớp bộ lọc.`);
     if (filters.notificationEnabled && notFoundNumbers.length) log(`[KHÔNG TÌM THẤY SAU KHI ÁP DỤNG TOÀN BỘ BỘ LỌC] ${notFoundNumbers.join(", ")}`);
 
-    const seenUrls = new Set();
+    // Một URL có thể được HPNet dùng cho nhiều văn bản. Không bỏ qua dòng
+    // tiếp theo: dùng lại bản PDF đã lưu để mọi văn bản đều có kết quả đối soát.
+    const cachedFilesByUrl = new Map();
     let downloaded = 0;
     let existed = 0;
     let badFormat = 0;
@@ -1039,35 +1041,37 @@ async function main({ configPath = process.argv[2], chromium: suppliedChromium }
           continue;
         }
 
-        if (validCandidates.every((candidate) => seenUrls.has(candidate.url))) sharedFiles += 1;
+        if (validCandidates.every((candidate) => cachedFilesByUrl.has(candidate.url))) sharedFiles += 1;
 
         for (const candidate of validCandidates) {
           const safeName = candidate.nameMatch.safeName;
           const activeOutputDir = await fileOutputDir(safeName);
           const destination = safeOutputPath(activeOutputDir, safeName);
-          if (seenUrls.has(candidate.url)) {
-            addResult([notificationNumber ?? "", label, entry.pageNumber, safeName, "", "BỎ QUA TRÙNG", "Cùng liên kết đã được tải hoặc kiểm tra nội dung thành công trong lần chạy này"]);
-            if (notificationNumber !== null) existingNumbers.add(notificationNumber);
-            continue;
-          }
           if (fileNamePolicy.mode === "legacy" && !fileNamePolicy.strictPattern.test(candidate.name)) log(`[NGOẠI LỆ THIẾU MÃ XÃ] ${safeName}: chấp nhận và giữ nguyên tên.`);
           try {
-          const buffer = await withRetry(
-            async () => {
-              const fileResponse = await context.request.get(candidate.url, { timeout: 120000, maxRedirects: 0 });
-              if (!fileResponse.ok()) throw new Error(`HTTP ${fileResponse.status()} khi tải ${safeName}.`);
-              if (!isHpnetUrl(fileResponse.url())) throw new Error(`${safeName} chuyển hướng ra ngoài máy chủ HPNet.`);
-              const declaredSize = Number(fileResponse.headers()["content-length"] || 0);
-              if (declaredSize > MAX_PDF_BYTES) throw new Error(`${safeName} vượt giới hạn 200 MB.`);
-              const body = await fileResponse.body();
-              if (body.length > MAX_PDF_BYTES) throw new Error(`${safeName} vượt giới hạn 200 MB.`);
-              if (body.length < 5 || body.subarray(0, 5).toString("ascii") !== "%PDF-") {
-                throw new Error(`${safeName} không phải dữ liệu PDF hợp lệ.`);
-              }
-              return body;
-            },
-            { onRetry: (attempt, error) => log(`[THỬ LẠI FILE] ${label} / ${safeName}, lần ${attempt}: ${error.message}`) },
-          );
+          let buffer;
+          const cached = cachedFilesByUrl.get(candidate.url);
+          if (cached && fs.existsSync(cached.path)) {
+            buffer = await fsp.readFile(cached.path);
+            log(`[DÙNG LẠI FILE DÙNG CHUNG] ${notificationNumber ?? "?"}: ${safeName} từ ${cached.path}`);
+          } else {
+            buffer = await withRetry(
+              async () => {
+                const fileResponse = await context.request.get(candidate.url, { timeout: 120000, maxRedirects: 0 });
+                if (!fileResponse.ok()) throw new Error(`HTTP ${fileResponse.status()} khi tải ${safeName}.`);
+                if (!isHpnetUrl(fileResponse.url())) throw new Error(`${safeName} chuyển hướng ra ngoài máy chủ HPNet.`);
+                const declaredSize = Number(fileResponse.headers()["content-length"] || 0);
+                if (declaredSize > MAX_PDF_BYTES) throw new Error(`${safeName} vượt giới hạn 200 MB.`);
+                const body = await fileResponse.body();
+                if (body.length > MAX_PDF_BYTES) throw new Error(`${safeName} vượt giới hạn 200 MB.`);
+                if (body.length < 5 || body.subarray(0, 5).toString("ascii") !== "%PDF-") {
+                  throw new Error(`${safeName} không phải dữ liệu PDF hợp lệ.`);
+                }
+                return body;
+              },
+              { onRetry: (attempt, error) => log(`[THỬ LẠI FILE] ${label} / ${safeName}, lần ${attempt}: ${error.message}`) },
+            );
+          }
 
           if (fs.existsSync(destination)) {
             const existing = await fsp.readFile(destination);
@@ -1076,7 +1080,7 @@ async function main({ configPath = process.argv[2], chromium: suppliedChromium }
               if (notificationNumber !== null) existingNumbers.add(notificationNumber);
             log(`[ĐÃ CÓ] ${notificationNumber ?? "?"}: ${safeName} -> ${destination}`);
               addResult([notificationNumber ?? "", label, entry.pageNumber, safeName, destination, "ĐÃ CÓ", "File hiện có giống hệt nội dung trên HPNet"]);
-              seenUrls.add(candidate.url);
+              cachedFilesByUrl.set(candidate.url, { path: destination });
               continue;
             }
             let collisionDir = activeOutputDir;
@@ -1103,14 +1107,15 @@ async function main({ configPath = process.argv[2], chromium: suppliedChromium }
               if (notificationNumber !== null) existingNumbers.add(notificationNumber);
               log(`[ĐÃ CÓ TRONG THƯ MỤC TRÙNG] ${collision.duplicateName}`);
               addResult([notificationNumber ?? "", label, entry.pageNumber, collision.duplicateName, collision.destination, "ĐÃ CÓ", "File trùng tên và nội dung đã có trong thư mục Trùng"]);
+              cachedFilesByUrl.set(candidate.url, { path: collision.destination });
             } else {
               renamedDuplicates += 1;
               downloaded += 1;
               if (notificationNumber !== null) downloadedNumbers.add(notificationNumber);
               log(`[ĐÃ LƯU FILE TRÙNG TÊN] ${safeName} -> Trùng\\${collision.duplicateName}`);
               addResult([notificationNumber ?? "", label, entry.pageNumber, collision.duplicateName, collision.destination, "ĐÃ LƯU TRÙNG TÊN", `Tên gốc: ${safeName}; tự thêm hậu tố _${collision.index}`]);
+              cachedFilesByUrl.set(candidate.url, { path: collision.destination });
             }
-            seenUrls.add(candidate.url);
             continue;
           }
 
@@ -1119,7 +1124,7 @@ async function main({ configPath = process.argv[2], chromium: suppliedChromium }
           if (notificationNumber !== null) downloadedNumbers.add(notificationNumber);
           log(`[ĐÃ TẢI] ${notificationNumber ?? "?"}: ${safeName} -> ${destination}`);
           addResult([notificationNumber ?? "", label, entry.pageNumber, safeName, destination, "ĐÃ TẢI", ""]);
-          seenUrls.add(candidate.url);
+          cachedFilesByUrl.set(candidate.url, { path: destination });
           } catch (error) {
             errors += 1;
             if (notificationNumber !== null) errorNumbers.add(notificationNumber);

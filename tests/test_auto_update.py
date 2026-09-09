@@ -73,8 +73,8 @@ def test_download_verifies_checksum_and_returns_extracted_app(tmp_path, monkeypa
     assert (app / EXE_NAME).read_bytes() == b"exe"
 
 
-@pytest.mark.parametrize("folder", [APP_FOLDER, "HPNet máy mới", "HPNET & VBDLIS Tools.previous"])
-def test_installer_replaces_app_and_keeps_previous_copy(tmp_path, monkeypatch, folder):
+@pytest.mark.parametrize("folder", [APP_FOLDER, "HPNet máy mới"])
+def test_installer_replaces_app_without_previous_copy(tmp_path, monkeypatch, folder):
     current = tmp_path / "install" / folder
     new_app = tmp_path / "download" / APP_FOLDER
     current.mkdir(parents=True); new_app.mkdir(parents=True)
@@ -101,13 +101,11 @@ def test_installer_replaces_app_and_keeps_previous_copy(tmp_path, monkeypatch, f
     assert "Stop-ProcessesInApp" not in installer
     assert "Stop-Process" not in installer
     assert "Copy-UserState $Current" in installer
-    assert "if ($movedCurrent -and (Test-Path -LiteralPath $Current))" in installer
+    assert "-Previous" not in args
+    assert "$Previous" not in installer
     args[args.index("-AppPid") + 1] = "2147483647"
     environment = {**os.environ, "LOCALAPPDATA": str(tmp_path / "state")}
     subprocess.run(args, check=True, env=environment)
     assert (current / "marker.txt").read_text(encoding="ascii") == "new"
-    previous = Path(args[args.index("-Previous") + 1])
-    assert previous.parent == current.parent
-    assert previous != current
-    assert (previous / "marker.txt").read_text(encoding="ascii") == "old"
+    assert not list(current.parent.glob(f"{current.name}.previous-*"))
     assert (tmp_path / "state/HPNet VBDLIS AIO Tool/Upload/cau_hinh.json").is_file()
