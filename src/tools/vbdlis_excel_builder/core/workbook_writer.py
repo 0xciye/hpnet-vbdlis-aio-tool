@@ -15,6 +15,8 @@ from .template_schema_reader import TemplateSchemaReader
 
 
 TEXT_COLUMNS = {"A", "B", "C", "H", "I", "J", "K", "L", "M", "N", "T", "U", "X", "AX", "AY", "AZ", "BA", "BB"}
+MIN_COLUMN_WIDTH = 12
+MAX_COLUMN_WIDTH = 80
 
 
 def _sha256(path: Path) -> str:
@@ -43,6 +45,32 @@ class WorkbookWriter:
                 target.number_format = source.number_format
             target.protection = copy(source.protection)
             target.alignment = copy(source.alignment)
+
+    @staticmethod
+    def _fit_column_widths(ws, schemas: list[FieldSchema], first_data_row: int, last_data_row: int) -> None:
+        """Make exported columns readable without changing the template workbook.
+
+        The official template uses narrow widths intended for data entry.  That
+        leaves values such as addresses, file names and land-use descriptions
+        clipped in the generated workbook.  Measure both headers and output
+        values, retain a sensible upper bound, and let Excel show the complete
+        value in the formula bar when a value is exceptionally long.
+        """
+        for schema in schemas:
+            column = schema.column
+            max_length = 0
+            for row in range(1, last_data_row + 1):
+                value = ws[f"{column}{row}"].value
+                if value in (None, ""):
+                    continue
+                lines = str(value).splitlines() or [""]
+                max_length = max(max_length, max(len(line) for line in lines))
+            # A small amount of padding prevents the final character touching
+            # the cell border.  Never shrink a deliberately wider template
+            # column.
+            width = min(MAX_COLUMN_WIDTH, max(MIN_COLUMN_WIDTH, max_length + 2))
+            current = ws.column_dimensions[column].width or 0
+            ws.column_dimensions[column].width = max(current, width)
 
     def write(
         self,
@@ -80,6 +108,7 @@ class WorkbookWriter:
                 if ws.title != main_ws.title:
                     workbook.remove(ws)
 
+        self._fit_column_widths(main_ws, schemas, item_row + 1, item_row + len(rows))
         workbook.save(output_path)
         workbook.close()
         if _sha256(self.template_path) != template_hash_before:

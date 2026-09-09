@@ -901,8 +901,9 @@ async function main({ configPath = process.argv[2], chromium: suppliedChromium }
     headless: false,
     acceptDownloads: true,
     viewport: null,
-    args: ["--start-maximized"],
+    args: ["--start-maximized", "--disable-background-mode"],
   });
+  log("Microsoft Edge đã sẵn sàng.");
 
   let page = context.pages()[0] || await context.newPage();
     log("Mở HPNet...");

@@ -181,7 +181,7 @@ def download_update(release):
         raise
 
 
-def launch_installer(new_app):
+def launch_installer(new_app, expected_version=None):
     if not getattr(sys, "frozen", False):
         raise RuntimeError("Chỉ cập nhật tự động trên bản ứng dụng đã đóng gói.")
     current = Path(sys.executable).resolve().parent
@@ -194,7 +194,7 @@ def launch_installer(new_app):
     script_fd, script_name = tempfile.mkstemp(prefix="hpnet-vbdlis-installer-", suffix=".ps1")
     os.close(script_fd)
     script_path = Path(script_name)
-    script_path.write_text(r'''param([int]$AppPid,[string]$Current,[string]$NewApp,[string]$Exe)
+    script_path.write_text(r'''param([int]$AppPid,[string]$Current,[string]$NewApp,[string]$Exe,[string]$Version)
 $ErrorActionPreference = 'Stop'
 $parent = Split-Path -Parent $Current
 $log = Join-Path $env:TEMP 'hpnet-vbdlis-update.log'
@@ -223,14 +223,47 @@ function Copy-UserState([string]$OldApp) {
 Write-UpdateLog "installer started pid=$AppPid current=$Current new=$NewApp"
 Wait-Process -Id $AppPid -ErrorAction SilentlyContinue
 Start-Sleep -Milliseconds 1200
+function Stop-AppProcesses([string]$Root,[int]$KeepPid) {
+    # Các công cụ HPNet chạy Node.js nằm trong _internal. Windows sẽ khóa
+    # node.exe nếu còn tiến trình con, khiến việc thay thư mục cài đặt thất bại.
+    $rootFull = [IO.Path]::GetFullPath($Root).TrimEnd('\') + '\'
+    for ($round = 1; $round -le 10; $round++) {
+        $stopped = 0
+        try {
+            $processes = @(Get-CimInstance Win32_Process -ErrorAction Stop)
+        } catch {
+            Write-UpdateLog "cannot enumerate app processes: $($_.Exception.Message)"
+            $processes = @()
+        }
+        foreach ($item in $processes) {
+            if ([int]$item.ProcessId -eq $KeepPid) { continue }
+            $path = [string]$item.ExecutablePath
+            if (-not $path -or -not $path.StartsWith($rootFull, [StringComparison]::OrdinalIgnoreCase)) { continue }
+            try {
+                Stop-Process -Id ([int]$item.ProcessId) -Force -ErrorAction Stop
+                $stopped++
+                Write-UpdateLog "stopped app process pid=$($item.ProcessId) path=$path"
+            } catch {
+                Write-UpdateLog "cannot stop app process pid=$($item.ProcessId): $($_.Exception.Message)"
+            }
+        }
+        if ($stopped -eq 0) { break }
+        Start-Sleep -Milliseconds 300
+    }
+}
+Stop-AppProcesses $Current $AppPid
 Copy-UserState $Current
 for ($attempt = 1; $attempt -le 20; $attempt++) {
     try {
+        $metadataPath = Join-Path $NewApp '_internal\build_info.json'
+        if (-not (Test-Path -LiteralPath $metadataPath)) { throw 'Bản cập nhật thiếu thông tin phiên bản.' }
+        $metadata = Get-Content -LiteralPath $metadataPath -Raw -Encoding utf8 | ConvertFrom-Json
+        if ($Version -and [string]$metadata.version -ne $Version) { throw "Bản cập nhật không đúng phiên bản yêu cầu: $($metadata.version)." }
         # Thay trực tiếp thư mục cài đặt; không tạo bản sao .previous.
         if (Test-Path -LiteralPath $Current) { Remove-Item -LiteralPath $Current -Recurse -Force }
         if (-not (Test-Path -LiteralPath $NewApp)) { throw 'Không còn thư mục cập nhật tạm.' }
         Move-Item -LiteralPath $NewApp -Destination $Current
-        Write-UpdateLog "install succeeded attempt=$attempt"
+        Write-UpdateLog "install succeeded attempt=$attempt version=$($metadata.version)"
         Start-Process -FilePath (Join-Path $Current $Exe) -WorkingDirectory $Current -WindowStyle Hidden
         exit 0
     } catch {
@@ -244,5 +277,5 @@ throw 'Không thể thay thế bản cài đặt sau 20 lần thử.'
     subprocess.Popen([
         "powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden",
         "-File", str(script_path), "-AppPid", str(os.getpid()), "-Current", str(current),
-        "-NewApp", str(new_app), "-Exe", EXE_NAME,
+        "-NewApp", str(new_app), "-Exe", EXE_NAME, "-Version", str(expected_version or ""),
     ], cwd=str(parent), creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))

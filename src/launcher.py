@@ -111,6 +111,15 @@ class ToolLauncher(QMainWindow):
 
     def _open_python(self, key, factory):
         window = self.tool_windows.get(key)
+        if window is not None:
+            try:
+                # A window closed just before the next click can still be present
+                # in the map until Qt delivers destroyed(); discard that pointer.
+                window.windowTitle()
+            except RuntimeError:
+                self.tool_windows.pop(key, None)
+                self.open_tools = [item for item in self.open_tools if item is not window]
+                window = None
         if window is None:
             window = factory()
             window.setAttribute(Qt.WA_DeleteOnClose, True)
@@ -261,6 +270,7 @@ class ToolLauncher(QMainWindow):
             return
         from auto_update import download_update
         from tools.qt_worker import Worker
+        self.pending_update_version = release.get("version", "")
         self.statusBar().showMessage("Đang tải xuống và kiểm tra bản cập nhật…")
         self.update_progress = QProgressDialog("Đang tải bản cập nhật…", "", 0, 0, self)
         self.update_progress.setWindowTitle("Đang cập nhật")
@@ -289,7 +299,7 @@ class ToolLauncher(QMainWindow):
             from auto_update import launch_installer
             for tool in list(self.open_tools):
                 tool.close()
-            launch_installer(new_app)
+            launch_installer(new_app, getattr(self, "pending_update_version", None))
         except Exception as error:
             if getattr(self, "update_progress", None):
                 self.update_progress.close()

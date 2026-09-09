@@ -11,6 +11,29 @@ $profilesPath = Join-Path $toolRoot 'profiles.json'
 $scanPath = Join-Path $toolRoot 'ket_qua_quet_moi_nhat.json'
 $defaultTitle = 'Bản nháp Thông báo xác nhận'
 
+function Read-ApprovalOutput($Process, [scriptblock]$OnLine) {
+    # Đọc cả stdout/stderr trên luồng giao diện; callback sự kiện .NET chạy ngoài
+    # runspace PowerShell nên có thể làm cửa sổ tự đóng khi Edge vừa khởi động.
+    $readers = @($Process.StandardOutput, $Process.StandardError)
+    $tasks = @($readers[0].ReadLineAsync(), $readers[1].ReadLineAsync())
+    while ($null -ne $tasks[0] -or $null -ne $tasks[1]) {
+        for ($i = 0; $i -lt 2; $i++) {
+            if ($null -ne $tasks[$i] -and $tasks[$i].IsCompleted) {
+                $line = $tasks[$i].GetAwaiter().GetResult()
+                if ($null -eq $line) { $tasks[$i] = $null }
+                else {
+                    if ($i -eq 1) { $line = "[LỖI] $line" }
+                    & $OnLine $line
+                    $tasks[$i] = $readers[$i].ReadLineAsync()
+                }
+            }
+        }
+        [Windows.Forms.Application]::DoEvents()
+        Start-Sleep -Milliseconds 10
+    }
+    $Process.WaitForExit()
+}
+
 function Find-HPNetRuntime {
     param([switch]$SkipBrowserCheck)
     # Runtime dùng chung tại nodes_tools/runtime/ — duy nhất, không fallback vào runtime riêng từng tool.
@@ -502,19 +525,14 @@ function Invoke-HPNetTool([string]$mode) {
         $process.Start() | Out-Null
         $script:activeProcess = $process
         $script:liveOutput = New-Object System.Collections.Concurrent.ConcurrentQueue[string]
-        $process.add_OutputDataReceived({ param($sender, $event); if ($null -ne $event.Data) { [void]$script:liveOutput.Enqueue($event.Data) } })
-        $process.add_ErrorDataReceived({ param($sender, $event); if ($null -ne $event.Data) { [void]$script:liveOutput.Enqueue("[LỖI] $($event.Data)") } })
-        $process.BeginOutputReadLine()
-        $process.BeginErrorReadLine()
-        while (-not $process.HasExited) {
-            [System.Windows.Forms.Application]::DoEvents()
+        Read-ApprovalOutput $process {
+            param($line)
+            [void]$script:liveOutput.Enqueue($line)
             $statusBox.Lines = @($script:liveOutput.ToArray())
-            foreach ($line in @($script:liveOutput.ToArray())) { Update-HPNetProgressFromLine $progressBar $progressLabel $line }
+            Update-HPNetProgressFromLine $progressBar $progressLabel $line
             $statusBox.SelectionStart = $statusBox.TextLength
             $statusBox.ScrollToCaret()
-            Start-Sleep -Milliseconds 150
         }
-        $process.WaitForExit()
         $statusText = (@($script:liveOutput.ToArray()) -join [Environment]::NewLine).Trim()
         if ($script:stopRequested) {
             Set-HPNetProgressStopped $progressBar $progressLabel 'Đã dừng theo yêu cầu'

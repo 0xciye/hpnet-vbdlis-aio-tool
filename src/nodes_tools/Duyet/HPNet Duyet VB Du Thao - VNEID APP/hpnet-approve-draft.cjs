@@ -321,13 +321,15 @@ async function main() {
   if (!modulesRoot || !edgeExe) throw new Error("Không xác định được bộ chạy trình duyệt.");
   const { chromium } = require(path.join(modulesRoot, "playwright"));
   const profileDir = path.join(toolRoot, "du_lieu_dang_nhap_vneid");
+  log("Đang mở Microsoft Edge...");
   const context = await chromium.launchPersistentContext(profileDir, {
     executablePath: edgeExe,
     headless: false,
     acceptDownloads: false,
     viewport: null,
-    args: ["--start-maximized"],
+    args: ["--start-maximized", "--disable-background-mode"],
   });
+  log("Microsoft Edge đã sẵn sàng.");
 
   let page = context.pages()[0] || await context.newPage();
   let fatalError = null;

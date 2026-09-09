@@ -89,12 +89,21 @@ class SettingsPage(QWidget):
 
         # THÔNG TIN ĐỊA PHƯƠNG
         main_form.addWidget(_section_label("THÔNG TIN ĐỊA PHƯƠNG"))
+        custom_hint = QLabel(
+            "Bạn có thể nhập giá trị riêng trực tiếp vào các ô dưới đây. "
+            "Giá trị này sẽ được dùng cho toàn bộ dòng trong file Excel kết quả."
+        )
+        custom_hint.setWordWrap(True)
+        custom_hint.setProperty("info", True)
+        main_form.addWidget(custom_hint)
         self.commune_code = QLineEdit()
         self.commune_code.setPlaceholderText("VD: 00481")
         self.address = QLineEdit()
         self.address.setPlaceholderText("Địa chỉ dùng khi thiếu xứ đồng")
         self.prefix = QLineEdit("CHUACOGIAY")
         self.entity_type = QLineEdit("Hộ gia đình")
+        self.entity_type.setPlaceholderText("Ví dụ: Hộ gia đình, Cá nhân, Tổ chức…")
+        self.entity_type.setToolTip("Ô nhập tự do: có thể thay bằng loại chủ thể riêng của hồ sơ.")
 
         form1 = QFormLayout()
         form1.setVerticalSpacing(8)
@@ -112,6 +121,11 @@ class SettingsPage(QWidget):
         self.owner_value = QLineEdit("Chủ hộ")
         self.member_value = QLineEdit("Thành viên hộ gia đình")
         self.document_type = QLineEdit("Loại 5")
+        self.owner_value.setPlaceholderText("Ví dụ: Chủ hộ")
+        self.member_value.setPlaceholderText("Ví dụ: Thành viên hộ gia đình")
+        self.document_type.setPlaceholderText("Ví dụ: Loại 5")
+        for editor in (self.owner_value, self.member_value, self.document_type):
+            editor.setToolTip("Ô nhập tự do: nhập đúng cách gọi mà đơn vị bạn đang sử dụng.")
         self.item2 = QLineEdit()
         self.item2.setPlaceholderText("{PREFIX}_{MA_XA}_{SO_TO}_{SO_THUA}")
         self.item49 = QLineEdit()

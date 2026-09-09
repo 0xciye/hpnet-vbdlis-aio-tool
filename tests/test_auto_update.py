@@ -80,6 +80,11 @@ def test_installer_replaces_app_without_previous_copy(tmp_path, monkeypatch, fol
     current.mkdir(parents=True); new_app.mkdir(parents=True)
     shutil.copy2(os.environ["COMSPEC"], current / EXE_NAME)
     shutil.copy2(os.environ["COMSPEC"], new_app / EXE_NAME)
+    (new_app / "_internal").mkdir()
+    (new_app / "_internal/build_info.json").write_text(
+        '{"version":"v1.0.1","repository":"0xciye/hpnet-vbdlis-aio-tool"}',
+        encoding="utf-8",
+    )
     (current / "marker.txt").write_text("old", encoding="ascii")
     (new_app / "marker.txt").write_text("new", encoding="ascii")
     legacy = current / "_internal/nodes_tools/Upload/HPNet Upload VB Du Thao - VNEID APP"
@@ -93,16 +98,19 @@ def test_installer_replaces_app_without_previous_copy(tmp_path, monkeypatch, fol
     monkeypatch.setattr(auto_update.sys, "frozen", True, raising=False)
     monkeypatch.setattr(auto_update.sys, "executable", str(current / EXE_NAME))
     monkeypatch.setattr(auto_update, "subprocess", fake_subprocess)
-    auto_update.launch_installer(new_app)
+    auto_update.launch_installer(new_app, "v1.0.1")
 
     args = captured["args"]
     assert captured["kwargs"]["cwd"] == str(current.parent)
     installer = open(args[args.index("-File") + 1], encoding="utf-8-sig").read()
-    assert "Stop-ProcessesInApp" not in installer
-    assert "Stop-Process" not in installer
+    assert "function Stop-AppProcesses" in installer
+    assert "Stop-Process -Id" in installer
+    assert "Stop-AppProcesses $Current $AppPid" in installer
     assert "Copy-UserState $Current" in installer
     assert "-Previous" not in args
     assert "$Previous" not in installer
+    assert args[args.index("-Version") + 1] == "v1.0.1"
+    assert "build_info.json" in installer and "không đúng phiên bản yêu cầu" in installer
     args[args.index("-AppPid") + 1] = "2147483647"
     environment = {**os.environ, "LOCALAPPDATA": str(tmp_path / "state")}
     subprocess.run(args, check=True, env=environment)

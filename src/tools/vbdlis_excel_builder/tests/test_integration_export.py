@@ -61,11 +61,14 @@ class IntegrationExportTests(unittest.TestCase):
             self.assertTrue(output.exists())
             self.assertIsNotNone(report)
             self.assertTrue(report.exists())
-            produced = load_workbook(output, read_only=True)
+            produced = load_workbook(output, read_only=False)
             self.assertEqual([produced.active[f"K{row}"].value for row in range(5, 9)],
                              ["Nam", "Nữ", "Nam", "Nữ"])
             self.assertEqual([produced.active[f"H{row}"].value for row in range(5, 9)],
                              ["NGUYỄN VĂN A", "TRẦN THỊ B", "NGUYỄN VĂN A", "TRẦN THỊ B"])
+            # Long VBDLIS values (especially Mục 49 file names) must remain
+            # readable when the generated workbook is opened.
+            self.assertGreaterEqual(produced.active.column_dimensions["AX"].width, 60)
             produced.close()
             report_wb = load_workbook(report, read_only=True)
             self.assertEqual(report_wb.sheetnames, ["Tong_quan", "Theo_ho", "Canh_bao", "GCN", "Mapping"])

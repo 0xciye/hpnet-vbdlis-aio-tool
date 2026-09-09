@@ -124,6 +124,20 @@ def test_opening_twice_reuses_window_and_preserves_unsaved_fields(hub):
     assert first.settings_page.commune_code.text() == "10930"
 
 
+def test_reopen_after_qt_window_was_destroyed_creates_a_fresh_window(hub):
+    class ClosedWindow:
+        def windowTitle(self):
+            raise RuntimeError("wrapped C/C++ object has been deleted")
+
+    closed = ClosedWindow()
+    hub.tool_windows["notice"] = closed
+    hub.open_tools.append(closed)
+    hub._open_python("notice", lambda: __import__("tools.notice_builder.ui", fromlist=["MainWindow"]).MainWindow())
+    assert hub.tool_windows["notice"] is not closed
+    assert closed not in hub.open_tools
+    hub.tool_windows["notice"].close()
+
+
 def test_search_muc29_does_not_change_hidden_rules_and_fixed_value_is_saved(hub, app):
     hub.launch_excel_builder()
     page = hub.tool_windows["excel"].advanced_page
