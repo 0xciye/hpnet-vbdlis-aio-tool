@@ -478,7 +478,9 @@ def test_ui_standalone_and_config_restore(app,tmp_path,monkeypatch,config):
     assert not errors and restored.job is None and restored.steps.currentRow()==2
     assert restored.mapping["area"].currentData()=="M"
     assert "SU_DUNG_CHUNG" not in restored.template_inputs
-    assert restored.template_inputs["NGUOI_KY"].text()=="NGƯỜI KÝ THỬ"
+    assert restored.template_inputs["NGUOI_KY"].isHidden()
+    assert not restored.empty_location.isHidden()
+    assert restored.optional_empty.isHidden()
     assert restored.optional_empty.currentData()=="dots"
     assert restored.inputs["commune_code"].text()=="12345" and not restored.confirm_button.isEnabled()
     restored.close(); app.processEvents()
@@ -699,7 +701,7 @@ def test_config_requires_explicit_common_inputs(config,token):
     with pytest.raises(UserError,match="Cần nhập"): replace(config,template_fields=values).validate()
 
 
-@pytest.mark.parametrize("mode,expected",[("blank",""),("dots","....")])
+@pytest.mark.parametrize("mode,expected",[("blank","..."),("dots","...")])
 def test_optional_slots_and_editable_common_fields(tmp_path,service,config,mode,expected):
     row=workbook(tmp_path/"src.xlsx",[("HỘ A",1,1,100,None)]).records[0]
     fields={**config.template_fields,"NGUOI_KY":"NGƯỜI KÝ THỬ"}
@@ -708,7 +710,7 @@ def test_optional_slots_and_editable_common_fields(tmp_path,service,config,mode,
     assert all(values[k]==expected for k in OPTIONAL_COMMON)
     assert values["DIEN_TICH"]==values["SU_DUNG_CHUNG"]=="100"
     text=all_text(service.template.render(values))
-    assert "NGƯỜI KÝ THỬ" in text and "{{" not in text
+    assert "Nguyễn Khắc Nghĩa" in text and "NGƯỜI KÝ THỬ" not in text and "{{" not in text
 
 
 def test_shared_area_is_always_derived_from_parcel_area(tmp_path,service,config):
@@ -835,9 +837,8 @@ def test_required_fields_are_isolated_per_template(config):
     cam=next(item for item in template_configs() if item.id=="CAM_GIANG")
     assert "NGAY_SINH" not in mao.required_fields and "NGAY_SINH" in cam.required_fields
     no_tax={**config.template_fields,"CO_QUAN_THUE":""}
-    with pytest.raises(UserError,match="Cơ quan thuế"):
-        replace(config,template_fields=no_tax).validate(
-            key for key in mao.user_fields if key in mao.required_fields)
+    replace(config,template_fields=no_tax).validate(
+        key for key in mao.user_fields if key in mao.required_fields)
     replace(config,template_fields=no_tax).validate(
         key for key in cam.user_fields if key in cam.required_fields)
 
@@ -856,3 +857,19 @@ def test_cam_giang_template_contract_is_separate_from_mau_22():
     assert "NGAY_SINH" in renderer.tokens
     assert {"MEMBER_NAME","MEMBER_BIRTH_DATE","MEMBER_IDENTITY","MEMBER_ADDRESS"} <= renderer.tokens
     assert "NGAY_SINH" not in WordTemplate(default_template_path()).tokens
+
+
+@pytest.mark.parametrize("fallback,expected", [("blank", ""), ("village", "Thôn thử")])
+def test_mao_defaults_ignore_old_inputs_and_location_fallback(tmp_path, service, config, fallback, expected):
+    row = workbook(tmp_path / "defaults.xlsx", [("HỘ A", 1, 1, 100, None)]).records[0]
+    cfg = replace(config, village="Thôn thử", empty_location=fallback, optional_empty="dots",
+                  template_fields=dict.fromkeys((*OPTIONAL_COMMON, "NGUOI_KY", "CO_QUAN_THUE", "DON_VI_LUU", "CHI_NHANH_VP_DKDD"), "giá trị cũ"))
+    values = service.values(row, cfg, 1)
+    assert values["XU_DONG"] == expected
+    assert values["CO_QUAN_THUE"] == "Thuế Cơ sở 11 TP Hải Phòng"
+    assert values["DON_VI_LUU"] == "XDNN&MT"
+    assert values["CHI_NHANH_VP_DKDD"] == "Cẩm Giàng"
+    assert all(values[key] == "..." for key in OPTIONAL_COMMON)
+    cam = next(item for item in template_configs() if item.id == "CAM_GIANG")
+    cam_service = NoticeService(cam.path, service.legal)
+    assert cam_service.values(row, replace(cfg, empty_location="village"), 1) == cam_service.values(row, replace(cfg, empty_location="blank"), 1)

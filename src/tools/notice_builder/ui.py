@@ -222,9 +222,9 @@ class MainWindow(QMainWindow):
             self.template_inputs[key]=field; form.addRow(label,field)
             self.template_field_labels[key]=form.labelForField(field)
         self.optional_empty=QComboBox(); self.optional_empty.addItem("Để trống", "blank"); self.optional_empty.addItem("Điền ....", "dots")
-        self.optional_empty.currentIndexChanged.connect(self.invalidate); form.addRow("Ô không bắt buộc chưa có dữ liệu",self.optional_empty)
-        self.empty_location=QComboBox(); self.empty_location.addItem("Dùng tên thôn", "village"); self.empty_location.addItem("Để trống", "blank")
-        self.empty_location.currentIndexChanged.connect(self.invalidate); form.addRow("Xứ đồng khi bị trống", self.empty_location)
+        self.optional_empty.currentIndexChanged.connect(self.invalidate); self.optional_empty_label=QLabel("Ô không bắt buộc chưa có dữ liệu"); form.addRow(self.optional_empty_label,self.optional_empty)
+        self.empty_location=QComboBox(); self.empty_location.addItem("Để trống", "blank"); self.empty_location.addItem("Dùng tên thôn", "village")
+        self.empty_location.currentIndexChanged.connect(self.invalidate); self.empty_location_label=QLabel("Xứ đồng khi bị trống"); form.addRow(self.empty_location_label, self.empty_location)
         form.addRow(self.button("Xem căn cứ và nội dung gốc",self.show_legal)); form.addRow(self.button("Lưu cấu hình để dùng lại",self.save_settings))
         self.numbering_changed()
 
@@ -362,10 +362,11 @@ class MainWindow(QMainWindow):
         if not hasattr(self, "template_inputs"):
             return
         config=template_config_for_path(self.template.text())
-        if config.id == "MAO_DIEN" and self.optional_empty.currentData() == "blank":
-            self.optional_empty.setCurrentIndex(self.optional_empty.findData("dots"))
+        is_mao = config.id == "MAO_DIEN"
+        self.optional_empty.setVisible(not is_mao); self.optional_empty_label.setVisible(not is_mao)
+        self.empty_location.setVisible(is_mao); self.empty_location_label.setVisible(is_mao)
         static_text="; ".join(f"{FIELD_LABELS.get(key, key)}: {value}" for key,value in config.static_values.items()
-                             if key in {"TEN_XA","DIA_DIEM","DON_VI_LUU"})
+                             if key in {"TEN_XA","DIA_DIEM","DON_VI_LUU","CHI_NHANH_VP_DKDD","CO_QUAN_THUE","NGUOI_KY"})
         self.template_static_note.setText(f"Mẫu đang dùng: {config.name}. Giá trị theo mẫu: {static_text or 'không có giá trị cố định'}. ")
         visible=set(config.user_fields) | set(config.optional_fields)
         for key,field in self.template_inputs.items():
@@ -551,7 +552,7 @@ class MainWindow(QMainWindow):
             for key,value in config.get("template_fields",{}).items():
                 if key in self.template_inputs: self.template_inputs[key].setText(str(value))
             self.optional_empty.setCurrentIndex(max(0,self.optional_empty.findData(config.get("optional_empty","blank"))))
-            self.empty_location.setCurrentIndex(max(0,self.empty_location.findData(config.get("empty_location","village"))))
+            self.empty_location.setCurrentIndex(max(0,self.empty_location.findData(config.get("empty_location","blank"))))
             self.saved_source_settings=data
         except (OSError,ValueError,TypeError):
             self.statusBar().showMessage("Cấu hình cũ không đọc được. Đã giữ nguyên file, vui lòng nhập lại.")

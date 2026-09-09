@@ -11,7 +11,12 @@
         "NGUOI_KY": "Nguyễn Khắc Nghĩa",
         "CHI_NHANH_VP_DKDD": "Cẩm Giàng",
         "CO_QUAN_THUE": "Thuế Cơ sở 11 TP Hải Phòng",
-        "DON_VI_LUU": "XDNN&MT"
+        "DON_VI_LUU": "XDNN&MT",
+        "SU_DUNG_RIENG": "...",
+        "THUA_LIEN_KE": "...",
+        "TO_LIEN_KE": "...",
+        "CHU_SU_HUU_LIEN_KE": "...",
+        "NOI_DUNG_QUYEN_LIEN_KE": "..."
       },
       "required_fields": [
         "TEN_XA", "SO_TB", "DIA_DIEM", "NGAY", "THANG", "NAM", "HO_TEN",
@@ -21,13 +26,9 @@
         "CO_QUAN_THUE", "DON_VI_LUU"
       ],
       "user_fields": [
-        "NGUON_GOC_SU_DUNG_DAT", "TAI_SAN_DANG_KY", "GIAY_TO_DA_NOP", "NGUOI_KY",
-        "CHI_NHANH_VP_DKDD", "CO_QUAN_THUE", "DON_VI_LUU"
+        "NGUON_GOC_SU_DUNG_DAT", "TAI_SAN_DANG_KY", "GIAY_TO_DA_NOP"
       ],
-      "optional_fields": [
-        "SU_DUNG_RIENG", "THUA_LIEN_KE", "TO_LIEN_KE", "CHU_SU_HUU_LIEN_KE",
-        "NOI_DUNG_QUYEN_LIEN_KE"
-      ],
+      "optional_fields": [],
       "placeholder_mapping": {
         "TEN_XA": "static_values.TEN_XA",
         "DIA_DIEM": "static_values.DIA_DIEM",

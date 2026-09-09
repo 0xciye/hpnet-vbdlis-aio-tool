@@ -100,3 +100,6 @@ Xem_truoc/
 .DS_Store
 Thumbs.db
 Desktop.ini
+
+# Local pytest work directories
+/.test-*/
