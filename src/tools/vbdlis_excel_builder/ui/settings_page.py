@@ -101,6 +101,7 @@ class SettingsPage(QWidget):
         form1.setHorizontalSpacing(16)
         form1.addRow("Mã xã *", self.commune_code)
         form1.addRow("Địa chỉ", self.address)
+        self.prefix.setToolTip("Có thể dùng CHUACOGIAY hoặc CHUACAPGIAY theo quy ước hồ sơ.")
         form1.addRow("Tiền tố tên file", self.prefix)
         form1.addRow("Loại chủ thể", self.entity_type)
         main_form.addLayout(form1)

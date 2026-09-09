@@ -193,7 +193,7 @@ $savedRead=if(Has-ConfigProperty $savedConfig 'readFilter'){[string]$savedConfig
 $readFilterBox.SelectedIndex=if($savedRead -eq 'unread'){1}elseif($savedRead -eq 'read'){2}else{0}; $group1.Controls.Add($readFilterBox)
 [void](New-Label $group1 'Quy tắc tên file:' 20 126 150 25 $fontNormal)
 $fileNameModeBox=New-Object Windows.Forms.ComboBox; $fileNameModeBox.Location=New-Object Drawing.Point(180,123); $fileNameModeBox.Size=New-Object Drawing.Size(655,26); $fileNameModeBox.DropDownStyle='DropDownList'; $fileNameModeBox.Font=$fontNormal
-[void]$fileNameModeBox.Items.Add('Mẫu hồ sơ CHUACOGIAY (tương thích cũ)'); [void]$fileNameModeBox.Items.Add('Theo hậu tố tên file')
+[void]$fileNameModeBox.Items.Add('Mẫu CHUACOGIAY/CHUACAPGIAY (tương thích cũ)'); [void]$fileNameModeBox.Items.Add('Theo hậu tố tên file')
 $fileNameModeBox.SelectedIndex=if($savedFileNameMode -eq 'suffix'){1}else{0}; $group1.Controls.Add($fileNameModeBox)
 [void](New-Label $group1 'Mã xã (5 chữ số):' 20 164 150 25 $fontNormal)
 $communeCodeBox=New-Object Windows.Forms.TextBox; $communeCodeBox.Location=New-Object Drawing.Point(180,161); $communeCodeBox.Size=New-Object Drawing.Size(180,25); $communeCodeBox.MaxLength=5; $communeCodeBox.Text=if($savedConfig.communeCode){[string]$savedConfig.communeCode}else{'10930'}; $group1.Controls.Add($communeCodeBox)
@@ -288,7 +288,7 @@ function Update-FileNameFormat {
     $isRunning=($script:activeProcess -and -not $script:activeProcess.HasExited);$legacy=($fileNameModeBox.SelectedIndex -eq 0);$canEdit=(-not $isRunning)
     $fileNameModeBox.Enabled=$canEdit;$communeCodeBox.Enabled=($canEdit -and $legacy);$missingCodeCheck.Enabled=($canEdit -and $legacy)
     foreach($control in @($signedCheck,$ldsignedCheck,$lsignedCheck,$customSuffixBox)){$control.Enabled=($canEdit -and -not $legacy)}
-    try{if($legacy){$code=Normalize-CommuneCode $communeCodeBox.Text;$formatLabel.Text="Nhận: CHUACOGIAY_${code}_{tờ}_{thửa}-TBXN.(signed/ldsigned/lsigned).pdf";if($missingCodeCheck.Checked){$formatLabel.Text+="`r`nNgoại lệ: CHUACOGIAY_{tờ}_{thửa}-TBXN.(signed/ldsigned/lsigned).pdf — giữ nguyên tên."}}
+    try{if($legacy){$code=Normalize-CommuneCode $communeCodeBox.Text;$formatLabel.Text="Nhận: CHUACOGIAY_${code}_{tờ}_{thửa}-TBXN.(signed/ldsigned/lsigned).pdf hoặc CHUACAPGIAY_${code}_{tờ}_{thửa}-TBXN.(signed/ldsigned/lsigned).pdf";if($missingCodeCheck.Checked){$formatLabel.Text+="`r`nNgoại lệ: CHUACOGIAY_{tờ}_{thửa}-TBXN.(signed/ldsigned/lsigned).pdf hoặc CHUACAPGIAY_{tờ}_{thửa}-TBXN.(signed/ldsigned/lsigned).pdf — giữ nguyên tên."}}
         else{$suffixes=@(Get-SelectedSuffixes);$examples=@($suffixes|ForEach-Object{"Kế Hoạch$_.pdf"});$formatLabel.Text="Nhận tên bất kỳ có hậu tố ngay trước .pdf: $($suffixes -join ', ')`r`nVí dụ: $($examples -join '  |  '). Đây là lọc tên, không xác thực chữ ký số."};$formatLabel.ForeColor=[Drawing.Color]::DarkGreen}
     catch{$formatLabel.Text=$_.Exception.Message;$formatLabel.ForeColor=[Drawing.Color]::DarkRed}
 }
@@ -332,7 +332,7 @@ $startButton.Add_Click({
         $configToSave['splitFolderEnabled']=$splitCheck.Checked
         $configToSave['splitFolderLimit']=$splitLimit
         Update-FilterUi
-        $nameSummary=if($fileNameMode -eq 'suffix'){"Hậu tố tên file: $($fileSuffixes -join ', ') (không xác thực chữ ký số)"}else{"Mẫu CHUACOGIAY; mã xã $communeCode; thiếu mã xã: $(if($missingCodeCheck.Checked){'có'}else{'không'})"}
+    $nameSummary=if($fileNameMode -eq 'suffix'){"Hậu tố tên file: $($fileSuffixes -join ', ') (không xác thực chữ ký số)"}else{"Mẫu CHUACOGIAY/CHUACAPGIAY; mã xã $communeCode; thiếu mã xã: $(if($missingCodeCheck.Checked){'có'}else{'không'})"}
         $scopeWarning=if($documentScope -eq 'all_visible'){"CẢNH BÁO PHẠM VI RỘNG: sẽ xét TOÀN BỘ Văn bản đi tài khoản được quyền xem và bỏ qua mọi bộ lọc/trạng thái."}else{"Chỉ văn bản thỏa TẤT CẢ nhóm bộ lọc đã bật mới được xét."}
         $answer=[Windows.Forms.MessageBox]::Show("Microsoft Edge sẽ mở để bạn đăng nhập VNeID.`r`n`r`n$scopeWarning`r`n`r`n$($filterSummary.Text)`r`n$nameSummary`r`n`r`nNgày lọc là NGÀY VĂN BẢN, không phải ngày upload. Chỉ quét mục VĂN BẢN ĐI.`r`nCSV ĐỐI SOÁT sẽ ghi cả các văn bản bị lọc và file không khớp.",'Xác nhận phạm vi tải','OKCancel','Warning')
         if($answer -ne [Windows.Forms.DialogResult]::OK){return}
@@ -365,7 +365,7 @@ if ($UiSelfTest) {
     $communeCodeBox.Text='10930'
     $missingCodeCheck.Checked=$true
     Update-FileNameFormat
-    if ($formatLabel.Text -notmatch 'Ngoại lệ: CHUACOGIAY_') { throw 'UI test: thiếu hướng dẫn ngoại lệ.' }
+    if ($formatLabel.Text -notmatch 'Ngoại lệ: CHUACOGIAY_.*CHUACAPGIAY_') { throw 'UI test: thiếu hướng dẫn ngoại lệ.' }
     $missingCodeCheck.Checked=$false
     if ($formatLabel.Text -match 'Ngoại lệ:') { throw 'UI test: tắt ngoại lệ không cập nhật.' }
     $missingCodeCheck.Checked=$true

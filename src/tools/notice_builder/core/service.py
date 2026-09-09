@@ -23,7 +23,7 @@ class Preview:
 
 
 def safe_filename(config, record):
-    raw = f"CHUACOGIAY_{config.commune_code.strip()}_{record.sheet}_{record.parcel}-{config.suffix.strip()}.docx"
+    raw = f"{config.prefix.strip()}_{config.commune_code.strip()}_{record.sheet}_{record.parcel}-{config.suffix.strip()}.docx"
     name = re.sub(r'[\\/:*?"<>|\x00-\x1f]', "_", raw).rstrip(" .")
     if len(name) > 180:
         raise UserError("Tên file quá dài. Hãy rút ngắn hậu tố tên file.")

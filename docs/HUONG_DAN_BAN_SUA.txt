@@ -61,7 +61,7 @@ MỤC ĐÍCH: Quét Văn bản đi mà tài khoản được quyền xem, lọc 
 QUY TRÌNH: Chọn phạm vi quét → đặt bộ lọc → chọn quy tắc tên PDF → chọn thư mục lưu → đọc tóm tắt xác nhận → bắt đầu quét và tải → đăng nhập VNeID trong Edge khi được yêu cầu → kiểm tra PDF, TXT và CSV.
 “Theo bộ lọc” sử dụng các điều kiện trích yếu, số thông báo, ký hiệu, ngày và trạng thái xem. Các nhóm bộ lọc đang bật kết hợp theo AND; nhiều giá trị trong cùng nhóm kết hợp theo OR.
 “Toàn bộ Văn bản đi được quyền xem” bỏ qua bộ lọc và trạng thái xem nhưng không mở rộng quyền của tài khoản.
-Quy tắc tên “Mẫu hồ sơ CHUACOGIAY” dùng mã xã và ngoại lệ tên thiếu mã xã. Quy tắc “Theo hậu tố tên file” nhận tên kết thúc bằng hậu tố đã chọn ngay trước .pdf, ví dụ Kế Hoạch.signed.pdf.
+Quy tắc tên “Mẫu hồ sơ CHUACOGIAY/CHUACAPGIAY” dùng mã xã và ngoại lệ tên thiếu mã xã. Quy tắc “Theo hậu tố tên file” nhận tên kết thúc bằng hậu tố đã chọn ngay trước .pdf, ví dụ Kế Hoạch.signed.pdf.
 LƯU Ý: Có thể chọn .signed, .ldsigned, .lsigned và nhập hậu tố khác. Đây là lọc theo tên file, không phải kiểm tra chữ ký số.
 KẾT QUẢ: Sau khi chạy, kiểm tra file đã tải, nhật ký TXT và CSV đối soát. Văn bản hoặc file bị loại đều có lý do trong nhật ký.
 

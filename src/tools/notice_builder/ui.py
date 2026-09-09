@@ -149,7 +149,10 @@ class MainWindow(QMainWindow):
         labels={"commune_code":"Mã đơn vị hành chính *","owner_address":"Địa chỉ người sử dụng đất *","village":"Tên thôn *",
                 "commune_name":"Tên xã *","administrative_address":"Địa chỉ hành chính của thửa","place":"Địa danh ghi ngày ký *","suffix":"Hậu tố tên file *"}
         for key,label in labels.items():
-            field=QLineEdit("TBXN" if key=="suffix" else ""); field.textChanged.connect(self.invalidate); self.inputs[key]=field; form.addRow(label,field)
+            default = "TBXN" if key == "suffix" else ""
+            field=QLineEdit(default); field.textChanged.connect(self.invalidate); self.inputs[key]=field; form.addRow(label,field)
+        prefix_field=QLineEdit("CHUACOGIAY"); prefix_field.setToolTip("Có thể dùng CHUACOGIAY hoặc CHUACAPGIAY."); prefix_field.textChanged.connect(self.invalidate); self.inputs["prefix"]=prefix_field
+        form.addRow("Tiền tố tên file", prefix_field)
         date_line=QWidget(); dates=QHBoxLayout(date_line); dates.setContentsMargins(0,0,0,0); today=date.today()
         for key,label,minimum,maximum,default in (("day","Ngày",1,31,today.day),("month","Tháng",1,12,today.month),("year","Năm",1900,2200,today.year)):
             spin=QSpinBox(); spin.setRange(minimum,maximum); spin.setValue(default); spin.valueChanged.connect(self.invalidate); self.inputs[key]=spin

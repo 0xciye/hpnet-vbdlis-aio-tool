@@ -31,7 +31,7 @@ Người dùng không chuyên nên mở tài liệu `HƯỚNG DẪN SỬ DỤNG.
 
 1. Tab **Dữ liệu**: chọn workbook, sheet và dòng header; kiểm tra preview nguồn.
 2. Tab **Ánh xạ**: chọn cột cho STT hộ, người, thửa và GCN. Nút tự động chỉ điền gợi ý có confidence cao.
-3. Tab **Cấu hình VBDLIS**: nhập mã xã, địa chỉ, prefix, role, fallback và GCN mode; lưu profile theo xã/đơn vị.
+3. Tab **Cấu hình VBDLIS**: nhập mã xã, địa chỉ, tiền tố tên file (`CHUACOGIAY` hoặc `CHUACAPGIAY`), role, fallback và GCN mode; lưu profile theo xã/đơn vị.
 4. Tab **Mapping nâng cao**: sửa mode của từng field (`Source`, `Fixed`, `Computed`, `Keep Template`, `Blank`, `Conditional`).
 5. Tab **Kiểm tra & Xuất**: chạy validation, xem output sau transformation, chọn tên/thư mục và tạo file.
 

@@ -363,6 +363,7 @@ def test_config_and_filename(config):
     from tools.notice_builder.core.models import NoticeRecord
     row=NoticeRecord(1,"Không được vào tên file",1,"72","175","20","")
     assert service_module.safe_filename(config,row)==("CHUACOGIAY_12345_72_175-TBXN.docx",False)
+    assert service_module.safe_filename(replace(config,prefix="CHUACAPGIAY"),row)==("CHUACAPGIAY_12345_72_175-TBXN.docx",False)
     name,cleaned=service_module.safe_filename(replace(config,suffix='A:/B?'),row)
     assert cleaned and name=="CHUACOGIAY_12345_72_175-A__B_.docx"
     with pytest.raises(UserError): replace(config,day=31,month=2).validate()

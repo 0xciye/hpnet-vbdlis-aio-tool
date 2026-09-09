@@ -4,7 +4,7 @@
 
 ## 1. Mục tiêu và phạm vi
 
-Cho phép tải PDF có tên bất kỳ, ví dụ `Kế Hoạch.signed.pdf`, theo hậu tố người dùng chọn. Không bắt buộc CHUACOGIAY, mã xã, số tờ/thửa hoặc TBXN trong chế độ mới. Giữ chế độ tên cũ và toàn bộ lựa chọn lọc/tải hiện có.
+Cho phép tải PDF có tên bất kỳ, ví dụ `Kế Hoạch.signed.pdf`, theo hậu tố người dùng chọn. Không bắt buộc CHUACOGIAY, CHUACAPGIAY, mã xã, số tờ/thửa hoặc TBXN trong chế độ mới. Giữ chế độ tên cũ và toàn bộ lựa chọn lọc/tải hiện có.
 
 Chỉ thay đổi PDF Downloader, hướng dẫn liên quan và kiểm thử/đóng gói. Không sửa Upload, Duyệt, Excel Builder, Auto Rename, Tạo thông báo hay PDF Cleaner. Nhận diện `.signed` ở đây là lọc tên, không xác thực chữ ký số.
 
@@ -12,7 +12,7 @@ Chỉ thay đổi PDF Downloader, hướng dẫn liên quan và kiểm thử/đ�
 
 Trong `src/nodes_tools/Downloader/HPNet PDF Downloader - VNEID APP/`:
 
-- `hpnet-downloader.cjs`: `buildValidPdfNamePattern()` cố định `CHUACOGIAY_...-TBXN.(signed|ldsigned|lsigned).pdf`.
+- `hpnet-downloader.cjs`: `buildValidPdfNamePattern()` nhận cả `CHUACOGIAY_...` và `CHUACAPGIAY_...-TBXN.(signed|ldsigned|lsigned).pdf`.
 - Mã xã được kiểm tra bắt buộc ngay khi đọc cấu hình, dù sau này chế độ hậu tố không cần mã xã.
 - Điều kiện tên file được dùng ở nhiều chỗ: chọn tên khi trùng URL, lọc file hợp lệ, báo file sai mẫu và ghi ngoại lệ thiếu mã xã. Phải cập nhật đồng bộ, không chỉ sửa một regex.
 - `buildFilters()` yêu cầu ít nhất một trong bốn bộ lọc: trích yếu, số thông báo, ký hiệu, ngày. UI PowerShell cũng chặn khi cả bốn tắt. Chỉ thêm hậu tố sẽ chưa đủ để tải toàn bộ file có hậu tố đó.
@@ -35,7 +35,7 @@ Quyết định tải gồm hai bước độc lập: văn bản thuộc phạm 
 
 | Chế độ | Quy tắc | Mã xã |
 | --- | --- | --- |
-| Mẫu hồ sơ CHUACOGIAY (hiện tại) | Giữ nguyên mẫu tên TBXN, các đuôi signed/ldsigned/lsigned và ngoại lệ thiếu mã xã | Giữ nguyên kiểm tra 5 chữ số và lựa chọn ngoại lệ |
+| Mẫu hồ sơ CHUACOGIAY/CHUACAPGIAY (hiện tại) | Nhận cả hai tiền tố, giữ nguyên mẫu tên TBXN, các đuôi signed/ldsigned/lsigned và ngoại lệ thiếu mã xã | Giữ nguyên kiểm tra 5 chữ số và lựa chọn ngoại lệ |
 | Theo hậu tố tên file (mới) | Tên bất kỳ kết thúc bằng hậu tố đã chọn, ngay trước `.pdf` | Không bắt buộc; vô hiệu hóa ô mã xã và ngoại lệ, không xóa giá trị đã lưu |
 
 Chế độ cũ vẫn sẵn có, không bị thay thế bằng một mẫu tên mới.

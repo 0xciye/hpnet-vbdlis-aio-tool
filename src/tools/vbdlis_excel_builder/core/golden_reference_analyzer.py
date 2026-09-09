@@ -9,7 +9,7 @@ from openpyxl import load_workbook
 from openpyxl.utils import get_column_letter
 
 
-ITEM49 = re.compile(r"^(?P<stem>CHUACOGIAY_.+_.+_.+)-TBXN\.pdf, (?P=stem)-DDK\.pdf$")
+ITEM49 = re.compile(r"^(?P<stem>(?:CHUACOGIAY|CHUACAPGIAY)_.+_.+_.+)-TBXN\.pdf, (?P=stem)-DDK\.pdf$")
 
 
 class GoldenReferenceAnalyzer:

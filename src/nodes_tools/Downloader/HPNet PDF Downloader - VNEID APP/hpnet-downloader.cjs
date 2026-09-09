@@ -52,7 +52,7 @@ function normalizeCommuneCode(value) {
 function buildValidPdfNamePattern(communeCode, allowMissingCommuneCode = true) {
   const code = normalizeCommuneCode(communeCode);
   const prefix = allowMissingCommuneCode ? `(?:${code}_)?` : `${code}_`;
-  return new RegExp(`^CHUACOGIAY_${prefix}([0-9]+(?:\\.[0-9]+)*)_([0-9]+(?:\\.[0-9]+)*)-TBXN\\.(signed|ldsigned|lsigned)\\.pdf$`, "i");
+  return new RegExp(`^(?:CHUACOGIAY|CHUACAPGIAY)_${prefix}([0-9]+(?:\\.[0-9]+)*)_([0-9]+(?:\\.[0-9]+)*)-TBXN\\.(signed|ldsigned|lsigned)\\.pdf$`, "i");
 }
 
 function normalizeDocumentScope(value) {
@@ -96,14 +96,14 @@ function buildFileNamePolicy(config = {}) {
       mode, communeCode, allowMissingCommuneCode,
       pattern: buildValidPdfNamePattern(communeCode, allowMissingCommuneCode),
       strictPattern: buildValidPdfNamePattern(communeCode, false),
-      description: `Mẫu CHUACOGIAY; mã xã ${communeCode}; thiếu mã xã: ${allowMissingCommuneCode ? "cho phép" : "không cho phép"}`,
+      description: `Mẫu CHUACOGIAY/CHUACAPGIAY; mã xã ${communeCode}; thiếu mã xã: ${allowMissingCommuneCode ? "cho phép" : "không cho phép"}`,
     };
   }
   if (mode === "suffix") {
     const suffixes = parseFileSuffixes(config.fileSuffixes ?? [".signed"]);
     return { mode, suffixes, description: `Hậu tố ngay trước .pdf: ${suffixes.join(", ")}` };
   }
-  throw new Error("Chế độ tên file không hợp lệ. Hãy chọn Mẫu hồ sơ CHUACOGIAY hoặc Theo hậu tố tên file.");
+  throw new Error("Chế độ tên file không hợp lệ. Hãy chọn Mẫu hồ sơ CHUACOGIAY/CHUACAPGIAY hoặc Theo hậu tố tên file.");
 }
 
 function validateWindowsFileName(value) {
@@ -124,8 +124,8 @@ function matchPdfFileName(fileName, policy) {
   if (!/\.pdf$/iu.test(name)) return { matched: false, code: "not_pdf", reason: "Không phải tên file PDF", safeName: name };
   if (policy.mode === "legacy") {
     return policy.pattern.test(name)
-      ? { matched: true, code: "matched", reason: "Đúng mẫu hồ sơ CHUACOGIAY", safeName: name }
-      : { matched: false, code: "legacy_mismatch", reason: "Không đúng mẫu tên CHUACOGIAY/TBXN đã chọn", safeName: name };
+      ? { matched: true, code: "matched", reason: "Đúng mẫu hồ sơ CHUACOGIAY/CHUACAPGIAY", safeName: name }
+      : { matched: false, code: "legacy_mismatch", reason: "Không đúng mẫu tên CHUACOGIAY/CHUACAPGIAY/TBXN đã chọn", safeName: name };
   }
   const foldedName = name.toLocaleLowerCase("vi-VN");
   for (const suffix of policy.suffixes) {
@@ -606,6 +606,7 @@ async function runSelfTest() {
   const pattern = buildValidPdfNamePattern("10930");
   const accepted = [
     "CHUACOGIAY_10930_114_203-TBXN.signed.pdf",
+    "CHUACAPGIAY_10930_114_203-TBXN.signed.pdf",
     "CHUACOGIAY_10930_12.1_45.2-TBXN.ldsigned.pdf",
     "CHUACOGIAY_10930_49_88-TBXN.lsigned.pdf",
   ];
@@ -613,6 +614,7 @@ async function runSelfTest() {
     "CHUACOGIAY_10930_114_203-TBXN.pdf",
     "CHUACOGIAY_10931_114_203-TBXN.signed.pdf",
     "DAGIAY_10930_114_203-TBXN.signed.pdf",
+    "CHUACAPGIAY_10931_114_203-TBXN.signed.pdf",
     "CHUACOGIAY_10930_114_203-TBXN.signed.docx",
   ];
   if (!accepted.every((name) => pattern.test(name))) throw new Error("Self-test: mẫu tên hợp lệ bị từ chối.");

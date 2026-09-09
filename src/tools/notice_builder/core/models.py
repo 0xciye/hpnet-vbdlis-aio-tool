@@ -58,6 +58,7 @@ class BatchConfig:
     number_date_rules: list[dict[str, str]] = field(default_factory=list)
     template_fields: dict[str, str] = field(default_factory=dict)
     optional_empty: str = "blank"
+    prefix: str = "CHUACOGIAY"
 
     def validate(self):
         required = {"Mã đơn vị hành chính": self.commune_code, "Địa chỉ người sử dụng đất": self.owner_address,
@@ -72,6 +73,8 @@ class BatchConfig:
             raise UserError("Cách hiển thị ô không bắt buộc phải là để trống hoặc dấu chấm.")
         if not re.fullmatch(r"[0-9]{5}", self.commune_code.strip()):
             raise UserError("Mã đơn vị hành chính phải có đúng 5 chữ số.")
+        if not re.fullmatch(r"[A-Za-z0-9_À-ỹ-]+", self.prefix.strip()):
+            raise UserError("Tiền tố tên file chỉ được gồm chữ, số, dấu gạch ngang hoặc gạch dưới.")
         try:
             date(self.year, self.month, self.day)
         except ValueError:

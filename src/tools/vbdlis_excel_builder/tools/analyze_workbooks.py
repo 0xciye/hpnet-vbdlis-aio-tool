@@ -202,7 +202,7 @@ def write_markdown(schema: dict[str, Any], analysis: dict[str, Any], path: Path)
             "",
             "- `CachNhap` chứa dữ liệu minh họa và 17 công thức; không được sao chép giá trị minh họa xuống output.",
             "- Golden không có dữ liệu ở Mục 3 (Ngày cấp GCN), Mục 4 (Số vào sổ GCN) và cột Loại GCN; các field này là `GCN_OPTIONAL`.",
-            "- Mục 2 vẫn được dùng trong hồ sơ chưa có GCN như mã bộ hồ sơ `CHUACOGIAY_{MA_XA}_{SO_TO}_{SO_THUA}`.",
+            "- Mục 2 vẫn được dùng trong hồ sơ chưa có GCN như mã bộ hồ sơ `CHUACOGIAY_{MA_XA}_{SO_TO}_{SO_THUA}` hoặc `CHUACAPGIAY_{MA_XA}_{SO_TO}_{SO_THUA}`.",
             "- Mục 49 trong golden luôn là hai file `-TBXN.pdf, -DDK.pdf`, cách nhau bởi dấu phẩy và một khoảng trắng.",
             "- Vai trò golden chỉ dùng `Chủ hộ` và `Thành viên hộ gia đình`; không dùng quan hệ Vợ/Chồng/Con.",
             "- Các cột template có sample nhưng golden trống được xếp optional/conditional, không biến thành lỗi bắt buộc.",

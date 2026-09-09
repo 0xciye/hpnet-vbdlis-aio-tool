@@ -162,6 +162,9 @@ function runSelfTest() {
   if (!variants.every((item) => documentKey(item) === local)) {
     throw new Error("Self-test: khóa chống trùng không đồng nhất giữa DOC/DOCX/PDF đã ký.");
   }
+  if (documentKey("CHUACAPGIAY_10930_112_54-TBXN.pdf") !== documentKey("CHUACAPGIAY_10930_112_54-TBXN.docx")) {
+    throw new Error("Self-test: chưa hỗ trợ tiền tố CHUACAPGIAY.");
+  }
   const record = { TrichYeu: "THÔNG BÁO<br/>CHUACOGIAY_10930_112_54-TBXN.ldsigned.pdf" };
   if (!recordContainsKey(record, local)) throw new Error("Self-test: không nhận ra file đã có.");
   if (recordContainsKey(record, documentKey("CHUACOGIAY_10930_112_5-TBXN.docx"))) {

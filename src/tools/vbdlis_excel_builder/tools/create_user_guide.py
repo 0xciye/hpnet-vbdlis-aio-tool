@@ -332,7 +332,7 @@ def build_story(s):
                     ["Ô cấu hình", "Cách điền"],
                     ["Mã xã", "Nhập chính xác mã đơn vị hành chính của đợt dữ liệu."],
                     ["Địa chỉ", "Nhập địa chỉ dùng cho người sử dụng đất và dùng thay thế khi thiếu Xứ đồng."],
-                    ["Tiền tố tên file", "Mặc định CHUACOGIAY. Chỉ đổi khi nghiệp vụ yêu cầu."],
+                    ["Tiền tố tên file", "Mặc định CHUACOGIAY; có thể dùng CHUACAPGIAY khi hồ sơ yêu cầu."],
                     ["Vai trò", "Giữ Chủ hộ và Thành viên hộ gia đình."],
                     ["Mục 2", "Giữ `{PREFIX}_{MA_XA}_{SO_TO}_{SO_THUA}` nếu không có yêu cầu khác."],
                     ["Mục 49", "Giữ nguyên cấu trúc TBXN + DDK ở dưới."],

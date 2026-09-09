@@ -9,8 +9,8 @@ Công cụ quét mục Văn bản đi mà tài khoản hiện tại được quy
 - Toàn bộ Văn bản đi được quyền xem: bỏ qua tất cả bộ lọc, kể cả trạng thái đã/chưa xem. Chỉ chọn khi thật sự muốn xét toàn bộ danh sách nhìn thấy bằng tài khoản hiện tại. Phần mềm sẽ hỏi xác nhận trước khi chạy.
 
 3. CHỌN QUY TẮC TÊN FILE
-- Mẫu hồ sơ CHUACOGIAY: dùng mã xã 5 chữ số và mẫu TBXN cũ. Có thể bật nhận thêm tên thiếu mã xã. Đây là chế độ mặc định của cấu hình cũ.
-- Theo hậu tố tên file: không yêu cầu CHUACOGIAY hoặc mã xã. Chọn một hay nhiều hậu tố .signed, .ldsigned, .lsigned; có thể nhập hậu tố khác.
+- Mẫu hồ sơ CHUACOGIAY/CHUACAPGIAY: dùng mã xã 5 chữ số và mẫu TBXN cũ. Có thể bật nhận thêm tên thiếu mã xã. Đây là chế độ mặc định của cấu hình cũ.
+- Theo hậu tố tên file: không yêu cầu CHUACOGIAY, CHUACAPGIAY hoặc mã xã. Chọn một hay nhiều hậu tố .signed, .ldsigned, .lsigned; có thể nhập hậu tố khác.
 
 Có thể nhập signed, .signed hoặc .signed.pdf; phần mềm tự chuẩn hóa thành .signed. Ví dụ khi chọn .signed:
 - Kế Hoạch.signed.pdf: nhận.
