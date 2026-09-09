@@ -4,8 +4,10 @@ from pypdf import PdfReader
 from tools.signed_pdf_cleaner.core.models import FileActionPlan, ActionType, ProcessStatus
 
 class FileScanner:
-    def __init__(self, validate_signatures: bool = True):
+    def __init__(self, validate_signatures: bool = True, delete_suffix: str = '.pdf', signed_suffix: str = '.signed.pdf'):
         self.validate_signatures = validate_signatures
+        self.delete_suffix = delete_suffix.lower() if delete_suffix.startswith('.') else '.' + delete_suffix.lower()
+        self.signed_suffix = signed_suffix.lower() if signed_suffix.startswith('.') else '.' + signed_suffix.lower()
 
     @staticmethod
     def has_embedded_signature(path: Path) -> bool:
@@ -57,7 +59,7 @@ class FileScanner:
         all_pdfs = {f.name.lower(): f for f in valid_files}
         
         for f in valid_files:
-            if f.name.lower().endswith('.signed.pdf'):
+            if f.name.lower().endswith(self.signed_suffix):
                 signed_files.append(f)
 
         # To keep track of processed unsigned files so we can also check for unsigned-only
@@ -65,10 +67,10 @@ class FileScanner:
 
         for signed_f in signed_files:
             original_name = signed_f.name
-            target_name = original_name[:-11] + original_name[-4:] # e.g. ABC.signed.pdf -> ABC + .pdf
+            target_name = original_name[:-len(self.signed_suffix)] + self.delete_suffix
             
             # check abnormal name like .signed.signed.pdf
-            if target_name.lower().endswith('.signed.pdf'):
+            if target_name.lower().endswith(self.signed_suffix):
                 plans.append(FileActionPlan(
                     signed_path=signed_f,
                     unsigned_path=None,

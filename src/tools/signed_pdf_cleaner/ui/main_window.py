@@ -89,6 +89,12 @@ class MainWindow(QMainWindow):
         options_layout = QHBoxLayout()
         self.chk_recursive = QCheckBox("Bao gồm thư mục con")
         options_layout.addWidget(self.chk_recursive)
+        options_layout.addWidget(QLabel("Hậu tố cần xóa:"))
+        self.txt_delete_suffix = QLineEdit(".pdf"); self.txt_delete_suffix.setMaximumWidth(110)
+        options_layout.addWidget(self.txt_delete_suffix)
+        options_layout.addWidget(QLabel("Hậu tố giữ lại:"))
+        self.txt_signed_suffix = QLineEdit(".signed.pdf"); self.txt_signed_suffix.setMaximumWidth(130)
+        options_layout.addWidget(self.txt_signed_suffix)
         
         options_layout.addWidget(QLabel("Chế độ xóa:"))
         self.cmb_delete_mode = QComboBox()
@@ -178,7 +184,7 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Lỗi", "Vui lòng chọn thư mục hợp lệ.")
             return
 
-        scanner = FileScanner()
+        scanner = FileScanner(delete_suffix=self.txt_delete_suffix.text().strip(), signed_suffix=self.txt_signed_suffix.text().strip())
         self.plans = scanner.scan_directory(folder, self.chk_recursive.isChecked())
         
         self.update_table()
