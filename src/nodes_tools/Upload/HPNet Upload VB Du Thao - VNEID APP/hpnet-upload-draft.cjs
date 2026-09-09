@@ -414,20 +414,7 @@ async function main() {
     resultRows.push([new Date().toISOString(), resultRows.length + 1, file.name, file.key, reviewerLevel1, matchedReviewer, status, note]);
   };
 
-  const modulesRoot = process.env.HPNET_NODE_MODULES;
-  const edgeExe = process.env.HPNET_EDGE_EXE;
-  if (!modulesRoot || !edgeExe) throw new Error("Không xác định được bộ chạy trình duyệt đi kèm công cụ.");
-  const { chromium } = require(path.join(modulesRoot, "playwright"));
-  const profileDir = path.join(toolRoot, "du_lieu_dang_nhap_vneid");
-  const context = await chromium.launchPersistentContext(profileDir, {
-    executablePath: edgeExe,
-    headless: false,
-    acceptDownloads: false,
-    viewport: null,
-    args: ["--start-maximized"],
-  });
-
-  let page = context.pages()[0] || await context.newPage();
+  let context = null;
   let fatalError = null;
   try {
     log(`Số thư mục: ${resolvedBatches.length}`);
@@ -435,6 +422,25 @@ async function main() {
     log(`Người duyệt cấp 1 / lãnh đạo: ${reviewerLevel1}`);
     log(`Chế độ up lại file đã sửa: ${config.reuploadModified ? "CÓ" : "KHÔNG"}`);
     log(`Tìm thấy ${files.length} file Word.`);
+    const modulesRoot = process.env.HPNET_NODE_MODULES;
+    const edgeExe = process.env.HPNET_EDGE_EXE;
+    if (!modulesRoot || !edgeExe) throw new Error("Không xác định được bộ chạy trình duyệt đi kèm công cụ.");
+    const { chromium } = require(path.join(modulesRoot, "playwright"));
+    const profileDir = path.join(toolRoot, "du_lieu_dang_nhap_vneid");
+    log("Đang mở Microsoft Edge...");
+    context = await chromium.launchPersistentContext(profileDir, {
+      executablePath: edgeExe,
+      headless: false,
+      acceptDownloads: false,
+      viewport: null,
+      args: ["--start-maximized", "--disable-background-mode"],
+    });
+    log("Microsoft Edge đã sẵn sàng.");
+    if (process.argv.includes("--browser-self-test")) {
+      log("BROWSER_SELF_TEST_OK: Edge mở bằng profile upload và đóng an toàn; không truy cập HPNet, không upload.");
+      return;
+    }
+    let page = context.pages()[0] || await context.newPage();
     page = await ensureLoggedIn(page, context, log);
     log("Đăng nhập HPNet thành công. Đang quét toàn bộ danh sách VB dự thảo...");
 
@@ -521,8 +527,15 @@ async function main() {
     if (config.dryRun) log("Đây là chế độ chỉ kiểm tra, chưa có file nào được tải lên.");
   } catch (error) {
     fatalError = error;
-    log(`[LỖI DỪNG] ${error.message}`);
+    const detail = String(error?.message || error);
+    const hint = /user data directory is already in use|processsingleton|profile.*in use/i.test(detail)
+      ? " Hãy đóng cửa sổ Edge do công cụ upload đang mở rồi chạy lại."
+      : "";
+    log(`[LỖI DỪNG] ${detail}${hint}`);
   } finally {
+    if (context) {
+      try { await context.close(); } catch (error) { log(`[CẢNH BÁO] Không đóng được Edge: ${error.message}`); }
+    }
     const csvRows = [
       ["Thời gian", "STT", "Tên file", "Khóa chống trùng", "Người duyệt cấu hình", "Người thực tế được match", "Kết quả", "Ghi chú"],
       ...resultRows,
@@ -531,7 +544,6 @@ async function main() {
     await fsp.writeFile(csvLogPath, `\uFEFF${csvRows.map((row) => row.map(csvCell).join(",")).join("\r\n")}\r\n`, "utf8");
     console.log(`Nhật ký TXT: ${textLogPath}`);
     console.log(`Nhật ký CSV: ${csvLogPath}`);
-    await context.close();
   }
 
   if (fatalError) throw fatalError;

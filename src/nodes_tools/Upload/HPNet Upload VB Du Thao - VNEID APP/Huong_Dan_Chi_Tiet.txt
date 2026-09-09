@@ -9,7 +9,8 @@ Bước 1: Bật ứng dụng trình duyệt (Google Chrome/Edge) trên máy tí
 Bước 2: Mở phầm mềm HPNet Upload lên.
 Bước 3: Nhập hoặc thêm thư mục chứa các tệp MS Word cần tải lên.
 Bước 4: Thiết lập thông tin chung của bộ hồ sơ:
-- Trích yếu chung: nhập vào ô riêng (Ví dụ: "Hồ sơ dự thảo của đội A"). Nếu mỗi thư mục có trích yếu khác nhau, ghi theo dạng "đường_dẫn | trích yếu".
+- Chọn chế độ "Dùng một trích yếu chung" nếu tất cả thư mục dùng cùng nội dung, rồi nhập vào ô Trích yếu chung (Ví dụ: "Hồ sơ dự thảo của đội A").
+- Tắt chế độ này nếu mỗi thư mục có trích yếu khác nhau, rồi ghi từng dòng theo dạng "đường_dẫn | trích yếu".
 - Người duyệt: chọn đúng tên lãnh đạo mà bạn muốn nộp duyệt từ danh sách.
 Bước 5: Khuyên dùng chế độ "Test Mode" (Chạy mô phỏng trước). Nếu không chọn, hãy bấm nút "Chạy Thật Ngay". 
 Bước 6: Khi bấm Bắt đầu, bàn phím và chuột sẽ bị phần mềm mượn đi, màn hình sẽ tự động múa các thao tác mở trang, điền chữ, tải file, lưu lại y như ma làm. Bạn cứ để nó chạy, khi nào hết số file trong thư mục nó sẽ tự ngưng và trả lại máy. Rất nhàn nhã!

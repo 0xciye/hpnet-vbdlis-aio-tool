@@ -128,6 +128,7 @@ if (-not $profileStore -or -not $profileStore.PSObject.Properties['profiles']) {
 $initialProfile = if ($savedConfig -and $savedConfig.profileName) { [string]$savedConfig.profileName } elseif ($profileStore.lastProfile) { [string]$profileStore.lastProfile } else { @(Get-ProfileNames $profileStore | Select-Object -First 1)[0] }
 $initialEntry = Get-ProfileEntry $profileStore $initialProfile
 $initialReviewer = if ($savedConfig -and $savedConfig.reviewerLevel1) { [string]$savedConfig.reviewerLevel1 } elseif ($initialEntry) { [string]$initialEntry.reviewerLevel1 } else { '' }
+$initialCommonAbstractMode = if ($savedConfig -and $savedConfig.abstractMode) { [string]$savedConfig.abstractMode -eq 'common' } else { -not ($savedConfig -and $savedConfig.batches) }
 
 [System.Windows.Forms.Application]::EnableVisualStyles()
 $form = New-Object System.Windows.Forms.Form
@@ -248,6 +249,14 @@ $abstractBox.ScrollBars = 'Vertical'
 $abstractBox.Font = $fontNormal
 $abstractBox.Text = if ($savedConfig -and $savedConfig.abstract) { [string]$savedConfig.abstract } else { '' }
 $group1.Controls.Add($abstractBox)
+
+$commonAbstractMode = New-Object System.Windows.Forms.CheckBox
+$commonAbstractMode.Text = 'Dùng một trích yếu chung cho tất cả thư mục'
+$commonAbstractMode.Location = New-Object System.Drawing.Point(150, 220)
+$commonAbstractMode.AutoSize = $true
+$commonAbstractMode.Checked = $initialCommonAbstractMode
+$commonAbstractMode.Font = $fontNormal
+$group1.Controls.Add($commonAbstractMode)
 
 
 # CARD 2: LUỒNG XỬ LÝ
@@ -434,6 +443,22 @@ function Update-WorkflowPreview {
     $previewLabel.Text = "Profile: $($profileBox.Text.Trim())    |    Người duyệt: $($reviewerBox.Text.Trim())"
 }
 
+function Update-AbstractMode {
+    $abstractLabel.Visible = $commonAbstractMode.Checked
+    $abstractBox.Visible = $commonAbstractMode.Checked
+    if ($commonAbstractMode.Checked) {
+        $folderLabel.Text = 'Danh sách thư mục:'
+        $folderBox.Height = 65
+    } else {
+        $abstractBox.Text = ''
+        $folderLabel.Text = 'Thư mục | trích yếu riêng:'
+        $folderBox.Height = 95
+    }
+}
+
+$commonAbstractMode.Add_CheckedChanged({ Update-AbstractMode })
+Update-AbstractMode
+
 $profileBox.Add_SelectedIndexChanged({
     $entry = Get-ProfileEntry $script:profileStore $profileBox.Text
     if ($entry) { $reviewerBox.Text = [string]$entry.reviewerLevel1 }
@@ -467,13 +492,11 @@ $startButton.Add_Click({
     $lines = @($folderBox.Lines | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
     $batches = @(Parse-UploadBatches $lines)
     $commonAbstract = $abstractBox.Text.Trim()
-    foreach ($batch in $batches) {
-        if ([string]::IsNullOrWhiteSpace($batch.abstract)) { $batch.abstract = $commonAbstract }
-    }
+    $hasPerFolderAbstract = @($batches | Where-Object { -not [string]::IsNullOrWhiteSpace($_.abstract) }).Count -gt 0
     $folder = if ($batches.Count) { [string]$batches[0].folder } else { '' }
     $reviewer = $reviewerBox.Text.Trim()
     if ($batches.Count -eq 0) {
-        [System.Windows.Forms.MessageBox]::Show('Hãy nhập ít nhất một thư mục và trích yếu chung.', 'Thiếu thư mục', 'OK', 'Warning') | Out-Null
+        [System.Windows.Forms.MessageBox]::Show('Hãy nhập ít nhất một thư mục.', 'Thiếu thư mục', 'OK', 'Warning') | Out-Null
         return
     }
     $invalidFolder = @($batches | Where-Object { -not (Test-Path -LiteralPath $_.folder -PathType Container) })
@@ -481,9 +504,25 @@ $startButton.Add_Click({
         [System.Windows.Forms.MessageBox]::Show("Không tìm thấy thư mục: $($invalidFolder[0].folder)", 'Sai thư mục', 'OK', 'Warning') | Out-Null
         return
     }
-    if (@($batches | Where-Object { [string]::IsNullOrWhiteSpace($_.abstract) }).Count -gt 0) {
-        [System.Windows.Forms.MessageBox]::Show('Hãy nhập Trích yếu chung hoặc thêm trích yếu riêng sau dấu | cho từng thư mục.', 'Thiếu trích yếu', 'OK', 'Warning') | Out-Null
-        return
+    if ($commonAbstractMode.Checked) {
+        if ($hasPerFolderAbstract) {
+            [System.Windows.Forms.MessageBox]::Show('Đang chọn trích yếu chung. Hãy bỏ phần sau dấu | ở danh sách thư mục.', 'Trích yếu bị trộn chế độ', 'OK', 'Warning') | Out-Null
+            return
+        }
+        if ([string]::IsNullOrWhiteSpace($commonAbstract)) {
+            [System.Windows.Forms.MessageBox]::Show('Hãy nhập Trích yếu chung.', 'Thiếu trích yếu', 'OK', 'Warning') | Out-Null
+            return
+        }
+        foreach ($batch in $batches) { $batch.abstract = $commonAbstract }
+    } else {
+        if (-not [string]::IsNullOrWhiteSpace($commonAbstract)) {
+            [System.Windows.Forms.MessageBox]::Show('Đang chọn trích yếu riêng. Hãy xóa nội dung ô Trích yếu chung.', 'Trích yếu bị trộn chế độ', 'OK', 'Warning') | Out-Null
+            return
+        }
+        if (@($batches | Where-Object { [string]::IsNullOrWhiteSpace($_.abstract) }).Count -gt 0) {
+            [System.Windows.Forms.MessageBox]::Show('Mỗi dòng phải có dạng: đường dẫn | trích yếu riêng.', 'Thiếu trích yếu', 'OK', 'Warning') | Out-Null
+            return
+        }
     }
     if ([string]::IsNullOrWhiteSpace($reviewer)) {
         [System.Windows.Forms.MessageBox]::Show('Vui lòng nhập Người duyệt cấp 1 / lãnh đạo.', 'Thiếu người duyệt', 'OK', 'Warning') | Out-Null
@@ -502,7 +541,7 @@ $startButton.Add_Click({
     if ($answer -ne [System.Windows.Forms.DialogResult]::OK) { return }
 
     try {
-        $config = [ordered]@{ profileName=$profileBox.Text.Trim(); abstract=$commonAbstract; batches=$batches; sourceFolder=$folder; reviewerLevel1=$reviewer; dryRun=[bool]$dryRun.Checked; reuploadModified=[bool]$reuploadModified.Checked; listPageSize=100 }
+        $config = [ordered]@{ profileName=$profileBox.Text.Trim(); abstract=$(if ($commonAbstractMode.Checked) { $commonAbstract } else { '' }); abstractMode=$(if ($commonAbstractMode.Checked) { 'common' } else { 'per-folder' }); batches=$batches; sourceFolder=$folder; reviewerLevel1=$reviewer; dryRun=[bool]$dryRun.Checked; reuploadModified=[bool]$reuploadModified.Checked; listPageSize=100 }
         $config | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $configPath -Encoding UTF8
 
         $startButton.Enabled = $false
@@ -510,6 +549,7 @@ $startButton.Add_Click({
         $folderBox.Enabled = $false
         $profileBox.Enabled = $false
         $reviewerBox.Enabled = $false
+        $commonAbstractMode.Enabled = $false
         $saveProfileButton.Enabled = $false
         $script:stopRequested = $false
         $stopButton.Enabled = $true
@@ -580,6 +620,7 @@ $startButton.Add_Click({
         $folderBox.Enabled = $true
         $profileBox.Enabled = $true
         $reviewerBox.Enabled = $true
+        $commonAbstractMode.Enabled = $true
         $saveProfileButton.Enabled = $true
     }
 })
@@ -592,10 +633,14 @@ if ($UiSelfTest) {
     $testBatches = @(Parse-UploadBatches @('C:\A | Trích yếu A', 'C:\B | Trích yếu B', 'C:\C | Trích yếu C'))
     if ($testBatches.Count -ne 3 -or $testBatches[2].abstract -ne 'Trích yếu C') { throw 'UI test: không phân tích đúng ba thư mục và trích yếu.' }
     if (-not $folderBox.Multiline -or $folderBox.Height -lt 50 -or $browseButton.Text -ne 'Thêm thư mục') { throw 'UI test: ô nhập nhiều thư mục chưa sẵn sàng.' }
-    if ($abstractLabel.Text -ne 'Trích yếu chung:' -or $abstractLabel.Location.Y -ne 150 -or $abstractBox.Location.Y -ne 147) { throw 'UI test: ô trích yếu chung chưa được bố trí.' }
+    if ($abstractLabel.Text -ne 'Trích yếu chung:' -or $abstractLabel.Location.Y -ne 150 -or $abstractBox.Location.Y -ne 147 -or $commonAbstractMode.Text -notlike '*trích yếu chung*') { throw 'UI test: chế độ trích yếu chưa được bố trí.' }
     $form.StartPosition = 'Manual'; $form.Location = New-Object Drawing.Point(-32000,-32000); $form.ShowInTaskbar = $false
     $form.Show(); $form.PerformLayout(); [Windows.Forms.Application]::DoEvents()
     if ($null -eq $form.Icon) { throw 'UI test: cửa sổ chưa có icon riêng.' }
+    $commonAbstractMode.Checked = $true; [Windows.Forms.Application]::DoEvents()
+    if (-not $abstractBox.Visible -or $folderLabel.Text -ne 'Danh sách thư mục:') { throw 'UI test: chế độ trích yếu chung không hiển thị đúng.' }
+    $abstractBox.Text = 'Trích yếu thử'; $commonAbstractMode.Checked = $false; [Windows.Forms.Application]::DoEvents()
+    if ($abstractBox.Visible -or $abstractBox.Text -ne '' -or $folderLabel.Text -ne 'Thư mục | trích yếu riêng:') { throw 'UI test: chế độ trích yếu riêng không hiển thị đúng.' }
     if (-not $uiWorkspace -or $uiWorkspace.Workspace.ColumnCount -ne 2 -or $uiWorkspace.ActivityPanel.RowCount -ne 5 -or $statusBox.Dock -ne 'Fill' -or $progressPanel.Dock -ne 'Fill' -or [string]::IsNullOrWhiteSpace($footerLabel.Text)) { throw 'UI test: workspace hoạt động/footer chưa hoàn chỉnh.' }
     foreach ($control in @($group1, $group2, $group3, $actionBar, $progressPanel, $statusBox)) {
         if ($control.Right -gt $mainPanel.ClientSize.Width + 2) { throw "UI test: điều khiển vượt chiều rộng: $($control.Name)" }
