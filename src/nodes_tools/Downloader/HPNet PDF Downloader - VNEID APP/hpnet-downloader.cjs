@@ -13,6 +13,21 @@ function fail(message, code = 1) {
   process.exitCode = code;
 }
 
+async function withRetry(action, { attempts = 3, delayMs = 750, onRetry = () => {} } = {}) {
+  let lastError;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      return await action();
+    } catch (error) {
+      lastError = error;
+      if (attempt >= attempts) break;
+      onRetry(attempt + 1, error);
+      await new Promise((resolve) => setTimeout(resolve, delayMs * attempt));
+    }
+  }
+  throw lastError;
+}
+
 function cleanJsonText(text) {
   return text.replace(/^\uFEFF/, "");
 }
@@ -583,6 +598,14 @@ function isUnread(value) {
 }
 
 async function runSelfTest() {
+  let retryAttempts = 0;
+  const retryValue = await withRetry(async () => {
+    retryAttempts += 1;
+    if (retryAttempts < 2) throw new Error("lỗi mạng giả lập");
+    return "ok";
+  }, { delayMs: 0 });
+  if (retryValue !== "ok" || retryAttempts !== 2) throw new Error("Self-test: cơ chế thử lại tải file không hoạt động.");
+
   const batchRoot = await fsp.mkdtemp(path.join(require("os").tmpdir(), "hpnet-batch-"));
   const namedRoot = path.join(batchRoot, "Đông Phòng (chùa)");
   await fsp.mkdir(namedRoot);
@@ -971,8 +994,14 @@ async function main({ configPath = process.argv[2], chromium: suppliedChromium }
       try {
         const detailUrl = new URL(DETAIL_URL);
         detailUrl.searchParams.set("VanbanDiId", documentId);
-        const detailResponse = await context.request.get(detailUrl.href, { timeout: 60000 });
-        if (!detailResponse.ok()) throw new Error(`HTTP ${detailResponse.status()} khi đọc chi tiết.`);
+        const detailResponse = await withRetry(
+          async () => {
+            const response = await context.request.get(detailUrl.href, { timeout: 60000 });
+            if (!response.ok()) throw new Error(`HTTP ${response.status()} khi đọc chi tiết.`);
+            return response;
+          },
+          { onRetry: (attempt, error) => log(`[THỬ LẠI CHI TIẾT] ${label}, lần ${attempt}: ${error.message}`) },
+        );
         const detail = unwrapPayload(await detailResponse.json());
         if (!detail || typeof detail !== "object") throw new Error("Phản hồi chi tiết không hợp lệ; không thể xác định file đính kèm.");
         if (detail.Result && String(detail.Result).toUpperCase() !== "OK") throw new Error(detail.Message || "HPNet trả lỗi khi đọc file đính kèm.");
@@ -1023,23 +1052,29 @@ async function main({ configPath = process.argv[2], chromium: suppliedChromium }
           }
           if (fileNamePolicy.mode === "legacy" && !fileNamePolicy.strictPattern.test(candidate.name)) log(`[NGOẠI LỆ THIẾU MÃ XÃ] ${safeName}: chấp nhận và giữ nguyên tên.`);
           try {
-          const fileResponse = await context.request.get(candidate.url, { timeout: 120000, maxRedirects: 0 });
-          if (!fileResponse.ok()) throw new Error(`HTTP ${fileResponse.status()} khi tải ${safeName}.`);
-          if (!isHpnetUrl(fileResponse.url())) throw new Error(`${safeName} chuyển hướng ra ngoài máy chủ HPNet.`);
-          const declaredSize = Number(fileResponse.headers()["content-length"] || 0);
-          if (declaredSize > MAX_PDF_BYTES) throw new Error(`${safeName} vượt giới hạn 200 MB.`);
-          const buffer = await fileResponse.body();
-          if (buffer.length > MAX_PDF_BYTES) throw new Error(`${safeName} vượt giới hạn 200 MB.`);
-          if (buffer.length < 5 || buffer.subarray(0, 5).toString("ascii") !== "%PDF-") {
-            throw new Error(`${safeName} không phải dữ liệu PDF hợp lệ.`);
-          }
+          const buffer = await withRetry(
+            async () => {
+              const fileResponse = await context.request.get(candidate.url, { timeout: 120000, maxRedirects: 0 });
+              if (!fileResponse.ok()) throw new Error(`HTTP ${fileResponse.status()} khi tải ${safeName}.`);
+              if (!isHpnetUrl(fileResponse.url())) throw new Error(`${safeName} chuyển hướng ra ngoài máy chủ HPNet.`);
+              const declaredSize = Number(fileResponse.headers()["content-length"] || 0);
+              if (declaredSize > MAX_PDF_BYTES) throw new Error(`${safeName} vượt giới hạn 200 MB.`);
+              const body = await fileResponse.body();
+              if (body.length > MAX_PDF_BYTES) throw new Error(`${safeName} vượt giới hạn 200 MB.`);
+              if (body.length < 5 || body.subarray(0, 5).toString("ascii") !== "%PDF-") {
+                throw new Error(`${safeName} không phải dữ liệu PDF hợp lệ.`);
+              }
+              return body;
+            },
+            { onRetry: (attempt, error) => log(`[THỬ LẠI FILE] ${label} / ${safeName}, lần ${attempt}: ${error.message}`) },
+          );
 
           if (fs.existsSync(destination)) {
             const existing = await fsp.readFile(destination);
             if (sha256(existing) === sha256(buffer)) {
               existed += 1;
               if (notificationNumber !== null) existingNumbers.add(notificationNumber);
-              log(`[ĐÃ CÓ] ${safeName}`);
+            log(`[ĐÃ CÓ] ${notificationNumber ?? "?"}: ${safeName} -> ${destination}`);
               addResult([notificationNumber ?? "", label, entry.pageNumber, safeName, destination, "ĐÃ CÓ", "File hiện có giống hệt nội dung trên HPNet"]);
               seenUrls.add(candidate.url);
               continue;
@@ -1082,7 +1117,7 @@ async function main({ configPath = process.argv[2], chromium: suppliedChromium }
           await writePdfAtomic(destination, buffer);
           downloaded += 1;
           if (notificationNumber !== null) downloadedNumbers.add(notificationNumber);
-          log(`[ĐÃ TẢI] ${safeName}`);
+          log(`[ĐÃ TẢI] ${notificationNumber ?? "?"}: ${safeName} -> ${destination}`);
           addResult([notificationNumber ?? "", label, entry.pageNumber, safeName, destination, "ĐÃ TẢI", ""]);
           seenUrls.add(candidate.url);
           } catch (error) {
@@ -1140,6 +1175,7 @@ async function main({ configPath = process.argv[2], chromium: suppliedChromium }
 }
 
 module.exports = {
+  withRetry,
   buildValidPdfNamePattern, normalizeDocumentScope, parseFileSuffixes, buildFileNamePolicy, validateWindowsFileName,
   matchPdfFileName, deduplicateCandidates, buildFilters, buildDocumentRecord, recordFilterReasons, recordMatchesFilters,
   scanDocumentPages, classifyEntries, auditRows, csvCell, safeOutputPath, writePdfAtomic, main,
