@@ -9,6 +9,28 @@ $nodeScript = Join-Path $toolRoot 'hpnet-upload-draft.cjs'
 $configPath = Join-Path $toolRoot 'cau_hinh.json'
 $profilesPath = Join-Path $toolRoot 'profiles.json'
 
+function Read-UploadOutput($Process, [scriptblock]$OnLine) {
+    # Poll .NET tasks on the UI thread; PowerShell callbacks cannot run on pool threads.
+    $readers = @($Process.StandardOutput, $Process.StandardError)
+    $tasks = @($readers[0].ReadLineAsync(), $readers[1].ReadLineAsync())
+    while ($null -ne $tasks[0] -or $null -ne $tasks[1]) {
+        for ($i = 0; $i -lt 2; $i++) {
+            if ($null -ne $tasks[$i] -and $tasks[$i].IsCompleted) {
+                $line = $tasks[$i].GetAwaiter().GetResult()
+                if ($null -eq $line) { $tasks[$i] = $null }
+                else {
+                    if ($i -eq 1) { $line = "[LỖI] $line" }
+                    & $OnLine $line
+                    $tasks[$i] = $readers[$i].ReadLineAsync()
+                }
+            }
+        }
+        [Windows.Forms.Application]::DoEvents()
+        Start-Sleep -Milliseconds 10
+    }
+    $Process.WaitForExit()
+}
+
 function Find-HPNetRuntime {
     param([switch]$SkipBrowserCheck)
     # Runtime dùng chung tại nodes_tools/runtime/ — duy nhất, không fallback vào runtime riêng từng tool.
@@ -222,6 +244,11 @@ $folderBox.ScrollBars = 'Vertical'
 $folderBox.Font = $fontNormal
 $folderBox.Text = if ($savedConfig -and $savedConfig.batches) { (@($savedConfig.batches) | ForEach-Object { "$($_.folder) | $($_.abstract)" }) -join "`r`n" } elseif ($savedConfig -and $savedConfig.sourceFolder) { "$( $savedConfig.sourceFolder ) | $( $savedConfig.abstract )" } else { '' }
 $group1.Controls.Add($folderBox)
+$folderBox.Add_Leave({
+    $folderBox.SelectionStart = 0
+    $folderBox.SelectionLength = 0
+    $folderBox.ScrollToCaret()
+})
 
 $browseButton = New-Object System.Windows.Forms.Button
 $browseButton.Text = 'Thêm thư mục'
@@ -451,7 +478,7 @@ function Update-AbstractMode {
         $folderBox.Height = 65
     } else {
         $abstractBox.Text = ''
-        $folderLabel.Text = 'Thư mục | trích yếu riêng:'
+        $folderLabel.Text = 'Thư mục | trích yếu:'
         $folderBox.Height = 95
     }
 }
@@ -576,19 +603,14 @@ $startButton.Add_Click({
         $script:activeProcess = $process
         Set-HPNetProgressRunning $progressBar $progressLabel 'Đang quét HPNet…'
         $script:liveOutput = New-Object System.Collections.Concurrent.ConcurrentQueue[string]
-        $process.add_OutputDataReceived({ param($sender, $event); if ($null -ne $event.Data) { [void]$script:liveOutput.Enqueue($event.Data) } })
-        $process.add_ErrorDataReceived({ param($sender, $event); if ($null -ne $event.Data) { [void]$script:liveOutput.Enqueue("[LỖI] $($event.Data)") } })
-        $process.BeginOutputReadLine()
-        $process.BeginErrorReadLine()
-        while (-not $process.HasExited) {
-            [System.Windows.Forms.Application]::DoEvents()
+        Read-UploadOutput $process {
+            param($line)
+            [void]$script:liveOutput.Enqueue($line)
             $statusBox.Lines = @($script:liveOutput.ToArray())
-            foreach ($line in @($script:liveOutput.ToArray())) { Update-HPNetProgressFromLine $progressBar $progressLabel $line }
+            Update-HPNetProgressFromLine $progressBar $progressLabel $line
             $statusBox.SelectionStart = $statusBox.TextLength
             $statusBox.ScrollToCaret()
-            Start-Sleep -Milliseconds 150
         }
-        $process.WaitForExit()
         $statusText = (@($script:liveOutput.ToArray()) -join [Environment]::NewLine).Trim()
         if ($script:stopRequested) {
             Set-HPNetProgressStopped $progressBar $progressLabel 'Đã dừng theo yêu cầu'
@@ -640,7 +662,7 @@ if ($UiSelfTest) {
     $commonAbstractMode.Checked = $true; [Windows.Forms.Application]::DoEvents()
     if (-not $abstractBox.Visible -or $folderLabel.Text -ne 'Danh sách thư mục:') { throw 'UI test: chế độ trích yếu chung không hiển thị đúng.' }
     $abstractBox.Text = 'Trích yếu thử'; $commonAbstractMode.Checked = $false; [Windows.Forms.Application]::DoEvents()
-    if ($abstractBox.Visible -or $abstractBox.Text -ne '' -or $folderLabel.Text -ne 'Thư mục | trích yếu riêng:') { throw 'UI test: chế độ trích yếu riêng không hiển thị đúng.' }
+    if ($abstractBox.Visible -or $abstractBox.Text -ne '' -or $folderLabel.Text -ne 'Thư mục | trích yếu:') { throw 'UI test: chế độ trích yếu riêng không hiển thị đúng.' }
     if (-not $uiWorkspace -or $uiWorkspace.Workspace.ColumnCount -ne 2 -or $uiWorkspace.ActivityPanel.RowCount -ne 5 -or $statusBox.Dock -ne 'Fill' -or $progressPanel.Dock -ne 'Fill' -or [string]::IsNullOrWhiteSpace($footerLabel.Text)) { throw 'UI test: workspace hoạt động/footer chưa hoàn chỉnh.' }
     foreach ($control in @($group1, $group2, $group3, $actionBar, $progressPanel, $statusBox)) {
         if ($control.Right -gt $mainPanel.ClientSize.Width + 2) { throw "UI test: điều khiển vượt chiều rộng: $($control.Name)" }
@@ -651,8 +673,21 @@ if ($UiSelfTest) {
         try { $form.DrawToBitmap($bitmap, (New-Object Drawing.Rectangle(0,0,$form.Width,$form.Height))); $bitmap.Save($TestImagePath, [Drawing.Imaging.ImageFormat]::Png) }
         finally { $bitmap.Dispose() }
     }
+    $workerTestInfo = New-Object Diagnostics.ProcessStartInfo
+    $workerTestInfo.FileName = $runtime.NodeExe
+    $workerTestInfo.Arguments = ('"{0}" --self-test' -f $nodeScript)
+    $workerTestInfo.UseShellExecute = $false
+    $workerTestInfo.CreateNoWindow = $true
+    $workerTestInfo.RedirectStandardOutput = $true
+    $workerTestInfo.RedirectStandardError = $true
+    $workerTest = New-Object Diagnostics.Process
+    $workerTest.StartInfo = $workerTestInfo
+    $workerOutput = New-Object System.Collections.Generic.List[string]
+    $workerTest.Start() | Out-Null
+    Read-UploadOutput $workerTest { param($line); $workerOutput.Add($line) }
+    if ($workerTest.ExitCode -ne 0 -or $workerOutput -notcontains 'NODE_SELF_TEST_OK') { throw 'UI test: luồng đọc tiến trình upload không hoạt động ổn định.' }
     $form.Dispose()
-    Write-Output 'UI_SELF_TEST_OK: nhiều thư mục/trích yếu, trạng thái điều khiển và bố cục; không mở Edge và không upload.'
+    Write-Output 'UI_SELF_TEST_OK: nhiều thư mục/trích yếu, luồng đọc tiến trình và bố cục; không mở Edge và không upload.'
     exit 0
 }
 
