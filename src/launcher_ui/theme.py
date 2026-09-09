@@ -8,24 +8,38 @@ COLORS = {
     "success":"#2E7D32", "warning":"#C47A00", "error":"#C53D45",
 }
 import os
-if os.name == "nt":
-    try:
-        import winreg
-        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize") as _key:
-            if int(winreg.QueryValueEx(_key, "AppsUseLightTheme")[0]) == 0:
-                COLORS.update({"canvas":"#202124","surface":"#2B2D31","surface_elevated":"#35383E","text":"#F2F4F7","muted":"#B8C0CC","border":"#4A505A","tint":"#263E73","primary":"#76A7FF","hover":"#9ABFFF","pressed":"#4F82D7","disabled":"#7E8794"})
-    except (OSError, ValueError): pass
+LIGHT_COLORS = dict(COLORS)
+DARK_COLORS = {**COLORS, "canvas":"#202124", "surface":"#2B2D31", "surface_elevated":"#35383E", "text":"#F2F4F7", "muted":"#B8C0CC", "border":"#4A505A", "tint":"#263E73", "primary":"#76A7FF", "hover":"#9ABFFF", "pressed":"#4F82D7", "disabled":"#7E8794"}
 SPACING = {"xs": 4, "sm": 8, "md": 12, "lg": 16, "xl": 24}
 TYPOGRAPHY = {"family": "'Segoe UI'", "monospace": "'Consolas'", "caption": "9pt", "body": "10pt", "heading": "13pt", "display": "22pt"}
 RADIUS = {"small": 5, "medium": 8, "large": 12}
 
 
-def palette():
+def system_dark_mode():
+    try:
+        from PySide6.QtWidgets import QApplication
+        app = QApplication.instance()
+        if app and app.property("darkMode") is not None:
+            return bool(app.property("darkMode"))
+    except RuntimeError:
+        pass
+    if os.name == "nt":
+        try:
+            import winreg
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize") as key:
+                return int(winreg.QueryValueEx(key, "AppsUseLightTheme")[0]) == 0
+        except (OSError, ValueError):
+            pass
+    return False
+
+
+def palette(dark=None):
+    colors = DARK_COLORS if (system_dark_mode() if dark is None else dark) else LIGHT_COLORS
     result=QPalette()
     for role,key in ((QPalette.Window,"canvas"),(QPalette.Base,"surface"),(QPalette.WindowText,"text"),
                      (QPalette.Text,"text"),(QPalette.Button,"surface"),(QPalette.ButtonText,"text"),
                      (QPalette.Highlight,"primary")):
-        result.setColor(role,QColor(COLORS[key]))
+        result.setColor(role,QColor(colors[key]))
     result.setColor(QPalette.HighlightedText,QColor("white"))
     return result
 
@@ -99,3 +113,17 @@ for key in sorted(COLORS, key=len, reverse=True): STYLE=STYLE.replace("@"+key,CO
 for key,value in SPACING.items(): STYLE=STYLE.replace("@space_"+key, f"{value}px")
 for key,value in TYPOGRAPHY.items(): STYLE=STYLE.replace("@font_"+key, value)
 for key,value in RADIUS.items(): STYLE=STYLE.replace("@radius_"+key, f"{value}px")
+def style_for_mode(dark=False):
+    style = STYLE
+    if dark:
+      for key, light_value in LIGHT_COLORS.items():
+        style = style.replace(light_value, DARK_COLORS[key])
+      for light, dark_value in {
+        "#FBFCFF": "#303338", "#F8FAFD": "#303338", "#F7F9FF": "#303338",
+        "#F8FCF8": "#263A2A", "#FFF9F9": "#402A2E", "#EDF2F9": "#30343B",
+        "#6B7788": "#AAB3C0", "#77869A": "#9EA8B6", "#DCE6FC": "#344A78",
+        "#EDF1F6": "#303338", "#F1F5FC": "#303338", "#B3C2D6": "#667080",
+        "#8B9FB9": "#8C98AA", "#53657A": "#B8C0CC", "#2458C5": "#76A7FF",
+      }.items():
+        style = style.replace(light, dark_value)
+    return style

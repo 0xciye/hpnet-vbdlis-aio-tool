@@ -10,6 +10,7 @@ from PySide6.QtWidgets import QApplication
 
 from tools.vbdlis_excel_builder.ui import MainWindow
 from tools.vbdlis_excel_builder.utils.paths import app_data_dir, resource_path
+from launcher_ui.theme import DARK_COLORS, LIGHT_COLORS, palette as shared_palette, system_dark_mode
 
 
 STYLE = """
@@ -297,6 +298,29 @@ QStatusBar {
 }
 """
 
+_DARK_STYLE_COLORS = {
+    "#1e293b": "#F2F4F7", "#f1f5f9": "#202124", "#ffffff": "#2B2D31",
+    "#cbd5e1": "#4A505A", "#e2e8f0": "#35383E", "#475569": "#B8C0CC",
+    "#0b63ce": "#76A7FF", "#f0f4fa": "#303338", "#bfdbfe": "#355A9C",
+    "#f8fbff": "#303338", "#f8fafc": "#303338", "#64748b": "#AAB3C0",
+    "#dbeafe": "#355A9C", "#15395c": "#F2F4F7", "#e2e8f0": "#35383E",
+    "#94a3b8": "#7E8794", "#cbd5e1": "#4A505A", "#f8fafc": "#303338",
+    "#1e3a5f": "#35383E", "#2c4f7a": "#4A505A", "#f0f4f8": "#41464F",
+    "#fffbeb": "#453A22", "#78350f": "#FFD58A", "#fcd34d": "#8F6B2A",
+    "#f59e0b": "#D89A28", "#eff6ff": "#243853", "#1e3a5f": "#BFD7FF",
+    "#3b82f6": "#76A7FF", "#0846a0": "#3F6FB8", "#0950a8": "#527FC2",
+    "#0d74ef": "#8DB8FF", "#f1f5f9": "#202124", "#94a3b8": "#7E8794",
+}
+
+
+def _is_dark_mode() -> bool:
+    try:
+        import winreg
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize") as key:
+            return int(winreg.QueryValueEx(key, "AppsUseLightTheme")[0]) == 0
+    except (OSError, ValueError):
+        return False
+
 
 def configure_logging() -> None:
     log_path = app_data_dir() / "logs" / "app.log"
@@ -327,35 +351,22 @@ def main() -> int:
 
 
 def light_palette() -> QPalette:
-    import winreg
-    dark = False
-    try:
-        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize") as key:
-            dark = int(winreg.QueryValueEx(key, "AppsUseLightTheme")[0]) == 0
-    except (OSError, ValueError): pass
-    if dark:
-        palette = QPalette()
-        for role, color in ((QPalette.Window,"#202124"),(QPalette.WindowText,"#F2F4F7"),(QPalette.Base,"#2B2D31"),(QPalette.AlternateBase,"#303338"),(QPalette.Text,"#F2F4F7"),(QPalette.Button,"#35383E"),(QPalette.ButtonText,"#F2F4F7"),(QPalette.Highlight,"#355A9C"),(QPalette.HighlightedText,"#FFFFFF"),(QPalette.PlaceholderText,"#AAB3C0")):
-            palette.setColor(role, QColor(color))
-        return palette
-
-    palette = QPalette()
-    for role, color in (
-        (QPalette.Window, "#f1f5f9"), (QPalette.WindowText, "#1e293b"),
-        (QPalette.Base, "#ffffff"), (QPalette.AlternateBase, "#f8fafc"),
-        (QPalette.Text, "#1e293b"), (QPalette.Button, "#f1f5f9"),
-        (QPalette.ButtonText, "#1e293b"), (QPalette.Highlight, "#dbeafe"),
-        (QPalette.HighlightedText, "#15395c"), (QPalette.PlaceholderText, "#64748b"),
-    ):
-        palette.setColor(role, QColor(color))
-    palette.setColor(QPalette.Disabled, QPalette.Text, QColor("#64748b"))
-    palette.setColor(QPalette.Disabled, QPalette.WindowText, QColor("#64748b"))
-    palette.setColor(QPalette.Disabled, QPalette.ButtonText, QColor("#64748b"))
-    return palette
+    app = QApplication.instance()
+    dark = bool(app.property("darkMode")) if app and app.property("darkMode") is not None else system_dark_mode()
+    return shared_palette(dark)
 
 
 def window_stylesheet() -> str:
-    return (STYLE.replace("__CHEVRON__", resource_path("resources/chevron_down.svg").as_posix())
+    app = QApplication.instance()
+    dark = bool(app.property("darkMode")) if app and app.property("darkMode") is not None else system_dark_mode()
+    style = STYLE
+    if dark:
+        for key, light_value in LIGHT_COLORS.items():
+            style = style.replace(light_value, DARK_COLORS[key])
+        for light, dark_value in {"#ffffff":"#2B2D31", "#f1f5f9":"#202124", "#e2e8f0":"#35383E", "#475569":"#B8C0CC", "#cbd5e1":"#4A505A", "#f8fafc":"#303338", "#f0f4fa":"#303338", "#1e293b":"#F2F4F7", "#0b63ce":"#76A7FF", "#dbeafe":"#355A9C", "#15395c":"#F2F4F7", "#f8fbff":"#303338", "#f0f4f8":"#41464F", "#1e3a5f":"#35383E", "#2c4f7a":"#4A505A", "#94a3b8":"#7E8794", "#fffbeb":"#453A22", "#78350f":"#FFD58A", "#fcd34d":"#8F6B2A", "#f59e0b":"#D89A28", "#eff6ff":"#243853", "#3b82f6":"#76A7FF"}.items():
+            style = style.replace(light, dark_value)
+    return (style
+            .replace("__CHEVRON__", resource_path("resources/chevron_down.svg").as_posix())
             .replace("__CHECK__", resource_path("resources/check.svg").as_posix()))
 
 

@@ -62,7 +62,7 @@ class DataPage(QWidget):
         header_row.addWidget(self.header_spin)
         hint = QLabel("Dòng chứa tên cột trong Excel. Ví dụ: tên cột ở dòng 6 → nhập 6.")
         hint.setWordWrap(True)
-        hint.setStyleSheet("color: #475569;")
+        hint.setStyleSheet("color: palette(mid);")
         header_row.addWidget(hint, 1)
         form.addRow("Dòng tiêu đề", header_row)
 
@@ -84,7 +84,7 @@ class DataPage(QWidget):
         self.table.horizontalHeader().setStretchLastSection(False)
         self.preview_status = QLabel("Chưa có dữ liệu xem trước. Chọn file Excel, kiểm tra trang tính rồi bấm Đọc dữ liệu.")
         self.preview_status.setWordWrap(True)
-        self.preview_status.setStyleSheet("color: #475569; padding: 4px 0;")
+        self.preview_status.setStyleSheet("color: palette(mid); padding: 4px 0;")
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(16, 16, 16, 16)

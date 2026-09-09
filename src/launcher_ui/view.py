@@ -3,7 +3,7 @@ import unicodedata
 from PySide6.QtCore import Qt, QSize, QEvent, QTimer, Signal
 from PySide6.QtGui import QKeySequence, QShortcut, QColor
 from PySide6.QtWidgets import (QWidget,QFrame,QLabel,QPushButton,QLineEdit,QVBoxLayout,QHBoxLayout,
-    QGridLayout,QScrollArea,QStackedWidget,QButtonGroup,QSizePolicy,QApplication,QLayout,
+    QGridLayout,QScrollArea,QStackedWidget,QButtonGroup,QSizePolicy,QApplication,QLayout,QComboBox,
     QGraphicsDropShadowEffect,QProgressBar)
 from .icons import icon
 from .help_page import HelpPage
@@ -136,6 +136,10 @@ class LauncherView(QWidget):
         self.nav_group=QButtonGroup(self); self.nav_buttons={}
         self.pages=QStackedWidget(); outer.addWidget(self.pages,1)
         self.tools_page=QWidget(); page=QVBoxLayout(self.tools_page); page.setContentsMargins(30,26,30,22); page.setSpacing(14)
+        theme_row=QHBoxLayout(); theme_row.setContentsMargins(0,0,0,0)
+        theme_row.addWidget(label("Giao diện", "muted")); self.theme_combo=QComboBox(); self.theme_combo.addItems(["Sáng", "Tối"])
+        self.theme_combo.setCurrentIndex(1 if hub.dark_mode else 0); self.theme_combo.setFixedWidth(82); self.theme_combo.setAccessibleName("Chọn giao diện Sáng hoặc Tối")
+        self.theme_combo.currentIndexChanged.connect(lambda index: hub.set_theme_mode("dark" if index == 1 else "light")); theme_row.addWidget(self.theme_combo); theme_row.addStretch(1); page.addLayout(theme_row)
         self.eyebrow=label("BỘ CÔNG CỤ XỬ LÝ HỒ SƠ","eyebrow"); page.addWidget(self.eyebrow)
         self.heading=label("Chọn công cụ. Bắt đầu công việc.","pageTitle"); page.addWidget(self.heading)
         self.description=label("Chuẩn bị hồ sơ, kiểm tra dữ liệu và làm việc với HPNet trong các cửa sổ riêng.","muted"); page.addWidget(self.description)

@@ -53,7 +53,12 @@ jobs:
             Where-Object { $_ -match '^v\d+\.\d+\.\d+$' } |
             ForEach-Object { [version]$_.Substring(1) })
           $latest = $versions | Sort-Object -Descending | Select-Object -First 1
-          $releaseId = if ($latest) { "v$($latest.Major).$($latest.Minor).$($latest.Build + 1)" } else { 'v1.0.0' }
+          # The first release used v1.0.0; transition the existing 1.0 line to v1.1.0.
+          $releaseId = if (-not $latest -or $latest -lt [version]'1.1.0') {
+            'v1.1.0'
+          } else {
+            "v$($latest.Major).$($latest.Minor).$($latest.Build + 1)"
+          }
           "RELEASE_ID=$releaseId" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Build and verify release

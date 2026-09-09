@@ -4,9 +4,9 @@ import sys
 import os
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import Qt, QTimer, QSettings
 from PySide6.QtGui import QIcon
-from PySide6.QtWidgets import (QApplication, QFrame, QGridLayout, QHBoxLayout, QLabel,
+from PySide6.QtWidgets import (QApplication, QAbstractItemView, QFrame, QGridLayout, QHBoxLayout, QLabel,
     QMainWindow, QMessageBox, QProgressDialog, QPushButton, QScrollArea, QVBoxLayout, QWidget)
 from auto_update import build_info
 
@@ -20,7 +20,7 @@ def resource_path(relative_path):
     base = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
     return str(base / relative_path)
 
-from launcher_ui.theme import STYLE as HUB_STYLE, palette as launcher_palette
+from launcher_ui.theme import style_for_mode, palette as launcher_palette
 from launcher_ui.view import LauncherView
 
 class ToolLauncher(QMainWindow):
@@ -29,8 +29,13 @@ class ToolLauncher(QMainWindow):
         self.setWindowTitle("HPNET & VBDLIS Tools • Trung tâm tác nghiệp hồ sơ")
         self.resize(1240, 860)
         self.setMinimumSize(900, 660)
-        self.setStyleSheet(HUB_STYLE)
-        self.setPalette(launcher_palette())
+        self.settings = QSettings("HPNet", "HPNet VBDLIS AIO Tool")
+        saved_theme = str(self.settings.value("theme", "")).lower()
+        # Use a predictable light default; the user controls the mode explicitly.
+        self.dark_mode = saved_theme == "dark" if saved_theme in {"dark", "light"} else False
+        QApplication.instance().setProperty("darkMode", self.dark_mode)
+        self.setStyleSheet(style_for_mode(self.dark_mode))
+        self.setPalette(launcher_palette(self.dark_mode))
         self.setWindowIcon(QIcon(resource_path("tools/vbdlis_excel_builder/resources/app_icon.ico")))
         self.open_tools = []
         self.tool_windows = {}
@@ -56,6 +61,27 @@ class ToolLauncher(QMainWindow):
     def setup_ui(self):
         self.launcher_view = LauncherView(self)
         self.setCentralWidget(self.launcher_view)
+
+    def set_theme_mode(self, mode):
+        self.dark_mode = str(mode).lower() == "dark"
+        self.settings.setValue("theme", "dark" if self.dark_mode else "light")
+        app = QApplication.instance()
+        app.setProperty("darkMode", self.dark_mode)
+        app.setPalette(launcher_palette(self.dark_mode))
+        self.setStyleSheet(style_for_mode(self.dark_mode))
+        for window in app.topLevelWidgets():
+            if window is self:
+                continue
+            if window.__class__.__module__.startswith("tools."):
+                window.setPalette(launcher_palette(self.dark_mode))
+                if window.__class__.__module__.startswith("tools.vbdlis_excel_builder"):
+                    from tools.vbdlis_excel_builder.main import configure_window_appearance
+                    configure_window_appearance(window)
+                else:
+                    window.setStyleSheet(style_for_mode(self.dark_mode))
+                for view in window.findChildren(QAbstractItemView):
+                    view.setPalette(launcher_palette(self.dark_mode))
+            window.style().unpolish(window); window.style().polish(window); window.update()
 
     def _setup_version_status(self):
         self.current_version_status = QLabel(f"Đang dùng: {self.current_version}")

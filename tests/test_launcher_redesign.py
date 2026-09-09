@@ -9,7 +9,7 @@ from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QPushButton
 from launcher import ToolLauncher
 from launcher_ui.help_page import guide_sources,guide_html
-from launcher_ui.theme import COLORS, RADIUS, SPACING, STYLE, TYPOGRAPHY
+from launcher_ui.theme import COLORS, RADIUS, SPACING, STYLE, TYPOGRAPHY, style_for_mode
 
 
 @pytest.fixture(scope="module")
@@ -30,6 +30,17 @@ def test_shared_design_tokens_are_complete_and_resolved():
     assert {"display", "heading", "body", "caption", "monospace"} <= TYPOGRAPHY.keys()
     assert tuple(RADIUS) == ("small", "medium", "large")
     assert "@" not in STYLE
+
+
+def test_user_can_choose_sang_toi_and_dark_hover_stays_dark(hub, app):
+    hub.launcher_view.theme_combo.setCurrentText("Tối")
+    app.processEvents()
+    assert hub.dark_mode is True and app.property("darkMode") is True
+    dark_style = style_for_mode(True)
+    assert "#FBFCFF" not in dark_style and "#303338" in dark_style
+    hub.launcher_view.theme_combo.setCurrentText("Sáng")
+    app.processEvents()
+    assert hub.dark_mode is False and app.property("darkMode") is False
 
 
 def test_guides_complete_and_read_inside_app(hub,app):

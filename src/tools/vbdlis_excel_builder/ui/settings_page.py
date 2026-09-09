@@ -21,8 +21,8 @@ from .widgets import ComboBox as QComboBox
 def _section_label(text: str) -> QLabel:
     lbl = QLabel(text)
     lbl.setStyleSheet(
-        "font-weight: 600; font-size: 9pt; color: #475569;"
-        "border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-top: 8px;"
+        "font-weight: 600; font-size: 9pt; color: palette(mid);"
+        "border-bottom: 1px solid palette(midlight); padding-bottom: 4px; margin-top: 8px;"
     )
     return lbl
 
@@ -30,7 +30,7 @@ def _section_label(text: str) -> QLabel:
 def _hline() -> QFrame:
     line = QFrame()
     line.setFrameShape(QFrame.HLine)
-    line.setStyleSheet("color: #e2e8f0;")
+    line.setStyleSheet("color: palette(midlight);")
     return line
 
 
@@ -49,7 +49,7 @@ class SettingsPage(QWidget):
 
         container = QWidget()
         container.setObjectName("settingsContent")
-        container.setStyleSheet("QWidget#settingsContent { background: #f8fafc; }")
+        container.setStyleSheet("QWidget#settingsContent { background: palette(window); }")
         main_form = QVBoxLayout(container)
         main_form.setContentsMargins(20, 16, 20, 16)
         main_form.setSpacing(4)

@@ -119,7 +119,7 @@ class ExportPage(QWidget):
         # Đường kẻ phân cách
         sep = QFrame()
         sep.setFrameShape(QFrame.HLine)
-        sep.setStyleSheet("color: #e2e8f0;")
+        sep.setStyleSheet("color: palette(midlight);")
 
         # Bảng xem trước kết quả
         self.preview_table = QTableWidget()
@@ -129,7 +129,7 @@ class ExportPage(QWidget):
         self.preview_table.verticalHeader().setDefaultSectionSize(26)
 
         preview_label = QLabel("Xem trước dữ liệu sau xử lý")
-        preview_label.setStyleSheet("font-weight: 600; color: #374151; padding-bottom: 4px;")
+        preview_label.setStyleSheet("font-weight: 600; color: palette(text); padding-bottom: 4px;")
         preview_box = QWidget()
         pv_layout = QVBoxLayout(preview_box)
         pv_layout.setContentsMargins(0, 0, 0, 0)
@@ -144,7 +144,7 @@ class ExportPage(QWidget):
         self.issues_table.verticalHeader().setDefaultSectionSize(26)
 
         issues_label = QLabel("Lỗi / Cảnh báo / Thông tin")
-        issues_label.setStyleSheet("font-weight: 600; color: #374151; padding-bottom: 4px;")
+        issues_label.setStyleSheet("font-weight: 600; color: palette(text); padding-bottom: 4px;")
         issue_box = QWidget()
         iss_layout = QVBoxLayout(issue_box)
         iss_layout.setContentsMargins(0, 0, 0, 0)
