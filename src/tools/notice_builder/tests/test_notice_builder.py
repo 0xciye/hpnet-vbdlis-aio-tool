@@ -443,6 +443,10 @@ def test_ui_standalone_and_config_restore(app,tmp_path,monkeypatch,config):
     assert not window.windowIcon().isNull()
     assert window.template_preview.pixmap() and not window.template_preview.pixmap().isNull()
     assert window.template_preview.accessibleName()=="Ảnh xem trước mẫu Word có placeholder"
+    assert window.inputs["commune_code"].placeholderText()=="Ví dụ: 10930"
+    assert window.inputs["owner_address"].placeholderText().startswith("Ví dụ: thôn")
+    assert window.inputs["prefix"].placeholderText()=="Ví dụ: CHUACOGIAY hoặc CHUACAPGIAY"
+    assert window.output.placeholderText().startswith("Ví dụ: D:/Ho so")
     assert "Số thiếu khác ngày" in window.numbering_cases_note.text()
     assert "Hết số" in window.numbering_cases_note.text()
     for key,value in asdict(config).items():

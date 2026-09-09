@@ -144,14 +144,29 @@ class MainWindow(QMainWindow):
         note.setWordWrap(True); box.addWidget(note); box.addStretch()
 
     def make_config_page(self):
-        box=self.page("Thông tin dùng cho đợt thông báo", "Dấu * là bắt buộc, không chấp nhận chỉ nhập dấu chấm. Nội dung đã điền sẵn cần được kiểm tra; có thể sửa theo đợt. Những ô còn lại được để trống.")
+        box=self.page("Thông tin dùng cho đợt thông báo", "Dấu * là bắt buộc. Gợi ý màu xám trong ô sẽ tự ẩn khi bạn bắt đầu nhập; hãy thay bằng thông tin của đợt đang làm.")
         scroll=QScrollArea(); scroll.setWidgetResizable(True); content=QWidget(); form=QFormLayout(content); scroll.setWidget(content); box.addWidget(scroll)
         labels={"commune_code":"Mã đơn vị hành chính *","owner_address":"Địa chỉ người sử dụng đất *","village":"Tên thôn *",
                 "commune_name":"Tên xã *","administrative_address":"Địa chỉ hành chính của thửa","place":"Địa danh ghi ngày ký *","suffix":"Hậu tố tên file *"}
+        examples={
+            "commune_code":("Ví dụ: 10930", "Mã đơn vị hành chính gồm 5 chữ số. Ví dụ: 10930."),
+            "owner_address":("Ví dụ: thôn Tân Hòa, xã Mao Điền, TP Hải Phòng", "Địa chỉ đầy đủ của người sử dụng đất."),
+            "village":("Ví dụ: Tân Hòa", "Tên thôn hoặc tổ dân phố."),
+            "commune_name":("Ví dụ: MAO ĐIỀN", "Tên xã/phường theo cách ghi trên văn bản."),
+            "administrative_address":("Ví dụ: xã Mao Điền, TP Hải Phòng", "Địa chỉ hành chính của thửa đất; có thể để trống nếu không dùng."),
+            "place":("Ví dụ: Mao Điền", "Địa danh ghi trước ngày ký, thường là tên xã/phường."),
+            "suffix":("Ví dụ: TBXN", "Hậu tố dùng trong tên file, ví dụ CHUACOGIAY_10930_1_2-TBXN.pdf."),
+        }
         for key,label in labels.items():
             default = "TBXN" if key == "suffix" else ""
-            field=QLineEdit(default); field.textChanged.connect(self.invalidate); self.inputs[key]=field; form.addRow(label,field)
-        prefix_field=QLineEdit("CHUACOGIAY"); prefix_field.setToolTip("Có thể dùng CHUACOGIAY hoặc CHUACAPGIAY."); prefix_field.textChanged.connect(self.invalidate); self.inputs["prefix"]=prefix_field
+            field=QLineEdit(default)
+            placeholder, tooltip = examples[key]
+            field.setPlaceholderText(placeholder); field.setToolTip(tooltip)
+            field.textChanged.connect(self.invalidate); self.inputs[key]=field; form.addRow(label,field)
+        prefix_field=QLineEdit("CHUACOGIAY")
+        prefix_field.setPlaceholderText("Ví dụ: CHUACOGIAY hoặc CHUACAPGIAY")
+        prefix_field.setToolTip("Tiền tố đặt đầu tên file. Có thể dùng CHUACOGIAY hoặc CHUACAPGIAY.")
+        prefix_field.textChanged.connect(self.invalidate); self.inputs["prefix"]=prefix_field
         form.addRow("Tiền tố tên file", prefix_field)
         date_line=QWidget(); dates=QHBoxLayout(date_line); dates.setContentsMargins(0,0,0,0); today=date.today()
         for key,label,minimum,maximum,default in (("day","Ngày",1,31,today.day),("month","Tháng",1,12,today.month),("year","Năm",1900,2200,today.year)):
@@ -180,7 +195,7 @@ class MainWindow(QMainWindow):
         form.addRow("Các số cần tạo và ngày",self.number_date_box)
         self.number_mode.currentIndexChanged.connect(self.numbering_changed); self.continue_check.toggled.connect(self.numbering_changed)
         self.start_number.valueChanged.connect(self.invalidate); self.number_list.textChanged.connect(self.invalidate); self.continue_number.valueChanged.connect(self.invalidate)
-        self.output=QLineEdit(); self.output.setPlaceholderText("Chọn một thư mục đầu ra riêng…"); self.output.textChanged.connect(self.invalidate)
+        self.output=QLineEdit(); self.output.setPlaceholderText("Ví dụ: D:/Ho so/TB 2026 hoặc bấm Chọn thư mục…"); self.output.setToolTip("Thư mục chứa các file Word được tạo và báo cáo kết quả."); self.output.textChanged.connect(self.invalidate)
         output_row=QWidget(); line=QHBoxLayout(output_row); line.setContentsMargins(0,0,0,0); line.addWidget(self.output); line.addWidget(self.button("Chọn thư mục…",self.browse_output)); form.addRow("Lưu thông báo tại *",output_row)
         defaults=json.loads(resource("config/legal_defaults.json").read_text(encoding="utf-8"))
         self.template_inputs={}
@@ -191,7 +206,7 @@ class MainWindow(QMainWindow):
                 derived_note.setObjectName("hint"); derived_note.setWordWrap(True); form.addRow(derived_note)
                 form.addRow(QLabel("NỘI DUNG KHÔNG BẮT BUỘC"))
             field=QLineEdit(defaults.get(key,"") if key in REQUIRED_COMMON else "")
-            field.setToolTip("{{"+key+"}}"); field.textChanged.connect(self.invalidate)
+            field.setToolTip("Nội dung điền vào ô {{"+key+"}} trong mẫu Word."); field.textChanged.connect(self.invalidate)
             field.setPlaceholderText("Bắt buộc nhập" if key in REQUIRED_COMMON else "Có thể để trống")
             self.template_inputs[key]=field; form.addRow(label+(" *" if key in REQUIRED_COMMON else ""),field)
         self.optional_empty=QComboBox(); self.optional_empty.addItem("Để trống", "blank"); self.optional_empty.addItem("Điền ....", "dots")
