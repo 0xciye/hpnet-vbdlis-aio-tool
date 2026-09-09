@@ -217,6 +217,11 @@ class ToolLauncher(QMainWindow):
         if not release:
             self.update_now_button.setEnabled(True)
             self.statusBar().showMessage("Bạn đang sử dụng phiên bản mới nhất.", 5000)
+            QMessageBox.information(
+                self,
+                "Đã là phiên bản mới nhất",
+                f"Bạn đang sử dụng phiên bản mới nhất ({self.current_version}).",
+            )
             return
         answer = QMessageBox.question(self, "Có phiên bản mới",
             f"Phiên bản {release['version']} đã sẵn sàng. Bạn có muốn tải xuống và cài đặt ngay không?",
