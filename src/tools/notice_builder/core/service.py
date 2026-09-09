@@ -12,6 +12,7 @@ from .numbering import NumberPool
 from .renderer import WordTemplate
 from .logging import LogEntry, RunLog
 from .fields import OPTIONAL_COMMON, REQUIRED_COMMON, REQUIRED_TOKENS, missing_required
+from ..template_config import template_config_for_path
 
 
 @dataclass(frozen=True)
@@ -51,30 +52,56 @@ def publish(payload, target):
 
 class NoticeService:
     def __init__(self, template_path, legal_values):
-        self.template = WordTemplate(template_path)
+        self.template_config = template_config_for_path(template_path)
+        self.template = WordTemplate(
+            template_path,
+            self.template_config.required_fields,
+            self.template_config.document_rules,
+        )
         self.legal = dict(legal_values)
         self.approvals = {}
+
+    @property
+    def required_user_fields(self):
+        return tuple(key for key in self.template_config.user_fields
+                     if key in self.template_config.required_fields)
 
     def values(self, record, config, number, notice_date=None):
         notice_date = notice_date or date(config.year, config.month, config.day)
         values = {key: str(value) for key,value in self.legal.items()}
         # New required fields are explicit inputs, never silently restored from old legal defaults.
-        for key in (*REQUIRED_COMMON, *OPTIONAL_COMMON):
+        for key in (*self.template_config.user_fields, *self.template_config.optional_fields):
             values[key] = str(config.template_fields.get(key, "")).strip()
-        values.update({"SO_TB":str(number), "TEN_XA":config.commune_name.strip(), "DIA_DIEM":config.place.strip(),
+        values.update({"SO_TB":str(number),
                        "NGAY":f"{notice_date.day:02d}","THANG":f"{notice_date.month:02d}","NAM":str(notice_date.year),
                        "HO_TEN":record.owner, "GIAY_TO_NHAN_THAN":record.identity, "DIA_CHI_NGUOI_SU_DUNG_DAT":config.owner_address.strip(),
                        "SO_TO":record.sheet,"SO_THUA":record.parcel,"DIEN_TICH":record.area,
                         "SU_DUNG_CHUNG":record.area,
                         "XU_DONG":record.location, "TEN_THON":config.village.strip(),
                         "DIA_CHI_HANH_CHINH":config.administrative_address.strip()})
+        values.update(self.template_config.static_values)
+        if self.template_config.document_rules.get("member_table"):
+            people = (record.members if self.template_config.document_rules.get("exclude_household_head")
+                      else record.household_people)
+            values["MEMBERS"] = [
+                {"name": person.name, "birth_date": person.birth_date,
+                 "identity": person.cccd, "address": config.owner_address.strip()}
+                for person in people
+            ]
         empty = "...." if config.optional_empty == "dots" else ""
-        for key in self.template.tokens - REQUIRED_TOKENS.keys():
+        for key in self.template.tokens - REQUIRED_TOKENS.keys() - {"MEMBER_STT", "MEMBER_NAME", "MEMBER_BIRTH_DATE", "MEMBER_IDENTITY", "MEMBER_ADDRESS"}:
             if not values.get(key): values[key] = empty
         return values
 
     def signature(self, inspection, config, output):
-        payload = (inspection.signature(), asdict(config), str(Path(output).resolve()), self.template.digest, self.legal)
+        config_values = asdict(config)
+        config_values.pop("commune_name", None)
+        config_values.pop("place", None)
+        config_values["template_fields"] = {
+            key: config.template_fields.get(key, "")
+            for key in (*self.template_config.user_fields, *self.template_config.optional_fields)
+        }
+        payload = (inspection.signature(), config_values, str(Path(output).resolve()), self.template.digest, self.legal)
         return hashlib.sha256(json.dumps(payload, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
 
     def check_unchanged(self, inspection):
@@ -84,7 +111,7 @@ class NoticeService:
             raise UserError("Mẫu Word đã thay đổi. Hãy mở lại công cụ và kiểm tra lại mẫu.")
 
     def preview(self, inspection, config, output, record_index, preview_dir):
-        config.validate(); self.check_unchanged(inspection)
+        config.validate(self.required_user_fields); self.check_unchanged(inspection)
         records = inspection.valid_records
         if not 0 <= record_index < len(records):
             raise UserError("Hãy chọn một thửa hợp lệ để xem trước.")
@@ -105,7 +132,7 @@ class NoticeService:
         return preview.token
 
     def generate(self, inspection, config, output, approval, progress=None, cancelled=None):
-        config.validate(); self.check_unchanged(inspection)
+        config.validate(self.required_user_fields); self.check_unchanged(inspection)
         if self.approvals.pop(approval, None) != self.signature(inspection, config, output):
             raise UserError("Chưa xác nhận bản xem trước cho cấu hình hiện tại. Hãy xem trước và xác nhận lại.")
         directory = Path(output).resolve(); directory.mkdir(parents=True, exist_ok=True)
@@ -126,7 +153,7 @@ class NoticeService:
                     if record.duplicate_rows:
                         detail += " Trùng tờ/thửa tại các dòng " + ", ".join(map(str,record.duplicate_rows)) + "; bỏ toàn bộ nhóm, chưa cấp số."
                     error_type = status
-                elif missing := missing_required(self.values(record, config, 1)):
+                elif missing := missing_required(self.values(record, config, 1), self.template_config.required_fields):
                     status = error_type = "THIẾU DỮ LIỆU"
                     detail = "Thiếu mục bắt buộc: " + ", ".join(missing) + f". Kiểm tra dòng {record.source_row}, tên hộ từ dòng {record.owner_row} và thông tin bước 4. Không tạo file, không dùng số."
                 else:

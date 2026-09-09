@@ -9,6 +9,8 @@ from openpyxl.cell.cell import ERROR_CODES
 from openpyxl.utils import get_column_letter, column_index_from_string
 from .models import ColumnMapping, Inspection, NoticeRecord, UserError, file_hash
 from .fields import has_content
+from tools.vbdlis_excel_builder.models import Person
+from tools.vbdlis_excel_builder.utils.dates import normalize_birth_date
 
 
 def clean(value):
@@ -105,7 +107,8 @@ def workbook_info(path, sheet_name=None, header_row=None, depth=2):
         for field_name, aliases in {"household_index": ("stt", "so tt", "stt ho", "so thu tu"),
                                    "owner": ("ten ho", "ho va ten", "ho ten"), "sheet": ("to bd moi", "to ban do moi"),
                                    "parcel": ("thua bd moi", "thua ban do moi"), "area": ("dt bd", "dien tich ban do"),
-                                   "location": ("xu dong", "vi tri",), "identity": ("cccd", "cmnd", "giay to nhan than", "so dinh danh")}.items():
+                                   "location": ("xu dong", "vi tri",), "identity": ("cccd", "cmnd", "giay to nhan than", "so dinh danh"),
+                                   "birth_date": ("ngay sinh", "ngay thang nam sinh", "nam sinh")}.items():
             matches = [col for col, label in headers.items() if any(a in folded(label) for a in aliases)]
             suggestions[field_name] = matches[0] if len(matches) == 1 else ""
         return {"source": str(Path(path).resolve()), "sheets": names, "sheet": ws.title, "rows": ws.max_row, "columns": ws.max_column,
@@ -129,6 +132,7 @@ def inspect_workbook(path, sheet_name, header_row, depth, mapping, *, require_id
     current_household = ""; household_problem = ""
     current_owner = ""; owner_row = None; owner_problem = ""
     current_identity = ""; identity_row = None; identity_problem = ""
+    current_people: list[Person] = []
     maximum_household = 0
     unresolved_household = False
     household_prefix = {}
@@ -206,6 +210,7 @@ def inspect_workbook(path, sheet_name, header_row, depth, mapping, *, require_id
                 current_household, household_problem = "", marker_issue
                 current_owner, owner_row, owner_problem = "", number, ""
                 current_identity, identity_row, identity_problem = "", None, ""
+                current_people = []
             elif marker:
                 try:
                     current_household = identifier(marker)
@@ -214,8 +219,10 @@ def inspect_workbook(path, sheet_name, header_row, depth, mapping, *, require_id
                     household_problem = f"Dữ liệu STT hộ không hợp lệ tại {mapping.household_index}{number}: «{marker}». STT phải là số nguyên dương."
                     current_owner, owner_row, owner_problem = "", number, ""
                     current_identity, identity_row, identity_problem = "", None, ""
+                    current_people = []
                 else:
                     household_problem = ""
+                    current_people = []
                     issue = problem("owner", "tên hộ")
                     if owner and not has_content(owner) and not issue:
                         issue = f"Dữ liệu tên hộ không hợp lệ tại {mapping.owner}{number}: chỉ có dấu/khoảng trống, chưa có họ tên. Hãy nhập họ tên đúng vào ô nguồn."
@@ -239,6 +246,35 @@ def inspect_workbook(path, sheet_name, header_row, depth, mapping, *, require_id
                             fmt = source_cells[indices["identity"]].number_format
                             if re.fullmatch(r"0+", fmt): current_identity = current_identity.zfill(len(fmt))
                         identity_row, identity_problem = number, ""
+                    if current_owner:
+                        current_people.append(Person(
+                            name=current_owner,
+                            cccd=current_identity,
+                            birth_date=normalize_birth_date(value("birth_date")),
+                            is_head=len(current_people) == 0,
+                            source_row=number,
+                        ))
+            elif owner and current_household:
+                # Reuse the VBDLIS household rule and model: after the STT row,
+                # each named person belongs to the current household and is not
+                # the head.  These people feed the Cẩm Giang page-3 table only.
+                member_identity = clean(value("identity"))
+                raw_member_identity = value("identity")
+                if (isinstance(raw_member_identity, (int, float)) and
+                        not isinstance(raw_member_identity, bool) and
+                        raw_member_identity == int(raw_member_identity)):
+                    member_identity = str(int(raw_member_identity))
+                    if "identity" in indices:
+                        fmt = source_cells[indices["identity"]].number_format
+                        if re.fullmatch(r"0+", fmt):
+                            member_identity = member_identity.zfill(len(fmt))
+                current_people.append(Person(
+                    name=owner,
+                    cccd=member_identity,
+                    birth_date=normalize_birth_date(value("birth_date")),
+                    is_head=len(current_people) == 0,
+                    source_row=number,
+                ))
             if not selected:
                 continue
             if not any(clean(source_cells[indices[k]].value) for k in ("sheet", "parcel", "area")):
@@ -282,7 +318,8 @@ def inspect_workbook(path, sheet_name, header_row, depth, mapping, *, require_id
             if location_issue: errors.append(location_issue)
             record = NoticeRecord(number, current_owner, owner_row, normalized["sheet"], normalized["parcel"],
                                   normalized["area"], "" if location_issue else clean(value("location")), errors,
-                                  identity=current_identity, identity_row=identity_row, household_number=current_household)
+                                  identity=current_identity, identity_row=identity_row, household_number=current_household,
+                                  household_people=current_people)
             records.append(record)
             if record.sheet and record.parcel:
                 groups[(record.sheet, record.parcel)].append(record)

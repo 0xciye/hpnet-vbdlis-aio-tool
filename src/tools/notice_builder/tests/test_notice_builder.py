@@ -17,6 +17,7 @@ from tools.notice_builder.core.numbering import parse_numbers
 from tools.notice_builder.core.reader import area_text, identifier, is_summary
 from tools.notice_builder.core.renderer import WORD_NS, paragraph_nodes, node_text
 from tools.notice_builder.core import service as service_module
+from tools.notice_builder.template_config import default_template_config, template_configs, template_config_for_path
 
 
 @pytest.fixture
@@ -174,7 +175,7 @@ def test_headers_grouping_summary_and_other_sheet(tmp_path):
         ("Cộng",1,1,1,None),("HỘ B",None,2,100,None),(None,1,None,100,None),(None,1,2,None,None)],header=6,other=True)
     info=workbook_info(path,"Dữ liệu")
     assert info["header_row"]==6 and len(info["sheets"])==2
-    assert info["suggestions"]=={"household_index":"A","owner":"B","sheet":"G","parcel":"H","area":"K","location":"L","identity":""}
+    assert info["suggestions"]=={"household_index":"A","owner":"B","sheet":"G","parcel":"H","area":"K","location":"L","identity":"","birth_date":""}
     assert len(data.records)==6 and data.records[0].status=="THIẾU DỮ LIỆU"
     assert data.records[1].owner==data.records[2].owner=="HỘ A"
     assert data.records[1].owner_row==8 and len(data.summary_rows)==3
@@ -762,3 +763,91 @@ def test_canonical_template_preserves_geometry_and_only_authorized_spacing():
         assert source.namelist()==[item["part"] for item in evidence["inventory"]]
         for item in evidence["inventory"]:
             assert hashlib.sha256(source.read(item["part"])).hexdigest()==item["sha256"],item["part"]
+
+
+def test_template_configuration_keeps_mau_22_default_and_values_in_one_source():
+    configs={item.id:item for item in template_configs()}
+    default=default_template_config()
+    assert default.id=="MAO_DIEN" and default.is_default
+    assert default.path==default_template_path()
+    assert default.static_values=={"TEN_XA":"MAO ĐIỀN","DIA_DIEM":"Mao Điền"}
+    assert configs["CAM_GIANG"].static_values["TEN_XA"]=="CẨM GIANG"
+    assert configs["CAM_GIANG"].static_values["DIA_DIEM"]=="Cẩm Giang"
+    with ZipFile(default.path) as archive:
+        xml=archive.read("word/document.xml").decode("utf-8")
+    assert xml.count("{{TEN_XA}}") == 1
+    assert xml.count("{{DIA_DIEM}}") == 1
+    source_root=Path(__file__).resolve().parents[2]
+    python_source="\n".join(path.read_text(encoding="utf-8") for path in source_root.rglob("*.py")
+                            if "tests" not in path.parts)
+    assert "MAO ĐIỀN" not in python_source and "Mao Điền" not in python_source
+
+
+def cam_giang_household(path):
+    wb=Workbook(); ws=wb.active; ws.title="Nguồn"
+    ws.append(["Họ và tên","Tờ BĐ mới","Thửa BĐ mới","Diện tích bản đồ","CCCD","Xứ đồng","STT hộ","Ngày sinh"])
+    ws.append(["NGUYỄN VĂN CHỦ",77,234,537,"030064013684","Đồng thử",1,"28/08/1964"])
+    ws.append(["NGUYỄN THỊ THÀNH VIÊN",None,None,None,"030200012345",None,None,"02/03/2000"])
+    ws.append(["NGUYỄN VĂN THÀNH VIÊN",None,None,None,"030202067890",None,None,2002])
+    wb.save(path); wb.close()
+    mapping=ColumnMapping(owner="A",sheet="B",parcel="C",area="D",identity="E",location="F",household_index="G",birth_date="H")
+    return inspect_workbook(path,"Nguồn",1,1,mapping,require_identity=True)
+
+
+def table_text_rows(payload, table_index):
+    with ZipFile(BytesIO(payload)) as archive:
+        document=minidom.parseString(archive.read("word/document.xml"))
+    table=document.getElementsByTagNameNS(WORD_NS,"tbl")[table_index]
+    return [" ".join(node_text(node) for node in row.getElementsByTagNameNS(WORD_NS,"t"))
+            for row in table.getElementsByTagNameNS(WORD_NS,"tr")]
+
+
+def test_cam_giang_uses_vbdlis_head_model_and_dynamic_member_rows(tmp_path,config):
+    data=cam_giang_household(tmp_path/"household.xlsx")
+    record=data.records[0]
+    assert [person.is_head for person in record.household_people]==[True,False,False]
+    assert [person.name for person in record.members]==["NGUYỄN THỊ THÀNH VIÊN","NGUYỄN VĂN THÀNH VIÊN"]
+    assert [person.birth_date for person in record.members]==["02/03/2000","2002"]
+
+    cam=next(item for item in template_configs() if item.id=="CAM_GIANG")
+    service=NoticeService(cam.path,json.loads(resource("config/legal_defaults.json").read_text(encoding="utf-8")))
+    fields={**config.template_fields,"NGUOI_DAI_DIEN":"Người đại diện: Nguyễn Văn A"}
+    configured=replace(config,day=9,month=9,year=2026,template_fields=fields)
+    payload=service.template.render(service.values(record,configured,23))
+    mao_service=NoticeService(default_template_path(),json.loads(resource("config/legal_defaults.json").read_text(encoding="utf-8")))
+    assert "MEMBERS" not in mao_service.values(record,configured,23)
+    text=all_text(payload); member_rows=table_text_rows(payload,2)
+    assert "{{" not in text and "Người đại diện: Nguyễn Văn A" in text
+    assert text.count("23/TB-UBND")==2
+    assert text.count("ngày 09 tháng 09 năm 2026")==2
+    assert len(member_rows)==6
+    assert not any("NGUYỄN VĂN CHỦ" in row for row in member_rows)
+    assert any("NGUYỄN THỊ THÀNH VIÊN" in row and "02/03/2000" in row and "030200012345" in row for row in member_rows)
+    assert any("NGUYỄN VĂN THÀNH VIÊN" in row and "2002" in row and "030202067890" in row for row in member_rows)
+
+
+def test_required_fields_are_isolated_per_template(config):
+    mao=default_template_config()
+    cam=next(item for item in template_configs() if item.id=="CAM_GIANG")
+    no_representative={**config.template_fields,"NGUOI_DAI_DIEN":""}
+    replace(config,template_fields=no_representative).validate(
+        key for key in mao.user_fields if key in mao.required_fields)
+    with pytest.raises(UserError,match="Người đại diện"):
+        replace(config,template_fields=no_representative).validate(
+            key for key in cam.user_fields if key in cam.required_fields)
+
+    no_tax={**config.template_fields,"NGUOI_DAI_DIEN":"Đại diện","CO_QUAN_THUE":""}
+    with pytest.raises(UserError,match="Cơ quan thuế"):
+        replace(config,template_fields=no_tax).validate(
+            key for key in mao.user_fields if key in mao.required_fields)
+    replace(config,template_fields=no_tax).validate(
+        key for key in cam.user_fields if key in cam.required_fields)
+
+
+def test_cam_giang_template_contract_is_separate_from_mau_22():
+    cam=next(item for item in template_configs() if item.id=="CAM_GIANG")
+    assert template_config_for_path(cam.path)==cam
+    renderer=WordTemplate(cam.path,cam.required_fields,cam.document_rules)
+    assert "NGUOI_DAI_DIEN" in renderer.tokens
+    assert {"MEMBER_NAME","MEMBER_BIRTH_DATE","MEMBER_IDENTITY","MEMBER_ADDRESS"} <= renderer.tokens
+    assert "NGUOI_DAI_DIEN" not in WordTemplate(default_template_path()).tokens

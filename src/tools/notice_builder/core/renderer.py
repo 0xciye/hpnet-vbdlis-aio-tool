@@ -48,8 +48,10 @@ def paragraphs(document):
 
 
 class WordTemplate:
-    def __init__(self, path):
+    def __init__(self, path, required_tokens=None, document_rules=None):
         self.path = Path(path).resolve()
+        self.required_tokens = tuple(REQUIRED_TOKENS if required_tokens is None else required_tokens)
+        self.document_rules = dict(document_rules or {})
         self.raw = self.path.read_bytes()
         self.digest = hashlib.sha256(self.raw).hexdigest()
         try:
@@ -68,20 +70,22 @@ class WordTemplate:
                     for p in paragraphs(doc):
                         self.tokens.update(TOKEN.findall("".join(node_text(n) for n in paragraph_nodes(p))))
                     doc.unlink()
-            required = set(REQUIRED_TOKENS)
+            required = set(self.required_tokens)
             if not required <= self.tokens:
                 raise UserError("Mẫu thiếu placeholder bắt buộc: " + ", ".join(sorted(required - self.tokens)))
         except (BadZipFile, ValueError) as exc:
             raise UserError("Không đọc được mẫu DOCX. Hãy chọn lại đúng mẫu placeholder.") from exc
 
     def render(self, values):
-        missing = self.tokens.intersection(REQUIRED_TOKENS) - values.keys()
+        missing = self.tokens.intersection(self.required_tokens) - values.keys()
         if missing:
             raise UserError("Chưa có cách điền placeholder: " + ", ".join(sorted(missing)))
-        missing_values = missing_required(values)
+        missing_values = missing_required(values, self.required_tokens)
         if missing_values:
             raise UserError("Cần nhập đủ mục bắt buộc: " + ", ".join(missing_values) + ".")
-        for value in values.values():
+        for key, value in values.items():
+            if key == "MEMBERS":
+                continue
             if "{{" in str(value) or re.search(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", str(value)):
                 raise UserError("Nội dung điền Word có ký tự điều khiển hoặc dấu placeholder không hợp lệ.")
         output = BytesIO()
@@ -90,6 +94,9 @@ class WordTemplate:
                 if TEXT_PART.fullmatch(info.filename):
                     doc = minidom.parseString(data)
                     changed = False
+                    if info.filename == "word/document.xml" and self.document_rules.get("member_table"):
+                        self._expand_member_rows(doc, values.get("MEMBERS", []))
+                        changed = True
                     for p in paragraphs(doc):
                         nodes = paragraph_nodes(p)
                         joined = "".join(node_text(n) for n in nodes)
@@ -111,6 +118,32 @@ class WordTemplate:
         payload = output.getvalue()
         self.verify(payload)
         return payload
+
+    @staticmethod
+    def _expand_member_rows(document, members):
+        """Replace the Cẩm Giang marker row with one row per non-head person."""
+        for row in list(document.getElementsByTagNameNS(WORD_NS, "tr")):
+            row_text = "".join(node_text(node) for node in row.getElementsByTagNameNS(WORD_NS, "t"))
+            if "{{MEMBER_NAME}}" not in row_text:
+                continue
+            parent = row.parentNode
+            for index, member in enumerate(members, 1):
+                clone = row.cloneNode(deep=True)
+                replacements = {
+                    "MEMBER_STT": str(index),
+                    "MEMBER_NAME": str(member.get("name", "")),
+                    "MEMBER_BIRTH_DATE": str(member.get("birth_date", "")),
+                    "MEMBER_IDENTITY": str(member.get("identity", "")),
+                    "MEMBER_ADDRESS": str(member.get("address", "")),
+                }
+                for paragraph in paragraphs(clone):
+                    nodes = paragraph_nodes(paragraph)
+                    joined = "".join(node_text(node) for node in nodes)
+                    for match in reversed(list(TOKEN.finditer(joined))):
+                        if match[1] in replacements:
+                            replace_span(nodes, match.start(), match.end(), replacements[match[1]])
+                parent.insertBefore(clone, row)
+            parent.removeChild(row)
 
     @staticmethod
     def verify(payload):

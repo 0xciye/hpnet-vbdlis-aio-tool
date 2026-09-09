@@ -8,6 +8,15 @@ REQUIRED_COMMON = {
     "CO_QUAN_THUE": "Cơ quan thuế",
     "DON_VI_LUU": "Đơn vị lưu",
 }
+FIELD_LABELS = {
+    "TEN_XA": "Tên xã", "SO_TB": "Số thông báo", "DIA_DIEM": "Địa điểm",
+    "NGAY": "Ngày", "THANG": "Tháng", "NAM": "Năm", "HO_TEN": "Họ tên",
+    "NGUOI_DAI_DIEN": "Người đại diện",
+    "GIAY_TO_NHAN_THAN": "Giấy tờ nhân thân", "DIA_CHI_NGUOI_SU_DUNG_DAT": "Địa chỉ",
+    "SO_TO": "Số tờ", "SO_THUA": "Số thửa", "TEN_THON": "Tên thôn",
+    "DIEN_TICH": "Diện tích", "SU_DUNG_CHUNG": "Diện tích sử dụng chung",
+    **REQUIRED_COMMON,
+}
 OPTIONAL_COMMON = {
     "SU_DUNG_RIENG": "Diện tích sử dụng riêng",
     "THUA_LIEN_KE": "Thửa liền kề",
@@ -15,14 +24,11 @@ OPTIONAL_COMMON = {
     "CHU_SU_HUU_LIEN_KE": "Chủ sử dụng thửa liền kề",
     "NOI_DUNG_QUYEN_LIEN_KE": "Nội dung quyền đối với thửa liền kề",
 }
-REQUIRED_TOKENS = {
-    "TEN_XA": "Tên xã", "SO_TB": "Số thông báo", "DIA_DIEM": "Địa điểm",
-    "NGAY": "Ngày", "THANG": "Tháng", "NAM": "Năm", "HO_TEN": "Họ tên",
-    "GIAY_TO_NHAN_THAN": "Giấy tờ nhân thân", "DIA_CHI_NGUOI_SU_DUNG_DAT": "Địa chỉ",
-    "SO_TO": "Số tờ", "SO_THUA": "Số thửa", "TEN_THON": "Tên thôn", "DIEN_TICH": "Diện tích",
-    "SU_DUNG_CHUNG": "Diện tích sử dụng chung",
-    **REQUIRED_COMMON,
-}
+REQUIRED_TOKENS = {key: FIELD_LABELS[key] for key in (
+    "TEN_XA", "SO_TB", "DIA_DIEM", "NGAY", "THANG", "NAM", "HO_TEN",
+    "GIAY_TO_NHAN_THAN", "DIA_CHI_NGUOI_SU_DUNG_DAT", "SO_TO", "SO_THUA",
+    "TEN_THON", "DIEN_TICH", "SU_DUNG_CHUNG", *REQUIRED_COMMON,
+)}
 
 
 def has_content(value):
@@ -30,5 +36,7 @@ def has_content(value):
     return bool(text and any(c.isalnum() for c in text) and "{{" not in text and not text.startswith("#"))
 
 
-def missing_required(values):
-    return [label for token,label in REQUIRED_TOKENS.items() if not has_content(values.get(token))]
+def missing_required(values, required_tokens=None):
+    tokens = required_tokens or REQUIRED_TOKENS
+    return [FIELD_LABELS.get(token, token.replace("_", " ").title())
+            for token in tokens if not has_content(values.get(token))]

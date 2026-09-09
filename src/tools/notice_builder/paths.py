@@ -10,13 +10,16 @@ def resource(relative):
 
 
 def default_template_path():
-    return resource("template") / DEFAULT_TEMPLATE_NAME
+    from .template_config import default_template_config
+    return default_template_config().path
 
 
 def default_template_fields():
-    from .core.fields import REQUIRED_COMMON, OPTIONAL_COMMON
+    from .template_config import default_template_config
     values = json.loads(resource("config/legal_defaults.json").read_text(encoding="utf-8"))
-    return {**{key:values.get(key, "") for key in REQUIRED_COMMON}, **{key:"" for key in OPTIONAL_COMMON}}
+    config = default_template_config()
+    return {**{key:values.get(key, "") for key in config.user_fields},
+            **{key:"" for key in config.optional_fields}}
 
 
 def saved_template_path(settings):

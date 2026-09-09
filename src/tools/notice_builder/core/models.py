@@ -4,7 +4,8 @@ from pathlib import Path
 import hashlib
 import json
 import re
-from .fields import REQUIRED_COMMON, has_content
+from .fields import FIELD_LABELS, REQUIRED_COMMON, has_content
+from tools.vbdlis_excel_builder.models import Person
 
 
 class UserError(ValueError):
@@ -20,17 +21,18 @@ class ColumnMapping:
     location: str = "L"
     identity: str = ""
     household_index: str = "A"
+    birth_date: str = ""
 
     def validate(self, max_columns):
         from openpyxl.utils import column_index_from_string
         used = []
         for field_name, value in asdict(self).items():
-            if field_name in ("location", "identity") and not value:
+            if field_name in ("location", "identity", "birth_date") and not value:
                 continue
             try:
                 index = column_index_from_string(value)
             except (ValueError, TypeError):
-                label = {"owner":"tên hộ","sheet":"tờ BĐ mới","parcel":"thửa BĐ mới","area":"diện tích","location":"xứ đồng","identity":"giấy tờ nhân thân","household_index":"STT hộ"}[field_name]
+                label = {"owner":"tên hộ","sheet":"tờ BĐ mới","parcel":"thửa BĐ mới","area":"diện tích","location":"xứ đồng","identity":"giấy tờ nhân thân","birth_date":"ngày sinh","household_index":"STT hộ"}[field_name]
                 raise UserError(f"Cột {label} chưa được chọn hợp lệ. Hãy quay lại bước Đối chiếu cột.") from None
             if not 1 <= index <= max_columns:
                 raise UserError(f"Cột {value} không có trong trang tính đang chọn.")
@@ -60,12 +62,13 @@ class BatchConfig:
     optional_empty: str = "blank"
     prefix: str = "CHUACOGIAY"
 
-    def validate(self):
+    def validate(self, required_template_fields=None):
         required = {"Mã đơn vị hành chính": self.commune_code, "Địa chỉ người sử dụng đất": self.owner_address,
-                    "Tên thôn": self.village, "Tên xã": self.commune_name,
-                    "Địa danh ngày ký": self.place,
+                    "Tên thôn": self.village,
                     "Hậu tố tên file": self.suffix}
-        required.update({label:self.template_fields.get(key) for key,label in REQUIRED_COMMON.items()})
+        required_keys = tuple(REQUIRED_COMMON) if required_template_fields is None else tuple(required_template_fields)
+        required.update({FIELD_LABELS.get(key, key.replace("_", " ").title()): self.template_fields.get(key)
+                         for key in required_keys})
         missing = [name for name, value in required.items() if not has_content(value)]
         if missing:
             raise UserError("Cần nhập: " + ", ".join(missing) + ".")
@@ -95,6 +98,11 @@ class NoticeRecord:
     identity: str = ""
     identity_row: int | None = None
     household_number: str = ""
+    household_people: list[Person] = field(default_factory=list)
+
+    @property
+    def members(self):
+        return [person for person in self.household_people if not person.is_head]
 
     @property
     def valid(self):

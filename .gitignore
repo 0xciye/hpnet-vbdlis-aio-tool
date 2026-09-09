@@ -62,6 +62,7 @@ MAU_22_THONG_BAO_XAC_NHAN_KET_QUA_DANG_KY_DAT_DAI.docx
 # MAU_22 trong src/template/ được tạo tự động bởi tools/sync_notice_template.py khi build.
 # Nguồn thật duy nhất là research/notice_template/ — không track bản copy trong src/.
 src/tools/notice_builder/template/MAU_22_THONG_BAO_XAC_NHAN_KET_QUA_DANG_KY_DAT_DAI.docx
+!src/tools/notice_builder/template/CAM_GIANG_THONG_BAO_XAC_NHAN_KET_QUA_DANG_KY_DAT_DAI.docx
 tmp/
 temp/
 output/
@@ -81,6 +82,7 @@ Xem_truoc/
 /research/notice_template/*
 !/research/notice_template/template-evidence.json
 !/research/notice_template/MAU_22_THONG_BAO_XAC_NHAN_KET_QUA_DANG_KY_DAT_DAI.docx
+!/research/notice_template/CAM_GIANG_THONG_BAO_XAC_NHAN_KET_QUA_DANG_KY_DAT_DAI.docx
 /RESEARCH_REPORT.md
 /docs/*
 !/docs/REQUIREMENTS.txt
@@ -88,6 +90,7 @@ Xem_truoc/
 !/docs/HUONG_DAN_BAN_SUA.txt
 !/docs/PDF_DOWNLOADER_PLAN.md
 !/docs/HPNET_UI_DESIGN_SYSTEM.md
+!/docs/TEMPLATE_CONFIG_REFACTOR.md
 /src/tools/vbdlis_excel_builder/docs/verification-report.md
 /tools/cleanup_approved_launcher.ps1
 

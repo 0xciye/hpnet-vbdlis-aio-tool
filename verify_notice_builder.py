@@ -27,11 +27,11 @@ def main():
     window=MainWindow()
     window.show(); app.processEvents()
     source=root/'synthetic.xlsx'; wb=Workbook(); ws=wb.active; ws.title='Kiểm thử'
-    ws.append(['Tên hộ','Tờ BĐ mới','Thửa BĐ mới','Diện tích bản đồ','Giấy tờ nhân thân'])
-    for i in range(args.count): ws.append([f'HỘ KIỂM THỬ {i+1}',72,i+1,357.25,f'GIẤY TỜ KIỂM THỬ {i+1}'])
+    ws.append(['Tên hộ','Tờ BĐ mới','Thửa BĐ mới','Diện tích bản đồ','Giấy tờ nhân thân','STT hộ'])
+    for i in range(args.count): ws.append([f'HỘ KIỂM THỬ {i+1}',72,i+1,357.25,f'GIẤY TỜ KIỂM THỬ {i+1}',i+1])
     wb.save(source); wb.close()
     config=BatchConfig('12345','Địa chỉ thử','Thôn thử','Xã thử','Xã thử, thành phố thử','Xã thử',1,9,2026,start_number=100,template_fields=default_template_fields())
-    data=inspect_workbook(source,'Kiểm thử',1,1,ColumnMapping('A','B','C','D','','E'),require_identity=True)
+    data=inspect_workbook(source,'Kiểm thử',1,1,ColumnMapping('A','B','C','D','','E','F'),require_identity=True)
     service=NoticeService(default_template_path(),json.loads(resource('config/legal_defaults.json').read_text(encoding='utf-8')))
     preview=service.preview(data,config,root/'synthetic_output',0,root/'preview_synthetic')
     start=perf_counter(); result=service.generate(data,config,root/'synthetic_output',service.approve(preview)); seconds=perf_counter()-start
@@ -52,7 +52,7 @@ def main():
             window.grab().save(str(root/f'ui-{size[0]}-step-{step+1}.png'))
     if args.real:
         info=workbook_info(args.real); real=inspect_workbook(args.real,info['sheet'],info['header_row'],info['depth'],ColumnMapping(identity='D'),require_identity=True)
-        actual_config=BatchConfig('10930','Thôn Cẩm Đông, xã Mao Điền, Thành phố Hải Phòng','Cẩm Đông','Mao Điền','xã Mao Điền, Thành phố Hải Phòng','Mao Điền',1,9,2026,start_number=1,template_fields=default_template_fields())
+        actual_config=BatchConfig('10930','Địa chỉ kiểm thử','Thôn kiểm thử','','Địa chỉ hành chính kiểm thử','',1,9,2026,start_number=1,template_fields=default_template_fields())
         actual_preview=service.preview(real,actual_config,root/'NOT_AN_OFFICIAL_BATCH',0,root/'Xem_truoc_Cam_Dong')
         report['real']={'source':str(real.source),'sha256':real.source_hash,'sheet':real.sheet_name,'rows':real.total_rows,'records':len(real.records),
             'valid':len(real.valid_records),'duplicates':[asdict(r) for r in real.records if r.duplicate_rows],

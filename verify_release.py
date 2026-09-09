@@ -79,7 +79,9 @@ def verify(folder, archive=None):
             )
             assert result.returncode == 0 and "UI_SELF_TEST_OK" in result.stdout and image.is_file(), result.stdout + result.stderr
             print(f"{name} -UiSelfTest: PASS")
-    for relative in ('template/MAU_22_THONG_BAO_XAC_NHAN_KET_QUA_DANG_KY_DAT_DAI.docx','config/legal_defaults.json','assets/app_icon.ico',
+    for relative in ('template/MAU_22_THONG_BAO_XAC_NHAN_KET_QUA_DANG_KY_DAT_DAI.docx',
+                     'template/CAM_GIANG_THONG_BAO_XAC_NHAN_KET_QUA_DANG_KY_DAT_DAI.docx',
+                     'config/legal_defaults.json','config/template_configs.json','assets/app_icon.ico',
                      'assets/template_placeholder_preview.png',
                      'assets/ui-chevron-down.svg','assets/ui-chevron-up.svg','assets/ui-check.svg'):
         assert digest(ROOT/'src/tools/notice_builder'/relative)==digest(folder/'_internal/tools/notice_builder'/relative), f'Notice resource mismatch: {relative}'

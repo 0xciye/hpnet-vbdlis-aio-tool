@@ -14,6 +14,8 @@ from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, Q
 from .paths import resource, data_dir, default_template_path, saved_template_path
 from .core import BatchConfig, ColumnMapping, NoticeService, UserError, inspect_workbook, workbook_info
 from .core.fields import REQUIRED_COMMON, OPTIONAL_COMMON
+from .core.fields import FIELD_LABELS
+from .template_config import template_configs, template_config_for_path
 
 from .presentation import STYLE, apply_presentation
 
@@ -77,7 +79,7 @@ class MainWindow(QMainWindow):
         footer.addStretch()
         self.cancel = self.button("Dừng sau file đang xử lý", self.cancel_job); self.cancel.setEnabled(False); footer.addWidget(self.cancel)
         self.next = self.button("Tiếp tục →",lambda:self.navigate(1)); footer.addWidget(self.next)
-        self.steps.setCurrentRow(0); self.load_settings()
+        self.steps.setCurrentRow(0); self.load_settings(); self.refresh_template_config()
         self.statusBar().showMessage("File nguồn chỉ được đọc. Không ghi đè file thông báo đã tồn tại.")
         apply_presentation(self)
 
@@ -101,7 +103,13 @@ class MainWindow(QMainWindow):
             box.addWidget(QLabel(label)); line=QHBoxLayout(); line.addWidget(field)
             line.addWidget(self.button("Chọn file…",lambda checked=False,f=field,t=filter_text:self.browse_file(f,t))); box.addLayout(line)
             field.textChanged.connect(self.invalidate)
-        box.addWidget(self.button("Dùng mẫu 22 chuẩn mới",lambda:self.template.setText(str(default_template_path()))))
+        known_templates = template_configs()
+        template_buttons = QHBoxLayout()
+        for config in known_templates:
+            template_buttons.addWidget(self.button("Dùng " + config.name,
+                lambda checked=False, path=config.path: self.template.setText(str(path))))
+        template_buttons.addStretch(1); box.addLayout(template_buttons)
+        self.template.textChanged.connect(self.refresh_template_config)
         box.addWidget(self.button("Đọc cấu trúc Excel →",self.read_source,True))
         preview_path=resource("assets/template_placeholder_preview.png")
         preview_title=QLabel("Ảnh tham khảo vị trí placeholder trong mẫu Word")
@@ -137,24 +145,22 @@ class MainWindow(QMainWindow):
     def make_mapping_page(self):
         box=self.page("Đối chiếu cột nguồn", "Với file Cẩm Đông: G/H là tờ/thửa MỚI; K là diện tích bản đồ, không phải diện tích giao ở M. Gợi ý chỉ là hỗ trợ, cần kiểm tra trước khi xuất.")
         form=QFormLayout(); box.addLayout(form); self.mapping={}
-        for key,label in (("household_index","STT hộ * (dòng xác định Chủ hộ)"),("owner","Tên hộ *"),("identity","Giấy tờ nhân thân * (CCCD/CMND/khác)"),("sheet","Tờ BĐ mới *"),("parcel","Thửa BĐ mới *"),("area","Diện tích *"),("location","Xứ đồng (có thể trống)")):
+        for key,label in (("household_index","STT hộ * (dòng xác định Chủ hộ)"),("owner","Tên hộ/thành viên *"),("identity","Giấy tờ nhân thân * (CCCD/CMND/khác)"),("birth_date","Ngày sinh thành viên (mẫu Cẩm Giang)"),("sheet","Tờ BĐ mới *"),("parcel","Thửa BĐ mới *"),("area","Diện tích *"),("location","Xứ đồng (có thể trống)")):
             combo=QComboBox(); combo.addItem("— Chưa chọn —",""); combo.currentIndexChanged.connect(self.invalidate)
             self.mapping[key]=combo; form.addRow(label,combo)
-        note=QLabel("Chỉ dòng có STT hộ mới xác lập Chủ hộ và giấy tờ. Tên/CCCD trên dòng STT trống được coi là thành viên và không thay thế Chủ hộ; các thửa vẫn kế thừa đúng Chủ hộ gần nhất phía trên. Dòng tổng/trống không tạo thông báo.")
+        note=QLabel("Dùng cùng quy tắc với Chuẩn bị hồ sơ VBDLIS: dòng có STT hộ bắt đầu hộ mới; người đầu tiên là Chủ hộ. Tên trên các dòng STT trống là thành viên và không thay thế Chủ hộ. Mẫu Cẩm Giang đưa các thành viên vào trang 3 và loại Chủ hộ khỏi danh sách.")
         note.setWordWrap(True); box.addWidget(note); box.addStretch()
 
     def make_config_page(self):
         box=self.page("Thông tin dùng cho đợt thông báo", "Dấu * là bắt buộc. Gợi ý màu xám trong ô sẽ tự ẩn khi bạn bắt đầu nhập; hãy thay bằng thông tin của đợt đang làm.")
         scroll=QScrollArea(); scroll.setWidgetResizable(True); content=QWidget(); form=QFormLayout(content); scroll.setWidget(content); box.addWidget(scroll)
         labels={"commune_code":"Mã đơn vị hành chính *","owner_address":"Địa chỉ người sử dụng đất *","village":"Tên thôn *",
-                "commune_name":"Tên xã *","administrative_address":"Địa chỉ hành chính của thửa","place":"Địa danh ghi ngày ký *","suffix":"Hậu tố tên file *"}
+                "administrative_address":"Địa chỉ hành chính của thửa","suffix":"Hậu tố tên file *"}
         examples={
             "commune_code":("Ví dụ: 10930", "Mã đơn vị hành chính gồm 5 chữ số. Ví dụ: 10930."),
-            "owner_address":("Ví dụ: thôn Tân Hòa, xã Mao Điền, TP Hải Phòng", "Địa chỉ đầy đủ của người sử dụng đất."),
+            "owner_address":("Ví dụ: thôn Tân Hòa, xã đang lập hồ sơ, TP Hải Phòng", "Địa chỉ đầy đủ của người sử dụng đất."),
             "village":("Ví dụ: Tân Hòa", "Tên thôn hoặc tổ dân phố."),
-            "commune_name":("Ví dụ: MAO ĐIỀN", "Tên xã/phường theo cách ghi trên văn bản."),
-            "administrative_address":("Ví dụ: xã Mao Điền, TP Hải Phòng", "Địa chỉ hành chính của thửa đất; có thể để trống nếu không dùng."),
-            "place":("Ví dụ: Mao Điền", "Địa danh ghi trước ngày ký, thường là tên xã/phường."),
+            "administrative_address":("Ví dụ: xã đang lập hồ sơ, TP Hải Phòng", "Địa chỉ hành chính của thửa đất; có thể để trống nếu không dùng."),
             "suffix":("Ví dụ: TBXN", "Hậu tố dùng trong tên file, ví dụ CHUACOGIAY_10930_1_2-TBXN.pdf."),
         }
         for key,label in labels.items():
@@ -199,8 +205,12 @@ class MainWindow(QMainWindow):
         output_row=QWidget(); line=QHBoxLayout(output_row); line.setContentsMargins(0,0,0,0); line.addWidget(self.output); line.addWidget(self.button("Chọn thư mục…",self.browse_output)); form.addRow("Lưu thông báo tại *",output_row)
         defaults=json.loads(resource("config/legal_defaults.json").read_text(encoding="utf-8"))
         self.template_inputs={}
+        self.template_field_labels={}
+        self.template_static_note=QLabel(); self.template_static_note.setObjectName("hint"); self.template_static_note.setWordWrap(True)
+        form.addRow(self.template_static_note)
         form.addRow(QLabel("NỘI DUNG BẮT BUỘC TRONG MẪU WORD"))
-        for key,label in {**REQUIRED_COMMON,**OPTIONAL_COMMON}.items():
+        available_fields={**REQUIRED_COMMON, "NGUOI_DAI_DIEN":"Người đại diện", **OPTIONAL_COMMON}
+        for key,label in available_fields.items():
             if key==next(iter(OPTIONAL_COMMON)):
                 derived_note=QLabel("Diện tích sử dụng chung tự động bằng Diện tích của từng thửa; không cần nhập.")
                 derived_note.setObjectName("hint"); derived_note.setWordWrap(True); form.addRow(derived_note)
@@ -208,7 +218,8 @@ class MainWindow(QMainWindow):
             field=QLineEdit(defaults.get(key,"") if key in REQUIRED_COMMON else "")
             field.setToolTip("Nội dung điền vào ô {{"+key+"}} trong mẫu Word."); field.textChanged.connect(self.invalidate)
             field.setPlaceholderText("Bắt buộc nhập" if key in REQUIRED_COMMON else "Có thể để trống")
-            self.template_inputs[key]=field; form.addRow(label+(" *" if key in REQUIRED_COMMON else ""),field)
+            self.template_inputs[key]=field; form.addRow(label,field)
+            self.template_field_labels[key]=form.labelForField(field)
         self.optional_empty=QComboBox(); self.optional_empty.addItem("Để trống", "blank"); self.optional_empty.addItem("Điền ....", "dots")
         self.optional_empty.currentIndexChanged.connect(self.invalidate); form.addRow("Ô không bắt buộc chưa có dữ liệu",self.optional_empty)
         form.addRow(self.button("Xem căn cứ và nội dung gốc",self.show_legal)); form.addRow(self.button("Lưu cấu hình để dùng lại",self.save_settings))
@@ -329,15 +340,36 @@ class MainWindow(QMainWindow):
 
     def config(self):
         fields={key:(widget.value() if isinstance(widget,QSpinBox) else widget.text().strip()) for key,widget in self.inputs.items()}
+        fields.update({"commune_name":"", "place":""})
+        template_config=template_config_for_path(self.template.text())
+        template_fields={key:self.template_inputs[key].text().strip()
+                         for key in (*template_config.user_fields, *template_config.optional_fields)}
         config=BatchConfig(**fields,number_mode=self.number_mode.currentData(),start_number=self.start_number.value(),number_list=self.number_list.text(),
                            number_date_rules=self.number_date_rules(),
-                           template_fields={key:widget.text().strip() for key,widget in self.template_inputs.items()},optional_empty=self.optional_empty.currentData(),
+                           template_fields=template_fields,optional_empty=self.optional_empty.currentData(),
                            continue_number=self.continue_number.value() if self.continue_check.isChecked() and self.number_mode.currentData()=="list" else None)
-        config.validate()
+        config.validate(key for key in template_config.user_fields if key in template_config.required_fields)
         from .core.numbering import NumberPool
         NumberPool.from_config(config)
         if not self.output.text().strip(): raise UserError("Hãy chọn thư mục đầu ra ở bước 4.")
         return config
+
+    def refresh_template_config(self, *_):
+        if not hasattr(self, "template_inputs"):
+            return
+        config=template_config_for_path(self.template.text())
+        static_text="; ".join(f"{FIELD_LABELS.get(key, key)}: {value}" for key,value in config.static_values.items()
+                             if key in {"TEN_XA","DIA_DIEM"})
+        self.template_static_note.setText(f"Mẫu đang dùng: {config.name}. Giá trị theo mẫu: {static_text or 'không có giá trị cố định'}. ")
+        visible=set(config.user_fields) | set(config.optional_fields)
+        for key,field in self.template_inputs.items():
+            shown=key in visible
+            field.setVisible(shown); self.template_field_labels[key].setVisible(shown)
+            required=key in config.required_fields
+            field.setPlaceholderText("Bắt buộc nhập" if required else "Có thể để trống")
+            label=FIELD_LABELS.get(key, key)
+            self.template_field_labels[key].setText(label + (" *" if required else ""))
+        self.invalidate()
 
     def validate_source(self):
         try:
