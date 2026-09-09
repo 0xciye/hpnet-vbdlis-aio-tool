@@ -1,5 +1,6 @@
 """Small, dependency-free updater for verified GitHub Release ZIPs."""
 import hashlib
+from http.client import IncompleteRead
 import json
 import os
 import re
@@ -9,6 +10,7 @@ import sys
 import tempfile
 import time
 from pathlib import Path, PurePosixPath
+from urllib.error import URLError
 from urllib.request import Request, urlopen
 from zipfile import ZipFile
 
@@ -22,6 +24,7 @@ API_URL = f"https://api.github.com/repos/{REPOSITORY}/releases/latest"
 MAX_DOWNLOAD_BYTES = 1_000_000_000
 MAX_EXTRACTED_BYTES = 2_000_000_000
 MAX_DOWNLOAD_SECONDS = 20 * 60
+MAX_DOWNLOAD_ATTEMPTS = 5
 
 
 def _semantic_version(value):
@@ -124,29 +127,56 @@ def fetch_latest_version():
 
 
 def _download(url, target, limit=MAX_DOWNLOAD_BYTES, progress=None):
-    request = Request(url, headers={"User-Agent": "HPNet-VBDLIS-AIO-Updater"})
-    total = 0
+    total = target.stat().st_size if target.exists() else 0
     started = time.monotonic()
-    try:
-        with urlopen(request, timeout=30) as response, target.open("wb") as output:
-            declared = int(response.headers.get("Content-Length", "0") or 0)
-            if declared > limit:
-                raise ValueError("Bản cập nhật vượt quá giới hạn dung lượng an toàn.")
-            if progress:
-                progress(0, declared)
-            while chunk := response.read(1024 * 1024):
-                total += len(chunk)
-                if total > limit:
+    last_error = None
+    for attempt in range(1, MAX_DOWNLOAD_ATTEMPTS + 1):
+        headers = {"User-Agent": "HPNet-VBDLIS-AIO-Updater"}
+        if total:
+            headers["Range"] = f"bytes={total}-"
+        request = Request(url, headers=headers)
+        try:
+            with urlopen(request, timeout=30) as response:
+                status = getattr(response, "status", response.getcode())
+                resumed = total > 0 and status == 206
+                if total and not resumed:
+                    total = 0
+                remaining = int(response.headers.get("Content-Length", "0") or 0)
+                expected_total = total + remaining if remaining else 0
+                if expected_total > limit:
                     raise ValueError("Bản cập nhật vượt quá giới hạn dung lượng an toàn.")
-                if time.monotonic() - started > MAX_DOWNLOAD_SECONDS:
-                    raise TimeoutError("Tải bản cập nhật quá 20 phút. Hãy kiểm tra mạng rồi thử lại.")
-                output.write(chunk)
                 if progress:
-                    progress(total, declared)
-    except TimeoutError as error:
-        if str(error).startswith("Tải bản cập nhật"):
+                    progress(total, expected_total)
+                with target.open("ab" if resumed else "wb") as output:
+                    while chunk := response.read(1024 * 1024):
+                        total += len(chunk)
+                        if total > limit:
+                            raise ValueError("Bản cập nhật vượt quá giới hạn dung lượng an toàn.")
+                        if time.monotonic() - started > MAX_DOWNLOAD_SECONDS:
+                            raise TimeoutError("Tải bản cập nhật quá 20 phút. Hãy kiểm tra mạng rồi thử lại.")
+                        output.write(chunk)
+                        if progress:
+                            progress(total, expected_total)
+                if expected_total and total < expected_total:
+                    raise ConnectionError("Máy chủ ngắt dữ liệu trước khi tải xong.")
+                return
+        except ValueError:
             raise
-        raise TimeoutError("Mạng ngừng phản hồi khi đang tải. Hãy kiểm tra mạng rồi thử lại.") from error
+        except TimeoutError as error:
+            if str(error).startswith("Tải bản cập nhật"):
+                raise
+            last_error = error
+            total = target.stat().st_size if target.exists() else 0
+            if attempt < MAX_DOWNLOAD_ATTEMPTS:
+                time.sleep(attempt)
+        except (IncompleteRead, OSError, URLError) as error:
+            last_error = error
+            total = target.stat().st_size if target.exists() else 0
+            if attempt < MAX_DOWNLOAD_ATTEMPTS:
+                time.sleep(attempt)
+    raise ConnectionError(
+        f"Mạng bị ngắt khi tải bản cập nhật. Đã thử lại {MAX_DOWNLOAD_ATTEMPTS} lần; hãy kiểm tra mạng rồi thử lại."
+    ) from last_error
 
 
 def _safe_extract(archive, destination, expected_version=None):

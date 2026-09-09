@@ -1,4 +1,5 @@
 import os
+from io import BytesIO
 import shutil
 import subprocess
 from pathlib import Path
@@ -80,6 +81,43 @@ def test_download_verifies_checksum_and_returns_extracted_app(tmp_path, monkeypa
     )
     assert (app / EXE_NAME).read_bytes() == b"exe"
     assert progress_events and progress_events[-1][0] == progress_events[-1][1]
+
+
+def test_download_resumes_after_connection_is_interrupted(tmp_path, monkeypatch):
+    content = b"abcdef"
+    requests = []
+
+    class Response(BytesIO):
+        def __init__(self, data, status, length, interrupt=False):
+            super().__init__(data)
+            self.status = status
+            self.headers = {"Content-Length": str(length)}
+            self.interrupt = interrupt
+
+        def getcode(self):
+            return self.status
+
+        def read(self, size=-1):
+            if self.interrupt:
+                self.interrupt = False
+                return super().read(3)
+            if self.tell() == 3 and len(self.getvalue()) == 6:
+                raise ConnectionResetError("connection reset")
+            return super().read(size)
+
+    responses = iter((Response(content, 200, 6, True), Response(content[3:], 206, 3)))
+
+    def open_response(request, timeout):
+        requests.append(request)
+        return next(responses)
+
+    monkeypatch.setattr(auto_update, "urlopen", open_response)
+    monkeypatch.setattr(auto_update.time, "sleep", lambda _seconds: None)
+    target = tmp_path / "update.zip"
+    auto_update._download("https://example.test/update.zip", target)
+
+    assert target.read_bytes() == content
+    assert requests[1].get_header("Range") == "bytes=3-"
 
 
 @pytest.mark.parametrize("folder", [APP_FOLDER, "HPNet máy mới"])
