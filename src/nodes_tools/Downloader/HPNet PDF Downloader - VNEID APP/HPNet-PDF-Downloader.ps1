@@ -204,8 +204,13 @@ $endLabel=New-Label $group2 'đến:' 700 290 40 25 $fontNormal
 $endPicker=New-Object Windows.Forms.DateTimePicker; $endPicker.Location=New-Object Drawing.Point(740,285); $endPicker.Size=New-Object Drawing.Size(95,25); $endPicker.Format='Custom'; $endPicker.CustomFormat='dd/MM/yyyy'; $endPicker.Value=Get-SavedDate 'endDate'; $group2.Controls.Add($endPicker)
 $filterSummary=New-Label $group2 '' 20 328 815 100 (New-Object Drawing.Font('Segoe UI',9,[Drawing.FontStyle]::Italic)); $filterSummary.ForeColor=[Drawing.Color]::DarkBlue
 
-$group3=New-Object Windows.Forms.GroupBox; $group3.Text=' THƯ MỤC LƯU FILE '; $group3.Font=$fontBold; $group3.Size=New-Object Drawing.Size(860,80); $group3.Margin=New-Object Windows.Forms.Padding(0,0,0,12); $group3.BackColor=[Drawing.Color]::White; $main.Controls.Add($group3)
+$group3=New-Object Windows.Forms.GroupBox; $group3.Text=' THƯ MỤC LƯU FILE '; $group3.Font=$fontBold; $group3.Size=New-Object Drawing.Size(860,115); $group3.Margin=New-Object Windows.Forms.Padding(0,0,0,12); $group3.BackColor=[Drawing.Color]::White; $main.Controls.Add($group3)
 $folderBox=New-Object Windows.Forms.TextBox; $folderBox.Location=New-Object Drawing.Point(20,33); $folderBox.Size=New-Object Drawing.Size(650,25); $folderBox.Text=if($savedConfig.outputDir){[string]$savedConfig.outputDir}else{$defaultOutput}; $group3.Controls.Add($folderBox)
+$splitCheck=New-Object Windows.Forms.CheckBox; $splitCheck.Text='Chia thư mục con'; $splitCheck.Location=New-Object Drawing.Point(20,70); $splitCheck.Size=New-Object Drawing.Size(150,25); $splitCheck.Checked=if(Has-ConfigProperty $savedConfig 'splitFolderEnabled'){[bool]$savedConfig.splitFolderEnabled}else{$false}; $group3.Controls.Add($splitCheck)
+$splitLimitBox=New-Object Windows.Forms.TextBox; $splitLimitBox.Location=New-Object Drawing.Point(180,68); $splitLimitBox.Size=New-Object Drawing.Size(90,25); $splitLimitBox.Text=if($savedConfig.splitFolderLimit){[string]$savedConfig.splitFolderLimit}else{'100'}; $group3.Controls.Add($splitLimitBox)
+$splitLimitBox.Enabled=$splitCheck.Checked
+$splitCheck.Add_CheckedChanged({$splitLimitBox.Enabled=$splitCheck.Checked})
+$null=New-Label $group3 'Số PDF tối đa / thư mục con' 280 70 400 25 $fontNormal
 $browseButton=New-Object Windows.Forms.Button; $browseButton.Text='Chọn thư mục'; $browseButton.Location=New-Object Drawing.Point(685,30); $browseButton.Size=New-Object Drawing.Size(150,30); $browseButton.FlatStyle='Flat'; $browseButton.BackColor=[Drawing.Color]::White; $group3.Controls.Add($browseButton)
 
 $actions=New-Object Windows.Forms.Panel; $actions.Size=New-Object Drawing.Size(860,45); $actions.Margin=New-Object Windows.Forms.Padding(0,0,0,12); $main.Controls.Add($actions)
@@ -298,6 +303,12 @@ $startButton.Add_Click({
         $dateMode=if($rangeRadio.Checked){'range'}else{'exact'}
         $legacyMode=if($numberCheck.Checked -and -not $titleCheck.Checked -and -not $symbolCheck.Checked -and -not $dateCheck.Checked){'numbers'}else{'titles'}
         $configToSave=[ordered]@{configVersion=4;documentScope=$documentScope;fileNameMode=$fileNameMode;fileSuffixes=$fileSuffixes;downloadMode=$legacyMode;titleFilterEnabled=$titleCheck.Checked;allowedTitles=$titles;notificationFilterEnabled=$numberCheck.Checked;notificationNumbers=$numbersBox.Text.Trim();symbolFilterEnabled=$symbolCheck.Checked;documentSymbols=$symbolBox.Text.Trim();dateFilterEnabled=$dateCheck.Checked;dateMode=$dateMode;exactDate=$exactPicker.Value.ToString('yyyy-MM-dd');startDate=$startPicker.Value.ToString('yyyy-MM-dd');endDate=$endPicker.Value.ToString('yyyy-MM-dd');communeCode=$communeCode;allowMissingCommuneCode=$missingCodeCheck.Checked;outputDir=$folderBox.Text;readFilter=$readFilter;onlyUnread=($readFilter -eq 'unread');listPageSize=100}
+        $splitLimit=0
+        if($splitCheck.Checked){
+            if(-not [int]::TryParse($splitLimitBox.Text,[ref]$splitLimit) -or $splitLimit -lt 1){throw 'Số PDF mỗi thư mục phải là số nguyên lớn hơn 0.'}
+        }
+        $configToSave['splitFolderEnabled']=$splitCheck.Checked
+        $configToSave['splitFolderLimit']=$splitLimit
         Update-FilterUi
         $nameSummary=if($fileNameMode -eq 'suffix'){"Hậu tố tên file: $($fileSuffixes -join ', ') (không xác thực chữ ký số)"}else{"Mẫu CHUACOGIAY; mã xã $communeCode; thiếu mã xã: $(if($missingCodeCheck.Checked){'có'}else{'không'})"}
         $scopeWarning=if($documentScope -eq 'all_visible'){"CẢNH BÁO PHẠM VI RỘNG: sẽ xét TOÀN BỘ Văn bản đi tài khoản được quyền xem và bỏ qua mọi bộ lọc/trạng thái."}else{"Chỉ văn bản thỏa TẤT CẢ nhóm bộ lọc đã bật mới được xét."}
@@ -305,7 +316,7 @@ $startButton.Add_Click({
         if($answer -ne [Windows.Forms.DialogResult]::OK){return}
         $configToSave|ConvertTo-Json -Depth 5|Set-Content -LiteralPath $configPath -Encoding UTF8
         $allInputs=@($startButton,$browseButton,$resetButton,$scopeBox,$fileNameModeBox,$signedCheck,$ldsignedCheck,$lsignedCheck,$customSuffixBox,$titleCheck,$numberCheck,$symbolCheck,$dateCheck,$exactRadio,$rangeRadio,$readFilterBox,$titlesBox,$numbersBox,$symbolBox,$exactPicker,$startPicker,$endPicker,$communeCodeBox,$missingCodeCheck,$folderBox)
-        $allInputs|ForEach-Object{$_.Enabled=$false};$stopButton.Enabled=$true;Set-HPNetProgressRunning $progressBar $progressLabel 'Đang quét và tải…';Set-HPNetFooterState $footerLabel 'Đang xử lý — các bộ lọc đã khóa' 'Running';$script:stopRequested=$false;$statusBox.Text='Đang chạy... Nếu Edge hiện trang đăng nhập, hãy chọn VNeID và hoàn tất xác thực.';$form.Refresh()
+        $allInputs+=@($splitCheck,$splitLimitBox);$allInputs|ForEach-Object{$_.Enabled=$false};$stopButton.Enabled=$true;Set-HPNetProgressRunning $progressBar $progressLabel 'Đang quét và tải…';Set-HPNetFooterState $footerLabel 'Đang xử lý — các bộ lọc đã khóa' 'Running';$script:stopRequested=$false;$statusBox.Text='Đang chạy... Nếu Edge hiện trang đăng nhập, hãy chọn VNeID và hoàn tất xác thực.';$form.Refresh()
         $psi=New-Object Diagnostics.ProcessStartInfo;$psi.FileName=$runtime.NodeExe;$psi.Arguments=('"{0}" "{1}"' -f $nodeScript,$configPath);$psi.UseShellExecute=$false;$psi.CreateNoWindow=$true;$psi.RedirectStandardOutput=$true;$psi.RedirectStandardError=$true;$psi.EnvironmentVariables['HPNET_NODE_MODULES']=$runtime.NodeModules;$psi.EnvironmentVariables['HPNET_EDGE_EXE']=$runtime.EdgeExe
         $utf8NoBom=New-Object System.Text.UTF8Encoding($false);$psi.StandardOutputEncoding=$utf8NoBom;$psi.StandardErrorEncoding=$utf8NoBom
         $process=New-Object Diagnostics.Process;$process.StartInfo=$psi;$process.Start()|Out-Null;$script:activeProcess=$process
@@ -320,7 +331,7 @@ $startButton.Add_Click({
         elseif($process.ExitCode -eq 0){Set-HPNetProgressCompleted $progressBar $progressLabel 'Hoàn tất';Set-HPNetFooterState $footerLabel 'Hoàn tất' 'Success';$statusBox.Text=$statusText;[Windows.Forms.MessageBox]::Show('Đã quét xong. Xem kết quả và nhật ký trong thư mục đã chọn.','Hoàn tất','OK','Information')|Out-Null}
         else{Set-HPNetProgressStopped $progressBar $progressLabel 'Chưa hoàn tất — xem lỗi';Set-HPNetFooterState $footerLabel 'Chưa hoàn tất — xem nhật ký' 'Warning';$statusBox.Text=$statusText;[Windows.Forms.MessageBox]::Show('Công cụ chưa hoàn tất. Xem nội dung lỗi ở khung phía dưới.','Chưa hoàn tất','OK','Warning')|Out-Null}
     }catch{Set-HPNetProgressStopped $progressBar $progressLabel 'Lỗi — xem chi tiết';Set-HPNetFooterState $footerLabel 'Lỗi — xem chi tiết' 'Error';$statusBox.Text=$_.Exception.ToString();[Windows.Forms.MessageBox]::Show($_.Exception.Message,'Lỗi','OK','Error')|Out-Null}
-    finally{$script:activeProcess=$null;$stopButton.Enabled=$false;foreach($control in @($startButton,$browseButton,$resetButton,$folderBox)){$control.Enabled=$true};Update-FilterUi;Update-FileNameFormat}
+    finally{$splitCheck.Enabled=$true;$splitLimitBox.Enabled=$splitCheck.Checked;$script:activeProcess=$null;$stopButton.Enabled=$false;foreach($control in @($startButton,$browseButton,$resetButton,$folderBox)){$control.Enabled=$true};Update-FilterUi;Update-FileNameFormat}
 })
 
 $form.Add_FormClosing({if($script:activeProcess -and -not $script:activeProcess.HasExited){Stop-ActiveWorker}})

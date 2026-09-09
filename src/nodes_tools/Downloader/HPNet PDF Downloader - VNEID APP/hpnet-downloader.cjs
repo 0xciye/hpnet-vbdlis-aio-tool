@@ -487,6 +487,30 @@ function safeOutputPath(outputDir, fileName) {
   return destination;
 }
 
+async function chooseOutputDir(root, limit, name) {
+  if (!limit) return root;
+  // Find existing originals across batches before selecting a free folder.
+  if (fs.existsSync(safeOutputPath(root, name))) return root;
+  const entries = await fsp.readdir(root, { withFileTypes: true });
+  for (const entry of entries) {
+    if (entry.isDirectory() && !entry.isSymbolicLink() && /^Phan_\d+$/.test(entry.name)) {
+      const folder = path.join(root, entry.name);
+      if (fs.existsSync(safeOutputPath(folder, name))) return folder;
+    }
+  }
+  for (let index = 1; ; index++) {
+    const folder = path.join(root, `Phan_${String(index).padStart(3, "0")}`);
+    if (!fs.existsSync(folder)) { await fsp.mkdir(folder); return folder; }
+    const info = await fsp.lstat(folder);
+    if (!info.isDirectory() || info.isSymbolicLink()) continue;
+    const files = await fsp.readdir(folder, { withFileTypes: true });
+    let count = files.filter(item => item.isFile() && /\.pdf$/i.test(item.name)).length;
+    const duplicates = path.join(folder, "Trùng");
+    if (fs.existsSync(duplicates)) count += (await fsp.readdir(duplicates)).filter(item => /\.pdf$/i.test(item)).length;
+    if (count < limit) return folder;
+  }
+}
+
 async function writePdfAtomic(destination, buffer) {
   const tempPath = `${destination}.part`;
   let tempCreated = false;
@@ -540,6 +564,22 @@ function isUnread(value) {
 }
 
 async function runSelfTest() {
+  const batchRoot = await fsp.mkdtemp(path.join(require("os").tmpdir(), "hpnet-batch-"));
+  try {
+    const check = require("assert");
+    check.strictEqual(await chooseOutputDir(batchRoot, 0, "a.pdf"), batchRoot);
+    const first = await chooseOutputDir(batchRoot, 2, "a.pdf");
+    await writePdfAtomic(path.join(first, "a.pdf"), Buffer.from("%PDF-a"));
+    check.strictEqual(await chooseOutputDir(batchRoot, 2, "b.pdf"), first);
+    await writePdfAtomic(path.join(first, "b.pdf"), Buffer.from("%PDF-b"));
+    const second = await chooseOutputDir(batchRoot, 2, "c.pdf");
+    check.notStrictEqual(second, first);
+    check.strictEqual(await chooseOutputDir(batchRoot, 2, "a.pdf"), first);
+    await writePdfAtomic(path.join(second, "c.pdf"), Buffer.from("%PDF-c"));
+    await saveNameCollision(second, "c.pdf", Buffer.from("%PDF-d"));
+    check.notStrictEqual(await chooseOutputDir(batchRoot, 2, "e.pdf"), second);
+  } finally { await fsp.rm(batchRoot, { recursive: true, force: true }); }
+
   const pattern = buildValidPdfNamePattern("10930");
   const accepted = [
     "CHUACOGIAY_10930_114_203-TBXN.signed.pdf",
@@ -775,6 +815,9 @@ async function main({ configPath = process.argv[2], chromium: suppliedChromium }
   if (!String(config.outputDir ?? "").trim()) throw new Error("Thiếu thư mục lưu PDF.");
   const outputDir = path.resolve(String(config.outputDir).trim());
   await fsp.mkdir(outputDir, { recursive: true });
+  const splitLimit = config.splitFolderEnabled === true ? Number(config.splitFolderLimit) : 0;
+  if (config.splitFolderEnabled === true && (!Number.isSafeInteger(splitLimit) || splitLimit < 1)) throw new Error("Số PDF mỗi thư mục phải là số nguyên lớn hơn 0.");
+  const fileOutputDir = (name) => chooseOutputDir(outputDir, splitLimit, name);
   const runStamp = `${timestamp()}_${crypto.randomBytes(3).toString("hex")}`;
   const logPath = path.join(outputDir, `NHAT_KY_TAI_PDF_${runStamp}.txt`);
   const csvLogPath = path.join(outputDir, `NHAT_KY_TAI_PDF_${runStamp}.csv`);
@@ -946,7 +989,8 @@ async function main({ configPath = process.argv[2], chromium: suppliedChromium }
 
         for (const candidate of validCandidates) {
           const safeName = candidate.nameMatch.safeName;
-          const destination = safeOutputPath(outputDir, safeName);
+          const activeOutputDir = await fileOutputDir(safeName);
+          const destination = safeOutputPath(activeOutputDir, safeName);
           if (seenUrls.has(candidate.url)) {
             addResult([notificationNumber ?? "", label, entry.pageNumber, safeName, "", "BỎ QUA TRÙNG", "Cùng liên kết đã được tải hoặc kiểm tra nội dung thành công trong lần chạy này"]);
             if (notificationNumber !== null) existingNumbers.add(notificationNumber);
@@ -975,7 +1019,24 @@ async function main({ configPath = process.argv[2], chromium: suppliedChromium }
               seenUrls.add(candidate.url);
               continue;
             }
-            const collision = await saveNameCollision(outputDir, safeName, buffer);
+            let collisionDir = activeOutputDir;
+            if (splitLimit) {
+              collisionDir = null;
+              const folders = [outputDir, ...(await fsp.readdir(outputDir, { withFileTypes: true }))
+                .filter(item => item.isDirectory() && /^Phan_\d+$/.test(item.name)).map(item => path.join(outputDir, item.name))];
+              for (const folder of folders) {
+                const duplicates = path.join(folder, "Trùng");
+                if (!fs.existsSync(duplicates)) continue;
+                for (let index = 2; ; index++) {
+                  const candidate = safeOutputPath(duplicates, buildDuplicateFileName(safeName, index));
+                  if (!fs.existsSync(candidate)) break;
+                  if (sha256(await fsp.readFile(candidate)) === sha256(buffer)) { collisionDir = folder; break; }
+                }
+                if (collisionDir) break;
+              }
+              if (!collisionDir) collisionDir = await fileOutputDir(`${crypto.randomUUID()}.pdf`);
+            }
+            const collision = await saveNameCollision(collisionDir, safeName, buffer);
             if (collision.status === "exists") {
               existed += 1;
               if (notificationNumber !== null) existingNumbers.add(notificationNumber);
