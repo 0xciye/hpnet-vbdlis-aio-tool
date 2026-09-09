@@ -7,7 +7,7 @@ from pathlib import Path
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (QApplication, QFrame, QGridLayout, QHBoxLayout, QLabel,
-    QMainWindow, QMessageBox, QPushButton, QScrollArea, QVBoxLayout, QWidget)
+    QMainWindow, QMessageBox, QProgressDialog, QPushButton, QScrollArea, QVBoxLayout, QWidget)
 from auto_update import build_info
 
 EXTERNAL_TOOLS = {
@@ -232,6 +232,12 @@ class ToolLauncher(QMainWindow):
         from auto_update import download_update
         from tools.qt_worker import Worker
         self.statusBar().showMessage("Đang tải xuống và kiểm tra bản cập nhật…")
+        self.update_progress = QProgressDialog("Đang tải bản cập nhật…", "", 0, 0, self)
+        self.update_progress.setWindowTitle("Đang cập nhật")
+        self.update_progress.setAutoClose(False)
+        self.update_progress.setCancelButton(None)
+        self.update_progress.setMinimumDuration(0)
+        self.update_progress.show()
         self.setEnabled(False)
         self.update_worker = Worker(lambda: download_update(release), self)
         self.update_worker.succeeded.connect(self._install_update)
@@ -239,17 +245,25 @@ class ToolLauncher(QMainWindow):
         self.update_worker.start()
 
     def _update_failed(self, message):
+        if getattr(self, "update_progress", None):
+            self.update_progress.close()
+            self.update_progress = None
         self.setEnabled(True)
         self.update_now_button.setEnabled(True)
         QMessageBox.warning(self, "Không thể cập nhật", f"Phiên bản hiện tại vẫn được giữ nguyên.\n\n{message}")
 
     def _install_update(self, new_app):
+        if getattr(self, "update_progress", None):
+            self.update_progress.setLabelText("Đã tải xong. Đang chuẩn bị cài đặt…")
         try:
             from auto_update import launch_installer
             for tool in list(self.open_tools):
                 tool.close()
             launch_installer(new_app)
         except Exception as error:
+            if getattr(self, "update_progress", None):
+                self.update_progress.close()
+                self.update_progress = None
             self.setEnabled(True)
             self.update_now_button.setEnabled(True)
             QMessageBox.warning(self, "Không thể cập nhật", f"Phiên bản hiện tại vẫn được giữ nguyên.\n\n{error}")
