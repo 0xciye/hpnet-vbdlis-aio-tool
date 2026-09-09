@@ -99,7 +99,7 @@ class MainWindow(QMainWindow):
         self.cmb_sheet = QComboBox()
         self.spin_header = QLineEdit("1")
         form.addRow("Sheet:", self.cmb_sheet)
-        form.addRow("Dòng Header:", self.spin_header)
+        form.addRow("Dòng bắt đầu tiêu đề:", self.spin_header)
         layout.addLayout(form)
         
         btn_load = QPushButton("Đọc dữ liệu Excel")
@@ -252,16 +252,39 @@ class MainWindow(QMainWindow):
             row = int(self.spin_header.text())
             reader = ExcelReader(file)
             headers = reader.get_headers(sheet, row)
+            depth = reader.header_depth(sheet, row)
+            visible_headers = [header for header in headers if header]
             
             for cmb in [self.cmb_map_name, self.cmb_map_sheet, self.cmb_map_parcel, self.cmb_map_stt]:
                 cmb.clear()
                 cmb.addItem("")
-                cmb.addItems(headers)
+                cmb.addItems(visible_headers)
+
+            self._select_header(self.cmb_map_name, visible_headers, ("tên hộ", "họ và tên", "họ tên"))
+            self._select_header(
+                self.cmb_map_sheet, visible_headers,
+                ("tờ bản đồ", "tờ bđ", "số tờ"), excluded_names=("số thửa",)
+            )
+            self._select_header(self.cmb_map_parcel, visible_headers, ("số thửa",))
+            self._select_header(self.cmb_map_stt, visible_headers, ("stt", "số thứ tự"))
                 
-            self.lbl_excel_status.setText(f"Đã đọc header thành công. Số cột: {len(headers)}")
+            self.lbl_excel_status.setText(
+                f"Đã nhận diện {len(visible_headers)} cột từ {depth} dòng tiêu đề. "
+                "Hãy kiểm tra các cột phần mềm đã chọn sẵn."
+            )
             self.tabs.setCurrentIndex(1)
         except Exception as e:
             QMessageBox.warning(self, "Lỗi", str(e))
+
+    @staticmethod
+    def _select_header(combo, headers, preferred_names, excluded_names=()):
+        for preferred in preferred_names:
+            for index, header in enumerate(headers, start=1):
+                folded = header.casefold()
+                if (preferred.casefold() in folded
+                        and not any(excluded.casefold() in folded for excluded in excluded_names)):
+                    combo.setCurrentIndex(index)
+                    return
             
     def browse_source(self):
         folder = QFileDialog.getExistingDirectory(self, "Chọn thư mục Nguồn")

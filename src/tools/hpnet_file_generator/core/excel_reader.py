@@ -1,5 +1,9 @@
+from collections import Counter
 from typing import List, Dict
+
 import openpyxl
+from openpyxl.utils import get_column_letter
+
 from tools.hpnet_file_generator.utils.text_normalizer import normalize_person_name, normalize_excel_identifier
 from tools.hpnet_file_generator.models.data_models import PersonRecord, Parcel
 
@@ -10,18 +14,54 @@ class ExcelReader:
         self.sheet_names = []
 
     def load(self):
-        self.wb = openpyxl.load_workbook(self.file_path, data_only=True, read_only=True)
+        # Dùng workbook thường để đọc được vị trí ô gộp trong phần tiêu đề.
+        self.wb = openpyxl.load_workbook(self.file_path, data_only=True, read_only=False)
         self.sheet_names = self.wb.sheetnames
+
+    def _merged_value(self, sheet, row: int, column: int):
+        cell = sheet.cell(row, column)
+        if cell.value is not None:
+            return cell.value
+        for merged in sheet.merged_cells.ranges:
+            if merged.min_row <= row <= merged.max_row and merged.min_col <= column <= merged.max_col:
+                return sheet.cell(merged.min_row, merged.min_col).value
+        return None
+
+    def header_depth(self, sheet_name: str, header_row: int = 1) -> int:
+        """Nhận diện phần tiêu đề gồm một hay hai dòng."""
+        if not self.wb:
+            self.load()
+        sheet = self.wb[sheet_name]
+        next_row = header_row + 1
+        for merged in sheet.merged_cells.ranges:
+            if merged.min_row <= header_row and merged.max_row >= next_row:
+                return 2
+            if merged.min_row == header_row == merged.max_row and merged.max_col > merged.min_col:
+                if any(sheet.cell(next_row, col).value not in (None, "")
+                       for col in range(merged.min_col, merged.max_col + 1)):
+                    return 2
+        return 1
 
     def get_headers(self, sheet_name: str, header_row: int = 1) -> List[str]:
         if not self.wb:
             self.load()
         sheet = self.wb[sheet_name]
+        depth = self.header_depth(sheet_name, header_row)
         headers = []
-        for row in sheet.iter_rows(min_row=header_row, max_row=header_row, values_only=True):
-            for cell in row:
-                headers.append(str(cell).strip() if cell is not None else "")
-            break
+        for column in range(1, sheet.max_column + 1):
+            parts = []
+            for row in range(header_row, header_row + depth):
+                value = self._merged_value(sheet, row, column)
+                text = str(value).strip() if value is not None else ""
+                if text and (not parts or text != parts[-1]):
+                    parts.append(text)
+            headers.append(" / ".join(parts))
+
+        counts = Counter(header for header in headers if header)
+        headers = [
+            f"{header} (cột {get_column_letter(index)})" if header and counts[header] > 1 else header
+            for index, header in enumerate(headers, start=1)
+        ]
         return headers
 
     def read_data(self, sheet_name: str, header_row: int, mapping: Dict[str, str], remove_duplicates: bool = True) -> List[PersonRecord]:
@@ -44,7 +84,7 @@ class ExcelReader:
 
         person_dict = {} # Keyed by (normalized_name, secondary_key)
         
-        row_idx = header_row + 1
+        row_idx = header_row + self.header_depth(sheet_name, header_row)
         for row in sheet.iter_rows(min_row=row_idx, values_only=True):
             idx_hoten = col_indices.get('ho_ten', -1)
             idx_soto = col_indices.get('so_to', -1)

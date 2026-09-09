@@ -65,12 +65,21 @@ def test_download_verifies_checksum_and_returns_extracted_app(tmp_path, monkeypa
     checksum = tmp_path / "source.sha256"
     checksum.write_text(f"{auto_update.hashlib.sha256(package.read_bytes()).hexdigest()}  {ASSET_NAME}", encoding="ascii")
 
-    def copy_download(url, target, limit=auto_update.MAX_DOWNLOAD_BYTES):
-        target.write_bytes(package.read_bytes() if url.endswith(".zip") else checksum.read_bytes())
+    progress_events = []
+
+    def copy_download(url, target, limit=auto_update.MAX_DOWNLOAD_BYTES, progress=None):
+        content = package.read_bytes() if url.endswith(".zip") else checksum.read_bytes()
+        target.write_bytes(content)
+        if progress:
+            progress(len(content), len(content))
 
     monkeypatch.setattr(auto_update, "_download", copy_download)
-    app = auto_update.download_update({"version": "v1.0.1", "zip_url": "good.zip", "checksum_url": "good.sha256"})
+    app = auto_update.download_update(
+        {"version": "v1.0.1", "zip_url": "good.zip", "checksum_url": "good.sha256"},
+        lambda received, total: progress_events.append((received, total)),
+    )
     assert (app / EXE_NAME).read_bytes() == b"exe"
+    assert progress_events and progress_events[-1][0] == progress_events[-1][1]
 
 
 @pytest.mark.parametrize("folder", [APP_FOLDER, "HPNet máy mới"])
@@ -105,6 +114,7 @@ def test_installer_replaces_app_without_previous_copy(tmp_path, monkeypatch, fol
     installer = open(args[args.index("-File") + 1], encoding="utf-8-sig").read()
     assert "function Stop-AppProcesses" in installer
     assert "Stop-Process -Id" in installer
+    assert "launcher did not exit after 10 seconds" in installer
     assert "Stop-AppProcesses $Current $AppPid" in installer
     assert "Copy-UserState $Current" in installer
     assert "-Previous" not in args
@@ -113,7 +123,7 @@ def test_installer_replaces_app_without_previous_copy(tmp_path, monkeypatch, fol
     assert "build_info.json" in installer and "không đúng phiên bản yêu cầu" in installer
     args[args.index("-AppPid") + 1] = "2147483647"
     environment = {**os.environ, "LOCALAPPDATA": str(tmp_path / "state")}
-    subprocess.run(args, check=True, env=environment)
+    subprocess.run([*args, "-SkipLaunch"], check=True, env=environment)
     assert (current / "marker.txt").read_text(encoding="ascii") == "new"
     assert not list(current.parent.glob(f"{current.name}.previous-*"))
     assert (tmp_path / "state/HPNet VBDLIS AIO Tool/Upload/cau_hinh.json").is_file()

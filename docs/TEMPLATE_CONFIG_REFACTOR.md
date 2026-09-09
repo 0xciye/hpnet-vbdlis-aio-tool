@@ -18,4 +18,6 @@
 
 Trình đọc thông báo dùng model `Person` của công cụ Chuẩn bị hồ sơ VBDLIS. Quy tắc xác định chủ hộ được giữ giống `HouseholdParser`: người đầu tiên sau dòng có STT hộ nhận `Person.is_head=True`; các tên tiếp theo khi STT hộ trống nhận `False`. Chỉ các phần tử có `is_head=False` được đưa vào bảng trang 3 của mẫu Cẩm Giang.
 
+Ngày sinh tại phần thông tin chính của mẫu Cẩm Giang dùng `NGAY_SINH` từ người có `Person.is_head=True`. Ngày sinh trong từng dòng trang 3 dùng `MEMBER_BIRTH_DATE` của thành viên tương ứng.
+
 Số thông báo và ngày thông báo ở trang đầu và trang 3 dùng chung các placeholder `SO_TB`, `NGAY`, `THANG`, `NAM`. Một bộ giá trị được kết xuất cho cả hai vị trí.

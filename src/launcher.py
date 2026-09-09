@@ -272,17 +272,38 @@ class ToolLauncher(QMainWindow):
         from tools.qt_worker import Worker
         self.pending_update_version = release.get("version", "")
         self.statusBar().showMessage("Đang tải xuống và kiểm tra bản cập nhật…")
-        self.update_progress = QProgressDialog("Đang tải bản cập nhật…", "", 0, 0, self)
+        self.update_progress = QProgressDialog("Đang kết nối để tải bản cập nhật…", "", 0, 0, self)
         self.update_progress.setWindowTitle("Đang cập nhật")
         self.update_progress.setAutoClose(False)
         self.update_progress.setCancelButton(None)
         self.update_progress.setMinimumDuration(0)
         self.update_progress.show()
         self.setEnabled(False)
-        self.update_worker = Worker(lambda: download_update(release), self)
+        self.update_worker = Worker(lambda progress: download_update(release, progress), self, with_progress=True)
+        self.update_worker.progress.connect(self._update_download_progress)
         self.update_worker.succeeded.connect(self._install_update)
         self.update_worker.failed.connect(self._update_failed)
         self.update_worker.start()
+
+    def _update_download_progress(self, received, total):
+        dialog = getattr(self, "update_progress", None)
+        if dialog is None:
+            return
+        downloaded_mb = received / (1024 * 1024)
+        if total > 0:
+            total_mb = total / (1024 * 1024)
+            percent = min(100, round(received * 100 / total))
+            dialog.setRange(0, 1000)
+            dialog.setValue(min(1000, round(received * 1000 / total)))
+            if received >= total:
+                dialog.setLabelText("Đã tải xong. Đang kiểm tra và giải nén…")
+            else:
+                dialog.setLabelText(
+                    f"Đang tải bản cập nhật: {percent}% ({downloaded_mb:.1f}/{total_mb:.1f} MB)"
+                )
+        else:
+            dialog.setRange(0, 0)
+            dialog.setLabelText(f"Đang tải bản cập nhật: {downloaded_mb:.1f} MB")
 
     def _update_failed(self, message):
         if getattr(self, "update_progress", None):

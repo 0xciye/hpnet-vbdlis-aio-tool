@@ -12,7 +12,7 @@ from openpyxl import Workbook, load_workbook
 from tools.notice_builder.paths import resource, default_template_path, default_template_fields
 from tools.notice_builder.core import (BatchConfig, ColumnMapping, NoticeService, NumberPool,
     UserError, WordTemplate, inspect_workbook, workbook_info)
-from tools.notice_builder.core.models import file_hash
+from tools.notice_builder.core.models import NoticeRecord, file_hash
 from tools.notice_builder.core.numbering import parse_numbers
 from tools.notice_builder.core.reader import area_text, identifier, is_summary
 from tools.notice_builder.core.renderer import WORD_NS, paragraph_nodes, node_text
@@ -773,6 +773,7 @@ def test_template_configuration_keeps_mau_22_default_and_values_in_one_source():
     assert default.static_values=={"TEN_XA":"MAO ĐIỀN","DIA_DIEM":"Mao Điền"}
     assert configs["CAM_GIANG"].static_values["TEN_XA"]=="CẨM GIANG"
     assert configs["CAM_GIANG"].static_values["DIA_DIEM"]=="Cẩm Giang"
+    assert configs["CAM_GIANG"].static_values["DON_VI_LUU"]=="KT. (1)"
     with ZipFile(default.path) as archive:
         xml=archive.read("word/document.xml").decode("utf-8")
     assert xml.count("{{TEN_XA}}") == 1
@@ -811,13 +812,15 @@ def test_cam_giang_uses_vbdlis_head_model_and_dynamic_member_rows(tmp_path,confi
 
     cam=next(item for item in template_configs() if item.id=="CAM_GIANG")
     service=NoticeService(cam.path,json.loads(resource("config/legal_defaults.json").read_text(encoding="utf-8")))
-    fields={**config.template_fields,"NGUOI_DAI_DIEN":"Người đại diện: Nguyễn Văn A"}
-    configured=replace(config,day=9,month=9,year=2026,template_fields=fields)
+    configured=replace(config,day=9,month=9,year=2026)
     payload=service.template.render(service.values(record,configured,23))
     mao_service=NoticeService(default_template_path(),json.loads(resource("config/legal_defaults.json").read_text(encoding="utf-8")))
-    assert "MEMBERS" not in mao_service.values(record,configured,23)
+    mao_values=mao_service.values(record,configured,23)
+    assert "MEMBERS" not in mao_values and "NGAY_SINH" not in mao_values
     text=all_text(payload); member_rows=table_text_rows(payload,2)
-    assert "{{" not in text and "Người đại diện: Nguyễn Văn A" in text
+    assert "{{" not in text and "Sinh năm 28/08/1964" in text
+    assert "XÃ CẨM GIANG" in text and "Cẩm Giang, ngày 09 tháng 09 năm 2026" in text
+    assert "Lưu: VT, KT. (1)." in text
     assert text.count("23/TB-UBND")==2
     assert text.count("ngày 09 tháng 09 năm 2026")==2
     assert len(member_rows)==6
@@ -829,25 +832,26 @@ def test_cam_giang_uses_vbdlis_head_model_and_dynamic_member_rows(tmp_path,confi
 def test_required_fields_are_isolated_per_template(config):
     mao=default_template_config()
     cam=next(item for item in template_configs() if item.id=="CAM_GIANG")
-    no_representative={**config.template_fields,"NGUOI_DAI_DIEN":""}
-    replace(config,template_fields=no_representative).validate(
-        key for key in mao.user_fields if key in mao.required_fields)
-    with pytest.raises(UserError,match="Người đại diện"):
-        replace(config,template_fields=no_representative).validate(
-            key for key in cam.user_fields if key in cam.required_fields)
-
-    no_tax={**config.template_fields,"NGUOI_DAI_DIEN":"Đại diện","CO_QUAN_THUE":""}
+    assert "NGAY_SINH" not in mao.required_fields and "NGAY_SINH" in cam.required_fields
+    no_tax={**config.template_fields,"CO_QUAN_THUE":""}
     with pytest.raises(UserError,match="Cơ quan thuế"):
         replace(config,template_fields=no_tax).validate(
             key for key in mao.user_fields if key in mao.required_fields)
     replace(config,template_fields=no_tax).validate(
         key for key in cam.user_fields if key in cam.required_fields)
 
+    record=NoticeRecord(2,"CHỦ HỘ",2,"1","1","100","",identity="012345678901")
+    mao_service=NoticeService(mao.path,json.loads(resource("config/legal_defaults.json").read_text(encoding="utf-8")))
+    cam_service=NoticeService(cam.path,json.loads(resource("config/legal_defaults.json").read_text(encoding="utf-8")))
+    mao_service.template.render(mao_service.values(record,config,1))
+    with pytest.raises(UserError,match="Ngày sinh chủ hộ"):
+        cam_service.template.render(cam_service.values(record,config,1))
+
 
 def test_cam_giang_template_contract_is_separate_from_mau_22():
     cam=next(item for item in template_configs() if item.id=="CAM_GIANG")
     assert template_config_for_path(cam.path)==cam
     renderer=WordTemplate(cam.path,cam.required_fields,cam.document_rules)
-    assert "NGUOI_DAI_DIEN" in renderer.tokens
+    assert "NGAY_SINH" in renderer.tokens
     assert {"MEMBER_NAME","MEMBER_BIRTH_DATE","MEMBER_IDENTITY","MEMBER_ADDRESS"} <= renderer.tokens
-    assert "NGUOI_DAI_DIEN" not in WordTemplate(default_template_path()).tokens
+    assert "NGAY_SINH" not in WordTemplate(default_template_path()).tokens

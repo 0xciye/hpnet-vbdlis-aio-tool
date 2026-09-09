@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path, PurePosixPath
 from urllib.request import Request, urlopen
 from zipfile import ZipFile
@@ -20,6 +21,7 @@ EXE_NAME = f"{APP_FOLDER}.exe"
 API_URL = f"https://api.github.com/repos/{REPOSITORY}/releases/latest"
 MAX_DOWNLOAD_BYTES = 1_000_000_000
 MAX_EXTRACTED_BYTES = 2_000_000_000
+MAX_DOWNLOAD_SECONDS = 20 * 60
 
 
 def _semantic_version(value):
@@ -121,18 +123,30 @@ def fetch_latest_version():
     return tag
 
 
-def _download(url, target, limit=MAX_DOWNLOAD_BYTES):
+def _download(url, target, limit=MAX_DOWNLOAD_BYTES, progress=None):
     request = Request(url, headers={"User-Agent": "HPNet-VBDLIS-AIO-Updater"})
     total = 0
-    with urlopen(request, timeout=30) as response, target.open("wb") as output:
-        declared = int(response.headers.get("Content-Length", "0") or 0)
-        if declared > limit:
-            raise ValueError("Bản cập nhật vượt quá giới hạn dung lượng an toàn.")
-        while chunk := response.read(1024 * 1024):
-            total += len(chunk)
-            if total > limit:
+    started = time.monotonic()
+    try:
+        with urlopen(request, timeout=30) as response, target.open("wb") as output:
+            declared = int(response.headers.get("Content-Length", "0") or 0)
+            if declared > limit:
                 raise ValueError("Bản cập nhật vượt quá giới hạn dung lượng an toàn.")
-            output.write(chunk)
+            if progress:
+                progress(0, declared)
+            while chunk := response.read(1024 * 1024):
+                total += len(chunk)
+                if total > limit:
+                    raise ValueError("Bản cập nhật vượt quá giới hạn dung lượng an toàn.")
+                if time.monotonic() - started > MAX_DOWNLOAD_SECONDS:
+                    raise TimeoutError("Tải bản cập nhật quá 20 phút. Hãy kiểm tra mạng rồi thử lại.")
+                output.write(chunk)
+                if progress:
+                    progress(total, declared)
+    except TimeoutError as error:
+        if str(error).startswith("Tải bản cập nhật"):
+            raise
+        raise TimeoutError("Mạng ngừng phản hồi khi đang tải. Hãy kiểm tra mạng rồi thử lại.") from error
 
 
 def _safe_extract(archive, destination, expected_version=None):
@@ -160,12 +174,12 @@ def _safe_extract(archive, destination, expected_version=None):
     return app
 
 
-def download_update(release):
+def download_update(release, progress=None):
     root = Path(tempfile.mkdtemp(prefix="hpnet-vbdlis-update-"))
     archive = root / ASSET_NAME
     checksum = root / f"{ASSET_NAME}.sha256"
     try:
-        _download(release["zip_url"], archive)
+        _download(release["zip_url"], archive, progress=progress)
         _download(release["checksum_url"], checksum, 4096)
         expected = checksum.read_text(encoding="ascii").strip().split()[0].lower()
         digest = hashlib.sha256()
@@ -194,7 +208,7 @@ def launch_installer(new_app, expected_version=None):
     script_fd, script_name = tempfile.mkstemp(prefix="hpnet-vbdlis-installer-", suffix=".ps1")
     os.close(script_fd)
     script_path = Path(script_name)
-    script_path.write_text(r'''param([int]$AppPid,[string]$Current,[string]$NewApp,[string]$Exe,[string]$Version)
+    script_path.write_text(r'''param([int]$AppPid,[string]$Current,[string]$NewApp,[string]$Exe,[string]$Version,[switch]$SkipLaunch)
 $ErrorActionPreference = 'Stop'
 $parent = Split-Path -Parent $Current
 $log = Join-Path $env:TEMP 'hpnet-vbdlis-update.log'
@@ -221,7 +235,14 @@ function Copy-UserState([string]$OldApp) {
     }
 }
 Write-UpdateLog "installer started pid=$AppPid current=$Current new=$NewApp"
-Wait-Process -Id $AppPid -ErrorAction SilentlyContinue
+for ($wait = 1; $wait -le 50; $wait++) {
+    if (-not (Get-Process -Id $AppPid -ErrorAction SilentlyContinue)) { break }
+    Start-Sleep -Milliseconds 200
+}
+if (Get-Process -Id $AppPid -ErrorAction SilentlyContinue) {
+    Write-UpdateLog "launcher did not exit after 10 seconds; stopping pid=$AppPid"
+    Stop-Process -Id $AppPid -Force -ErrorAction SilentlyContinue
+}
 Start-Sleep -Milliseconds 1200
 function Stop-AppProcesses([string]$Root,[int]$KeepPid) {
     # Các công cụ HPNet chạy Node.js nằm trong _internal. Windows sẽ khóa
@@ -264,7 +285,9 @@ for ($attempt = 1; $attempt -le 20; $attempt++) {
         if (-not (Test-Path -LiteralPath $NewApp)) { throw 'Không còn thư mục cập nhật tạm.' }
         Move-Item -LiteralPath $NewApp -Destination $Current
         Write-UpdateLog "install succeeded attempt=$attempt version=$($metadata.version)"
-        Start-Process -FilePath (Join-Path $Current $Exe) -WorkingDirectory $Current -WindowStyle Hidden
+        if (-not $SkipLaunch) {
+            Start-Process -FilePath (Join-Path $Current $Exe) -WorkingDirectory $Current -WindowStyle Hidden
+        }
         exit 0
     } catch {
         Write-UpdateLog "attempt=$attempt error=$($_.Exception.Message)"

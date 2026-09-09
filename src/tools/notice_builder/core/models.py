@@ -101,6 +101,10 @@ class NoticeRecord:
     household_people: list[Person] = field(default_factory=list)
 
     @property
+    def head(self):
+        return next((person for person in self.household_people if person.is_head), None)
+
+    @property
     def members(self):
         return [person for person in self.household_people if not person.is_head]
 

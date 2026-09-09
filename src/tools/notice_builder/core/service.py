@@ -74,12 +74,15 @@ class NoticeService:
             values[key] = str(config.template_fields.get(key, "")).strip()
         values.update({"SO_TB":str(number),
                        "NGAY":f"{notice_date.day:02d}","THANG":f"{notice_date.month:02d}","NAM":str(notice_date.year),
-                       "HO_TEN":record.owner, "GIAY_TO_NHAN_THAN":record.identity, "DIA_CHI_NGUOI_SU_DUNG_DAT":config.owner_address.strip(),
+                       "HO_TEN":record.owner,
+                       "GIAY_TO_NHAN_THAN":record.identity, "DIA_CHI_NGUOI_SU_DUNG_DAT":config.owner_address.strip(),
                        "SO_TO":record.sheet,"SO_THUA":record.parcel,"DIEN_TICH":record.area,
                         "SU_DUNG_CHUNG":record.area,
                         "XU_DONG":record.location, "TEN_THON":config.village.strip(),
                         "DIA_CHI_HANH_CHINH":config.administrative_address.strip()})
         values.update(self.template_config.static_values)
+        if "NGAY_SINH" in self.template.tokens:
+            values["NGAY_SINH"] = record.head.birth_date if record.head else ""
         if self.template_config.document_rules.get("member_table"):
             people = (record.members if self.template_config.document_rules.get("exclude_household_head")
                       else record.household_people)

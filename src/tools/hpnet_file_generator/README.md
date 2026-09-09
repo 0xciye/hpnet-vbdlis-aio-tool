@@ -10,7 +10,7 @@ Phần mềm chuyên dụng để tự động nhân bản và đổi tên file 
 - Tự động bỏ qua các thửa đất dùng chung giữa nhiều hộ khác nhau để tránh trùng lặp.
 
 ## Hướng dẫn sử dụng:
-1. **Dữ liệu Excel**: Chọn file Excel chứa dữ liệu, chọn Sheet và Dòng Header, sau đó bấm *Đọc dữ liệu*.
+1. **Dữ liệu Excel**: Chọn file Excel, chọn Sheet và nhập dòng bắt đầu của tiêu đề. Phần mềm tự nhận diện tiêu đề một hoặc hai tầng, kể cả ô gộp, sau đó gợi ý các cột cần dùng.
 2. **File Nguồn**: Chọn thư mục chứa file PDF/DOCX gốc (tên file tương ứng với họ tên).
 3. **Ánh xạ & Match**: Chọn các cột tương ứng (Họ Tên, Số Tờ, Số Thửa) từ Excel. Bấm *Phân tích Match* để xem trước kết quả ánh xạ.
 4. **Tên File & Output**: Nhập Prefix, Mã ĐVHC, và chọn hậu tố (TBXN/DDK...). Chọn thư mục đích (Output).

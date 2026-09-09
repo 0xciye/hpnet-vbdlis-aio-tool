@@ -1,10 +1,12 @@
 import pytest
+from openpyxl import Workbook
 from pathlib import Path
 from tools.hpnet_file_generator.models.data_models import PersonRecord, Parcel, SourceFile, ProfileConfig, ActionStatus
 from tools.hpnet_file_generator.utils.text_normalizer import normalize_person_name, extract_stt_and_name
 from tools.hpnet_file_generator.core.person_matcher import PersonMatcher
 from tools.hpnet_file_generator.core.naming_engine import NamingEngine
 from tools.hpnet_file_generator.core.action_planner import ActionPlanner
+from tools.hpnet_file_generator.core.excel_reader import ExcelReader
 
 def test_normalize_person_name():
     assert normalize_person_name(" NGUYỄN   VĂN A ") == "nguyễn văn a"
@@ -93,3 +95,57 @@ def test_action_planner_conflict(tmp_path):
     statuses = [a.status for a in actions]
     assert ActionStatus.READY in statuses
     assert ActionStatus.CONFLICT in statuses
+
+
+def test_excel_reader_keeps_single_header_behavior(tmp_path):
+    path = tmp_path / "single-header.xlsx"
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.append(["STT", "Tên hộ", "Số tờ", "Số thửa"])
+    sheet.append([1, "Nguyễn Văn A", 10, 20])
+    workbook.save(path)
+
+    reader = ExcelReader(str(path))
+    assert reader.header_depth(sheet.title, 1) == 1
+    assert reader.get_headers(sheet.title, 1)[:4] == ["STT", "Tên hộ", "Số tờ", "Số thửa"]
+    records = reader.read_data(sheet.title, 1, {
+        "ho_ten": "Tên hộ", "so_to": "Số tờ", "so_thua": "Số thửa"
+    })
+    assert records[0].raw_rows == [2]
+    assert records[0].parcels == {Parcel("10", "20")}
+
+
+def test_excel_reader_flattens_two_level_merged_headers_and_skips_both_rows(tmp_path):
+    path = tmp_path / "two-level-header.xlsx"
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.merge_cells("A4:A5")
+    sheet.merge_cells("B4:B5")
+    sheet.merge_cells("C4:E4")
+    sheet["A4"] = "STT"
+    sheet["B4"] = "Tên hộ"
+    sheet["C4"] = "BĐ 2004"
+    sheet["C5"] = "Số thửa"
+    sheet["D5"] = "Tờ BĐ"
+    sheet["E5"] = "Diện tích"
+    sheet["A6"] = 1
+    sheet["B6"] = "Nguyễn Văn A"
+    sheet["C6"] = 55
+    sheet["D6"] = 12
+    sheet["E6"] = 100
+    workbook.save(path)
+
+    reader = ExcelReader(str(path))
+    assert reader.header_depth(sheet.title, 4) == 2
+    assert reader.get_headers(sheet.title, 4)[:5] == [
+        "STT", "Tên hộ", "BĐ 2004 / Số thửa", "BĐ 2004 / Tờ BĐ", "BĐ 2004 / Diện tích"
+    ]
+    records = reader.read_data(sheet.title, 4, {
+        "ho_ten": "Tên hộ",
+        "so_to": "BĐ 2004 / Tờ BĐ",
+        "so_thua": "BĐ 2004 / Số thửa",
+        "secondary_key": "STT",
+    })
+    assert records[0].raw_rows == [6]
+    assert records[0].secondary_key == "1"
+    assert records[0].parcels == {Parcel("12", "55")}

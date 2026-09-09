@@ -145,7 +145,7 @@ class MainWindow(QMainWindow):
     def make_mapping_page(self):
         box=self.page("Đối chiếu cột nguồn", "Với file Cẩm Đông: G/H là tờ/thửa MỚI; K là diện tích bản đồ, không phải diện tích giao ở M. Gợi ý chỉ là hỗ trợ, cần kiểm tra trước khi xuất.")
         form=QFormLayout(); box.addLayout(form); self.mapping={}
-        for key,label in (("household_index","STT hộ * (dòng xác định Chủ hộ)"),("owner","Tên hộ/thành viên *"),("identity","Giấy tờ nhân thân * (CCCD/CMND/khác)"),("birth_date","Ngày sinh thành viên (mẫu Cẩm Giang)"),("sheet","Tờ BĐ mới *"),("parcel","Thửa BĐ mới *"),("area","Diện tích *"),("location","Xứ đồng (có thể trống)")):
+        for key,label in (("household_index","STT hộ * (dòng xác định Chủ hộ)"),("owner","Tên hộ/thành viên *"),("identity","Giấy tờ nhân thân * (CCCD/CMND/khác)"),("birth_date","Ngày sinh chủ hộ/thành viên (mẫu Cẩm Giang)"),("sheet","Tờ BĐ mới *"),("parcel","Thửa BĐ mới *"),("area","Diện tích *"),("location","Xứ đồng (có thể trống)")):
             combo=QComboBox(); combo.addItem("— Chưa chọn —",""); combo.currentIndexChanged.connect(self.invalidate)
             self.mapping[key]=combo; form.addRow(label,combo)
         note=QLabel("Dùng cùng quy tắc với Chuẩn bị hồ sơ VBDLIS: dòng có STT hộ bắt đầu hộ mới; người đầu tiên là Chủ hộ. Tên trên các dòng STT trống là thành viên và không thay thế Chủ hộ. Mẫu Cẩm Giang đưa các thành viên vào trang 3 và loại Chủ hộ khỏi danh sách.")
@@ -209,7 +209,7 @@ class MainWindow(QMainWindow):
         self.template_static_note=QLabel(); self.template_static_note.setObjectName("hint"); self.template_static_note.setWordWrap(True)
         form.addRow(self.template_static_note)
         form.addRow(QLabel("NỘI DUNG BẮT BUỘC TRONG MẪU WORD"))
-        available_fields={**REQUIRED_COMMON, "NGUOI_DAI_DIEN":"Người đại diện", **OPTIONAL_COMMON}
+        available_fields={**REQUIRED_COMMON, **OPTIONAL_COMMON}
         for key,label in available_fields.items():
             if key==next(iter(OPTIONAL_COMMON)):
                 derived_note=QLabel("Diện tích sử dụng chung tự động bằng Diện tích của từng thửa; không cần nhập.")
@@ -359,7 +359,7 @@ class MainWindow(QMainWindow):
             return
         config=template_config_for_path(self.template.text())
         static_text="; ".join(f"{FIELD_LABELS.get(key, key)}: {value}" for key,value in config.static_values.items()
-                             if key in {"TEN_XA","DIA_DIEM"})
+                             if key in {"TEN_XA","DIA_DIEM","DON_VI_LUU"})
         self.template_static_note.setText(f"Mẫu đang dùng: {config.name}. Giá trị theo mẫu: {static_text or 'không có giá trị cố định'}. ")
         visible=set(config.user_fields) | set(config.optional_fields)
         for key,field in self.template_inputs.items():

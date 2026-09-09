@@ -46,7 +46,7 @@
     {
       "id": "CAM_GIANG",
       "name": "Mẫu Cẩm Giang",
-      "template_file": "CAM_GIANG_THONG_BAO_XAC_NHAN_KET_QUA_DANG_KY_DAT_DAI.docx",
+      "template_file": "CAM_GIANG_THONG_BAO_XAC_NHAN_KET_QUA_DANG_KY_DAT_DAI_NGAY_SINH.docx",
       "is_default": false,
       "static_values": {
         "TEN_XA": "CẨM GIANG",
@@ -57,12 +57,12 @@
       },
       "required_fields": [
         "TEN_XA", "SO_TB", "DIA_DIEM", "NGAY", "THANG", "NAM", "HO_TEN",
-        "NGUOI_DAI_DIEN", "GIAY_TO_NHAN_THAN", "DIA_CHI_NGUOI_SU_DUNG_DAT",
+        "NGAY_SINH", "GIAY_TO_NHAN_THAN", "DIA_CHI_NGUOI_SU_DUNG_DAT",
         "SO_TO", "SO_THUA", "DIEN_TICH", "NGUON_GOC_SU_DUNG_DAT",
         "TAI_SAN_DANG_KY", "GIAY_TO_DA_NOP", "NGUOI_KY", "CHI_NHANH_VP_DKDD", "DON_VI_LUU"
       ],
       "user_fields": [
-        "NGUOI_DAI_DIEN", "NGUON_GOC_SU_DUNG_DAT", "TAI_SAN_DANG_KY", "GIAY_TO_DA_NOP"
+        "NGUON_GOC_SU_DUNG_DAT", "TAI_SAN_DANG_KY", "GIAY_TO_DA_NOP"
       ],
       "optional_fields": [],
       "placeholder_mapping": {
@@ -73,7 +73,7 @@
         "THANG": "notice.date.month",
         "NAM": "notice.date.year",
         "HO_TEN": "record.owner",
-        "NGUOI_DAI_DIEN": "template_fields.NGUOI_DAI_DIEN",
+        "NGAY_SINH": "record.head.birth_date",
         "GIAY_TO_NHAN_THAN": "record.identity",
         "SO_TO": "record.sheet",
         "SO_THUA": "record.parcel",

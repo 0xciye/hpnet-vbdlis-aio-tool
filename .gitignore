@@ -62,7 +62,7 @@ MAU_22_THONG_BAO_XAC_NHAN_KET_QUA_DANG_KY_DAT_DAI.docx
 # MAU_22 trong src/template/ được tạo tự động bởi tools/sync_notice_template.py khi build.
 # Nguồn thật duy nhất là research/notice_template/ — không track bản copy trong src/.
 src/tools/notice_builder/template/MAU_22_THONG_BAO_XAC_NHAN_KET_QUA_DANG_KY_DAT_DAI.docx
-!src/tools/notice_builder/template/CAM_GIANG_THONG_BAO_XAC_NHAN_KET_QUA_DANG_KY_DAT_DAI.docx
+!src/tools/notice_builder/template/CAM_GIANG_THONG_BAO_XAC_NHAN_KET_QUA_DANG_KY_DAT_DAI_NGAY_SINH.docx
 tmp/
 temp/
 output/

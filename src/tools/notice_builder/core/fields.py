@@ -11,7 +11,7 @@ REQUIRED_COMMON = {
 FIELD_LABELS = {
     "TEN_XA": "Tên xã", "SO_TB": "Số thông báo", "DIA_DIEM": "Địa điểm",
     "NGAY": "Ngày", "THANG": "Tháng", "NAM": "Năm", "HO_TEN": "Họ tên",
-    "NGUOI_DAI_DIEN": "Người đại diện",
+    "NGAY_SINH": "Ngày sinh chủ hộ",
     "GIAY_TO_NHAN_THAN": "Giấy tờ nhân thân", "DIA_CHI_NGUOI_SU_DUNG_DAT": "Địa chỉ",
     "SO_TO": "Số tờ", "SO_THUA": "Số thửa", "TEN_THON": "Tên thôn",
     "DIEN_TICH": "Diện tích", "SU_DUNG_CHUNG": "Diện tích sử dụng chung",
