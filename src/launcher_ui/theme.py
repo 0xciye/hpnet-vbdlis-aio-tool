@@ -7,6 +7,14 @@ COLORS = {
     "secondary":"#53657A", "border":"#DCE4EF", "focus":"#2458C5", "disabled":"#6B7788",
     "success":"#2E7D32", "warning":"#C47A00", "error":"#C53D45",
 }
+import os
+if os.name == "nt":
+    try:
+        import winreg
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize") as _key:
+            if int(winreg.QueryValueEx(_key, "AppsUseLightTheme")[0]) == 0:
+                COLORS.update({"canvas":"#202124","surface":"#2B2D31","surface_elevated":"#35383E","text":"#F2F4F7","muted":"#B8C0CC","border":"#4A505A","tint":"#263E73","primary":"#76A7FF","hover":"#9ABFFF","pressed":"#4F82D7","disabled":"#7E8794"})
+    except (OSError, ValueError): pass
 SPACING = {"xs": 4, "sm": 8, "md": 12, "lg": 16, "xl": 24}
 TYPOGRAPHY = {"family": "'Segoe UI'", "monospace": "'Consolas'", "caption": "9pt", "body": "10pt", "heading": "13pt", "display": "22pt"}
 RADIUS = {"small": 5, "medium": 8, "large": 12}
