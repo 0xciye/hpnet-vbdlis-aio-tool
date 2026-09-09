@@ -174,7 +174,7 @@ $form.Controls.Add($headerPanel)
 $group1 = New-Object System.Windows.Forms.GroupBox
 $group1.Text = ' NGUỒN DỮ LIỆU '
 $group1.Font = New-Object System.Drawing.Font('Segoe UI', 9.75, [System.Drawing.FontStyle]::Bold)
-$group1.Size = New-Object System.Drawing.Size(830, 200)
+$group1.Size = New-Object System.Drawing.Size(830, 270)
 $group1.Margin = New-Object System.Windows.Forms.Padding(0, 0, 0, 15)
 $group1.BackColor = [System.Drawing.Color]::White
 $mainPanel.Controls.Add($group1)
@@ -233,13 +233,15 @@ $group1.Controls.Add($browseButton)
 
 $abstractLabel = New-Object System.Windows.Forms.Label
 $abstractLabel.Text = 'Trích yếu chung:'
-$abstractLabel.Visible = $false
+$abstractLabel.Location = New-Object System.Drawing.Point(20, 150)
+$abstractLabel.Visible = $true
 $abstractLabel.AutoSize = $true
 $abstractLabel.Font = $fontNormal
 $group1.Controls.Add($abstractLabel)
 
 $abstractBox = New-Object System.Windows.Forms.TextBox
-$abstractBox.Visible = $false
+$abstractBox.Location = New-Object System.Drawing.Point(150, 147)
+$abstractBox.Visible = $true
 $abstractBox.Size = New-Object System.Drawing.Size(660, 65)
 $abstractBox.Multiline = $true
 $abstractBox.ScrollBars = 'Vertical'
@@ -464,11 +466,14 @@ Update-WorkflowPreview
 $startButton.Add_Click({
     $lines = @($folderBox.Lines | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
     $batches = @(Parse-UploadBatches $lines)
+    $commonAbstract = $abstractBox.Text.Trim()
+    foreach ($batch in $batches) {
+        if ([string]::IsNullOrWhiteSpace($batch.abstract)) { $batch.abstract = $commonAbstract }
+    }
     $folder = if ($batches.Count) { [string]$batches[0].folder } else { '' }
-    $abstract = if ($batches.Count) { (($batches | ForEach-Object { $_.abstract }) -join '; ') } else { '' }
     $reviewer = $reviewerBox.Text.Trim()
     if ($batches.Count -eq 0) {
-        [System.Windows.Forms.MessageBox]::Show('Hãy nhập ít nhất một thư mục theo dạng: C:\DuThao | Trích yếu.', 'Thiếu thư mục', 'OK', 'Warning') | Out-Null
+        [System.Windows.Forms.MessageBox]::Show('Hãy nhập ít nhất một thư mục và trích yếu chung.', 'Thiếu thư mục', 'OK', 'Warning') | Out-Null
         return
     }
     $invalidFolder = @($batches | Where-Object { -not (Test-Path -LiteralPath $_.folder -PathType Container) })
@@ -477,7 +482,7 @@ $startButton.Add_Click({
         return
     }
     if (@($batches | Where-Object { [string]::IsNullOrWhiteSpace($_.abstract) }).Count -gt 0) {
-        [System.Windows.Forms.MessageBox]::Show('Mỗi thư mục phải có trích yếu riêng sau dấu |.', 'Thiếu trích yếu', 'OK', 'Warning') | Out-Null
+        [System.Windows.Forms.MessageBox]::Show('Hãy nhập Trích yếu chung hoặc thêm trích yếu riêng sau dấu | cho từng thư mục.', 'Thiếu trích yếu', 'OK', 'Warning') | Out-Null
         return
     }
     if ([string]::IsNullOrWhiteSpace($reviewer)) {
@@ -492,12 +497,12 @@ $startButton.Add_Click({
 
     $modeText = if ($dryRun.Checked) { 'CHỈ KIỂM TRA, KHÔNG UP' } else { 'UP THẬT LÊN HPNET' }
     $reuploadText = if ($reuploadModified.Checked) { 'Có - bỏ qua bản cũ, up lại bản đã sửa' } else { 'Không - thấy cùng tên là bỏ qua' }
-    $message = "Chế độ: $modeText`r`nProfile: $($profileBox.Text.Trim())`r`nSố thư mục: $($batches.Count)`r`nSố file Word: $($wordFiles.Count)`r`nUp lại file đã sửa: $reuploadText`r`nNgười duyệt cấp 1 / lãnh đạo: $reviewer`r`nVị trí: Văn bản trình duyệt (*)`r`n`r`nCác thư mục và trích yếu:`r`n$($lines -join "`r`n")`r`n`r`nTiếp tục?"
+    $message = "Chế độ: $modeText`r`nProfile: $($profileBox.Text.Trim())`r`nSố thư mục: $($batches.Count)`r`nSố file Word: $($wordFiles.Count)`r`nUp lại file đã sửa: $reuploadText`r`nNgười duyệt cấp 1 / lãnh đạo: $reviewer`r`nVị trí: Văn bản trình duyệt (*)`r`n`r`nCác thư mục và trích yếu:`r`n$(($batches | ForEach-Object { "$($_.folder) | $($_.abstract)" }) -join "`r`n")`r`n`r`nTiếp tục?"
     $answer = [System.Windows.Forms.MessageBox]::Show($message, 'Xác nhận chạy công cụ', 'OKCancel', 'Information')
     if ($answer -ne [System.Windows.Forms.DialogResult]::OK) { return }
 
     try {
-        $config = [ordered]@{ profileName=$profileBox.Text.Trim(); abstract=$abstract; batches=$batches; sourceFolder=$folder; reviewerLevel1=$reviewer; dryRun=[bool]$dryRun.Checked; reuploadModified=[bool]$reuploadModified.Checked; listPageSize=100 }
+        $config = [ordered]@{ profileName=$profileBox.Text.Trim(); abstract=$commonAbstract; batches=$batches; sourceFolder=$folder; reviewerLevel1=$reviewer; dryRun=[bool]$dryRun.Checked; reuploadModified=[bool]$reuploadModified.Checked; listPageSize=100 }
         $config | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $configPath -Encoding UTF8
 
         $startButton.Enabled = $false
@@ -587,6 +592,7 @@ if ($UiSelfTest) {
     $testBatches = @(Parse-UploadBatches @('C:\A | Trích yếu A', 'C:\B | Trích yếu B', 'C:\C | Trích yếu C'))
     if ($testBatches.Count -ne 3 -or $testBatches[2].abstract -ne 'Trích yếu C') { throw 'UI test: không phân tích đúng ba thư mục và trích yếu.' }
     if (-not $folderBox.Multiline -or $folderBox.Height -lt 50 -or $browseButton.Text -ne 'Thêm thư mục') { throw 'UI test: ô nhập nhiều thư mục chưa sẵn sàng.' }
+    if ($abstractLabel.Text -ne 'Trích yếu chung:' -or $abstractLabel.Location.Y -ne 150 -or $abstractBox.Location.Y -ne 147) { throw 'UI test: ô trích yếu chung chưa được bố trí.' }
     $form.StartPosition = 'Manual'; $form.Location = New-Object Drawing.Point(-32000,-32000); $form.ShowInTaskbar = $false
     $form.Show(); $form.PerformLayout(); [Windows.Forms.Application]::DoEvents()
     if ($null -eq $form.Icon) { throw 'UI test: cửa sổ chưa có icon riêng.' }
