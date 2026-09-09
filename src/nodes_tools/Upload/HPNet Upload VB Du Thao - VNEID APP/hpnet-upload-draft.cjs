@@ -323,7 +323,6 @@ async function submitOne(page, context, file, abstract, reviewerLevel1, reupload
     } catch (error) {
       submitError = error;
     }
-    await page.waitForTimeout(1200);
   } finally {
     page.off("dialog", dialogHandler);
   }
@@ -334,6 +333,9 @@ async function submitOne(page, context, file, abstract, reviewerLevel1, reupload
     return { success: true, matchedReviewer: selectedLeader, message: lastDialog || "HPNet đã đóng hộp dự thảo sau khi Cập nhật." };
   }
 
+  // Only wait briefly before the fallback list check; a hidden modal/success dialog
+  // already confirms the server accepted the upload.
+  await page.waitForTimeout(300);
   const appeared = await waitForRecord(context, page, file, reuploadModified);
   if (appeared) return { success: true, matchedReviewer: selectedLeader, message: lastDialog || "HPNet đã ghi nhận văn bản." };
 
@@ -442,6 +444,7 @@ async function main() {
 
     let uploaded = 0;
     let skipped = 0;
+    const uploadDurations = [];
     for (let index = 0; index < files.length; index += 1) {
       const file = files[index];
       log(`(${index + 1}/${files.length}) Kiểm tra ${file.name}`);
@@ -481,7 +484,11 @@ async function main() {
         continue;
       }
 
+      const uploadStartedAt = Date.now();
       const result = await submitOne(page, context, file, file.abstract, reviewerLevel1, Boolean(config.reuploadModified), log);
+      const uploadSeconds = (Date.now() - uploadStartedAt) / 1000;
+      uploadDurations.push(uploadSeconds);
+      log(`[TỐC ĐỘ UPLOAD] ${file.name}: ${uploadSeconds.toFixed(1)} giây`);
       if (!result.success) {
         addResult(file, "DỪNG - CHƯA XÁC NHẬN", result.matchedReviewer || "", result.message);
         throw new Error(`Dừng tại ${file.name}. Có thể HPNet đã nhận nhưng danh sách chưa xác nhận; hãy chạy lại để công cụ kiểm tra và bỏ qua nếu đã có.`);
@@ -498,6 +505,10 @@ async function main() {
     log(`Tổng file Word: ${files.length}`);
     log(`Đã up mới: ${uploaded}`);
     log(`Đã có/bỏ qua: ${skipped}`);
+    if (uploadDurations.length) {
+      const average = uploadDurations.reduce((sum, value) => sum + value, 0) / uploadDurations.length;
+      log(`[TỐC ĐỘ TRUNG BÌNH] ${average.toFixed(1)} giây/file (${uploadDurations.length} file đã upload).`);
+    }
     if (config.dryRun) log("Đây là chế độ chỉ kiểm tra, chưa có file nào được tải lên.");
   } catch (error) {
     fatalError = error;

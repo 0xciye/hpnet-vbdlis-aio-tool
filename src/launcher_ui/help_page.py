@@ -6,7 +6,7 @@ import sys
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QTextCursor, QTextDocument
 from PySide6.QtWidgets import (QWidget,QVBoxLayout,QHBoxLayout,QLabel,QLineEdit,QPushButton,
-                             QTextBrowser,QListWidget,QListWidgetItem,QSplitter,QStackedWidget)
+                             QTextBrowser,QListWidget,QListWidgetItem,QSplitter,QStackedWidget,QApplication)
 
 GUIDES = (
     ("Quy trình hiện hành", "HUONG_DAN_BAN_SUA.txt", "docs/HUONG_DAN_BAN_SUA.txt"),
@@ -77,11 +77,13 @@ class HelpPage(QWidget):
         self.contents.setAccessibleName("Các trang hướng dẫn"); self.contents.setMinimumWidth(170)
         self.contents.setMaximumWidth(270)
         self.documents=QStackedWidget(); self.browsers=[]; self.source_texts=[]; self.search_states=[]
+        application = QApplication.instance()
+        self._dark_mode = bool(application.property("darkMode")) if application and application.property("darkMode") is not None else False
         for index,source in enumerate(guide_sources()):
             title,_=source
             browser=QTextBrowser(); browser.setAccessibleName(f"Nội dung: {title}")
             browser.setOpenExternalLinks(False)
-            browser.document().setDefaultStyleSheet("h1 {font-size:19pt; color:#172B42; margin-top:24px;} h2 {font-size:12pt; font-weight:700; color:#2458C5; margin-top:22px; margin-bottom:10px;} p {font-size:11pt; line-height:165%; margin:9px 0;} .guide-label {margin-top:13px; color:#173B6C;} .guide-label strong {font-weight:700; color:#174EA6;} .guide-label.warning {color:#7A4512; background-color:#FFF6E5;} .guide-label.warning strong {color:#A45100;} .note {color:#53657A;}")
+            browser.document().setDefaultStyleSheet(self._document_css(self._dark_mode))
             html,_,texts=guide_html([source]); browser.setHtml(html)
             self.source_texts.extend(texts); self.browsers.append(browser); self.documents.addWidget(browser)
             self.search_states.append(("",self.default_search_status()))
@@ -90,6 +92,30 @@ class HelpPage(QWidget):
         split.addWidget(self.contents); split.addWidget(self.documents); split.setSizes([225,650]); split.setStretchFactor(1,1)
         split.setChildrenCollapsible(False); box.addWidget(split,1)
         self.contents.setCurrentRow(0)
+
+    @staticmethod
+    def _document_css(dark=False):
+        if dark:
+            return ("body { color:#F2F4F7; background:#2B2D31; } "
+                    "h1 {font-size:19pt; color:#FFFFFF; font-weight:700; margin-top:24px;} "
+                    "h2 {font-size:12pt; font-weight:700; color:#FFFFFF; margin-top:22px; margin-bottom:10px;} "
+                    "p {font-size:11pt; line-height:165%; margin:9px 0; color:#F2F4F7;} "
+                    ".guide-label {margin-top:13px; color:#FFFFFF;} "
+                    ".guide-label strong {font-weight:700; color:#FFFFFF;} "
+                    ".guide-label.warning {color:#FFFFFF; background-color:#5A4422;} "
+                    ".guide-label.warning strong {color:#FFFFFF;} .note {color:#D5D9E0;}")
+        return ("body { color:#172B42; background:#FFFFFF; } "
+                "h1 {font-size:19pt; color:#172B42; margin-top:24px;} "
+                "h2 {font-size:12pt; font-weight:700; color:#2458C5; margin-top:22px; margin-bottom:10px;} "
+                "p {font-size:11pt; line-height:165%; margin:9px 0;} .guide-label {margin-top:13px; color:#173B6C;} "
+                ".guide-label strong {font-weight:700; color:#174EA6;} .guide-label.warning {color:#7A4512; background-color:#FFF6E5;} "
+                ".guide-label.warning strong {color:#A45100;} .note {color:#53657A;}")
+
+    def apply_theme(self, dark):
+        self._dark_mode = bool(dark)
+        for browser in self.browsers:
+            browser.document().setDefaultStyleSheet(self._document_css(self._dark_mode))
+            browser.viewport().update()
 
     @property
     def browser(self):

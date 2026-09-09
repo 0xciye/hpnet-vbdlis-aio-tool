@@ -373,13 +373,18 @@ async function main() {
       const approvedCandidates = unique.filter((item) => approvedIds.has(item.id));
       log(`Số mục đã xác nhận ở lần quét: ${approvedIds.size}. Số mục vẫn đủ điều kiện lúc này: ${approvedCandidates.length}.`);
       let completed = 0;
+      const approvalDurations = [];
       for (let index = 0; index < approvedCandidates.length; index += 1) {
         const candidate = approvedCandidates[index];
         log(`(${index + 1}/${approvedCandidates.length}) Kiểm tra lại ${candidate.id}`);
+        const approvalStartedAt = Date.now();
         const result = await approveOne(page, context, candidate, candidate.exactTitle, expectedStatus, nextReviewer, log);
+        const approvalSeconds = (Date.now() - approvalStartedAt) / 1000;
+        approvalDurations.push(approvalSeconds);
         resultRows.push([new Date().toISOString(), resultRows.length + 1, candidate.id, candidate.title, candidate.status, submitter, nextReviewer, result.matchedReviewer || "", result.result, result.newStatus, result.note]);
         if (result.result === "ĐÃ DUYỆT") completed += 1;
         log(`[${result.result}] ${candidate.id} - ${result.newStatus}`);
+        log(`[TỐC ĐỘ DUYỆT] ${candidate.id}: ${approvalSeconds.toFixed(1)} giây`);
       }
       for (const item of report.candidates || []) {
         if (!unique.some((current) => current.id === String(item.id))) {
@@ -387,6 +392,10 @@ async function main() {
         }
       }
       log(`Hoàn tất. Đã duyệt và xác nhận đổi tình trạng: ${completed}/${approvedIds.size}.`);
+      if (approvalDurations.length) {
+        const average = approvalDurations.reduce((sum, value) => sum + value, 0) / approvalDurations.length;
+        log(`[TỐC ĐỘ TRUNG BÌNH] ${average.toFixed(1)} giây/văn bản (${approvalDurations.length} văn bản đã xử lý).`);
+      }
       log("Công cụ tự dừng vì đã xử lý hết các mục trong lần quét được xác nhận.");
     }
   } catch (error) {

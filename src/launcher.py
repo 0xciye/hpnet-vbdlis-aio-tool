@@ -69,6 +69,8 @@ class ToolLauncher(QMainWindow):
         app.setProperty("darkMode", self.dark_mode)
         app.setPalette(launcher_palette(self.dark_mode))
         self.setStyleSheet(style_for_mode(self.dark_mode))
+        if hasattr(self, "launcher_view") and hasattr(self.launcher_view, "help_page"):
+            self.launcher_view.help_page.apply_theme(self.dark_mode)
         for window in app.topLevelWidgets():
             if window is self:
                 continue
