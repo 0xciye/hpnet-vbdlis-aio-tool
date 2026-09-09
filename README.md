@@ -108,7 +108,7 @@ Khi bấm nút:
 - Khi chuyển ứng dụng sang máy khác, hãy sao chép toàn bộ thư mục đã giải nén.
 - Không tắt Microsoft Edge trong khi công cụ HPNet đang hoạt động.
 - Không thực hiện thao tác thật nếu chưa kiểm tra dữ liệu xem trước.
-- PDF Cleaner hỗ trợ nhiều hậu tố, nhập cách nhau bằng dấu phẩy (ví dụ `.signed, .ldsigned` và `.signed.signed, .ldsigned.signed`). Công cụ kiểm tra cấu trúc chữ ký trong file PDF khi bật chế độ xác thực, nhưng không thay thế việc kiểm tra giá trị pháp lý của chữ ký.
+- PDF Cleaner hỗ trợ nhiều hậu tố, nhập cách nhau bằng dấu phẩy (ví dụ `.signed, .ldsigned` và `.signed.signed, .ldsigned.signed`). Công cụ xóa file cũ rồi bỏ toàn bộ hậu tố của file giữ lại để trả về tên gốc `.pdf`. Công cụ kiểm tra cấu trúc chữ ký trong file PDF khi bật chế độ xác thực, nhưng không thay thế việc kiểm tra giá trị pháp lý của chữ ký.
 
 ---
 

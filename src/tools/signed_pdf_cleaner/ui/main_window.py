@@ -110,7 +110,7 @@ class MainWindow(QMainWindow):
         options_layout.addStretch()
         main_layout.addLayout(options_layout)
 
-        suffix_hint = QLabel("Nhiều hậu tố cách nhau bằng dấu phẩy, ví dụ: xóa .signed, .ldsigned | đổi tên .signed.signed, .ldsigned.signed")
+        suffix_hint = QLabel("Nhiều hậu tố cách nhau bằng dấu phẩy. Ví dụ: xóa .signed, .ldsigned | đổi tên .signed.signed, .ldsigned.signed → kết quả chỉ còn tên gốc.pdf")
         suffix_hint.setWordWrap(True)
         suffix_hint.setStyleSheet("color: #64748b; font-size: 11px;")
         main_layout.addWidget(suffix_hint)

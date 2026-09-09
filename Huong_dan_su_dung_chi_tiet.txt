@@ -86,7 +86,7 @@ E. Đọc kết quả và nhật ký
   + Lựa chọn tiện ích "PDF Cleaner".
   + Chọn "Chọn..." nhằm trỏ đường dẫn tới thư mục kho chứa văn bản hồ sơ.
   + Nhập hậu tố cần xóa và hậu tố của file cần đổi tên. Có thể nhập nhiều hậu tố, ngăn cách bằng dấu phẩy; ví dụ xóa ".signed, .ldsigned" và đổi tên ".signed.signed, .ldsigned.signed". Phần mềm tự thêm ".pdf" nếu chưa nhập.
-  + Các hậu tố được ghép theo cặp tương ứng: file ".signed.signed.pdf" sẽ thay cho ".signed.pdf", file ".ldsigned.signed.pdf" sẽ thay cho ".ldsigned.pdf".
+  + Các hậu tố được ghép theo cặp tương ứng. File ".signed.signed.pdf" sẽ thay cho ".signed.pdf" rồi được đổi tên thành tên gốc chỉ còn ".pdf"; file ".ldsigned.signed.pdf" cũng xử lý tương tự.
   + Bấm lệnh "Quét / Xem trước". Phần mềm sẽ kiểm đếm và thống kê số lượng hồ sơ hợp lệ.
   + Bấm lệnh "Thực hiện xử lý". Hệ thống sẽ tự động vô hiệu hóa và luân chuyển các tập tin tài liệu chưa ký vào thư mục Recycle Bin (Thùng rác), hoàn tất quy trình tinh gọn không gian lưu trữ hiệu quả.
 

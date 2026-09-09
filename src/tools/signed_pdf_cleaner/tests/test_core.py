@@ -92,7 +92,7 @@ def test_4_multiple_pairs(temp_dir):
     assert not (temp_dir / "B.signed.pdf").exists()
 
 def test_multiple_suffix_pairs_are_normalized_and_processed(temp_dir):
-    """Each configured keep suffix maps to its corresponding delete suffix."""
+    """Each kept file loses all configured suffixes and returns to base.pdf."""
     create_file(temp_dir, "A.signed.pdf", "OLD_SIGNED")
     create_file(temp_dir, "A.signed.signed.pdf", "NEW_SIGNED")
     create_file(temp_dir, "B.ldsigned.pdf", "OLD_LDSIGNED")
@@ -109,15 +109,16 @@ def test_multiple_suffix_pairs_are_normalized_and_processed(temp_dir):
 
     ready = [p for p in plans if p.status == ProcessStatus.READY]
     assert len(ready) == 2
-    assert {p.target_path.name for p in ready} == {"A.signed.pdf", "B.ldsigned.pdf"}
+    assert {p.target_path.name for p in ready} == {"A.pdf", "B.pdf"}
+    assert {p.unsigned_path.name for p in ready} == {"A.signed.pdf", "B.ldsigned.pdf"}
     assert all(p.action == ActionType.DELETE_AND_RENAME for p in ready)
 
     processor = FileProcessor(use_recycle_bin=False)
     for plan in ready:
         processor.process_plan(plan)
 
-    assert (temp_dir / "A.signed.pdf").read_text(encoding="utf-8") == "NEW_SIGNED"
-    assert (temp_dir / "B.ldsigned.pdf").read_text(encoding="utf-8") == "NEW_LDSIGNED"
+    assert (temp_dir / "A.pdf").read_text(encoding="utf-8") == "NEW_SIGNED"
+    assert (temp_dir / "B.pdf").read_text(encoding="utf-8") == "NEW_LDSIGNED"
     assert not (temp_dir / "A.signed.signed.pdf").exists()
     assert not (temp_dir / "B.ldsigned.signed.pdf").exists()
 

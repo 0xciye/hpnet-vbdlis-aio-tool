@@ -1,7 +1,7 @@
 # HPNet - Lọc & Đổi tên văn bản đã ký
 
 Ứng dụng giúp bạn tự động dọn dẹp các thư mục chứa nhiều phiên bản PDF của cùng một văn bản.
-Ứng dụng sẽ xóa file có hậu tố cần bỏ và đổi tên file có hậu tố cần giữ về tên tương ứng.
+Ứng dụng sẽ xóa file có hậu tố cần bỏ và đổi tên file có hậu tố cần giữ về tên gốc sạch (chỉ còn `.pdf`).
 
 ## Cách sử dụng:
 
@@ -11,7 +11,7 @@
    - "Bao gồm thư mục con": Tích vào nếu bạn muốn quét cả các thư mục nằm bên trong thư mục đã chọn.
    - "Hậu tố file cần xóa": Nhập một hoặc nhiều hậu tố, ngăn cách bằng dấu phẩy. Ví dụ: `.signed, .ldsigned`.
    - "Hậu tố file cần đổi tên": Nhập các hậu tố của bản muốn giữ lại. Ví dụ: `.signed.signed, .ldsigned.signed`.
-     Phần mềm tự thêm `.pdf` nếu bạn bỏ qua phần mở rộng này. Các hậu tố ở hai ô được ghép theo tên tương ứng; vì vậy `.signed.signed` sẽ thay cho `.signed`, còn `.ldsigned.signed` sẽ thay cho `.ldsigned`.
+     Phần mềm tự thêm `.pdf` nếu bạn bỏ qua phần mở rộng này. Các hậu tố ở hai ô được ghép theo tên tương ứng; vì vậy `.signed.signed.pdf` sẽ thay cho `.signed.pdf` rồi được đổi tên thành `TênGốc.pdf`, còn `.ldsigned.signed.pdf` sẽ thay cho `.ldsigned.pdf` rồi được đổi tên thành `TênGốc.pdf`.
    - "Chế độ xóa": Mặc định là chuyển file chưa ký vào **Recycle Bin (Thùng rác)** để có thể khôi phục lại khi cần. Bạn cũng có thể chọn Xóa vĩnh viễn (sẽ có cảnh báo).
 4. **Nhấn Quét**: Nhấn nút "Quét / Xem trước" để ứng dụng phân tích dữ liệu. Chưa có file nào bị tác động ở bước này.
 5. **Kiểm tra Preview**: Xem danh sách các file sẽ được xử lý tại bảng hiển thị bên dưới. 
@@ -25,7 +25,7 @@
 - Khi bật kiểm tra chữ ký, file có hậu tố cần đổi tên phải là PDF đọc được và có trường chữ ký nhúng; nếu chỉ đổi tên file thường, ứng dụng sẽ cảnh báo và bỏ qua.
 - Công cụ chưa xác minh chuỗi chứng thư, thời hạn hoặc hiệu lực pháp lý của chữ ký số.
 - Nếu chỉ tồn tại bản chưa ký, ứng dụng sẽ **không xóa** (bỏ qua).
-- Nếu chỉ tồn tại file cần đổi tên, ứng dụng vẫn đổi tên file theo hậu tố tương ứng.
+- Nếu chỉ tồn tại file cần đổi tên, ứng dụng vẫn đổi tên file về tên gốc sạch, không còn các hậu tố đã cấu hình.
 - Tuyệt đối không chạm vào các định dạng file khác ngoài PDF (như Word, Excel, ảnh...).
 
 ---

@@ -48,13 +48,14 @@ class FileScanner:
         self.delete_suffix = self.delete_suffixes[0]
         self.signed_suffix = self.signed_suffixes[0]
 
-    def _target_suffix(self, signed_suffix: str, signed_index: int) -> str:
-        """Choose the unsigned suffix corresponding to a signed suffix.
+    def _delete_suffix_for_signed(self, signed_suffix: str, signed_index: int) -> str:
+        """Choose the removable-file suffix corresponding to a kept suffix.
 
-        For the common pair ``.signed -> .signed.signed`` (and the analogous
-        ``.ldsigned`` pair), the target is inferred from the keep suffix. If
-        a custom pair cannot be inferred, values fall back to the same-order
-        delete suffix and finally the first configured suffix.
+        For the common pairs ``.signed -> .signed.signed`` and
+        ``.ldsigned -> .ldsigned.signed``, the removable suffix is inferred
+        from the kept suffix. If a custom pair cannot be inferred, values
+        fall back to the same-order delete suffix and finally the first
+        configured suffix.
         """
         signed_stem = signed_suffix[:-4] if signed_suffix.endswith(".pdf") else signed_suffix
         for delete_suffix in sorted(self.delete_suffixes, key=len, reverse=True):
@@ -129,8 +130,13 @@ class FileScanner:
                 ((index, suffix) for index, suffix in ordered_signed_suffixes if signed_name_lower.endswith(suffix)),
                 (0, self.signed_suffixes[0]),
             )
-            target_suffix = self._target_suffix(matched_suffix, signed_index)
-            target_name = original_name[:-len(matched_suffix)] + target_suffix
+            # Remove the complete configured keep suffix. The resulting file
+            # always returns to the normal PDF name (for example
+            # A.signed.signed.pdf -> A.pdf).
+            base_name = original_name[:-len(matched_suffix)]
+            target_name = base_name + ".pdf"
+            delete_suffix = self._delete_suffix_for_signed(matched_suffix, signed_index)
+            delete_name = base_name + delete_suffix
             
             # Keep warning for a configured suffix that still resolves to
             # another configured signed file (usually a duplicated suffix).
@@ -157,7 +163,10 @@ class FileScanner:
                 continue
 
             target_path = directory / target_name
-            unsigned_f = all_pdfs.get(target_name.lower())
+            # The file to remove keeps its configured removable suffix
+            # (A.signed.pdf or B.ldsigned.pdf), while the kept file is renamed
+            # to the clean base name (A.pdf or B.pdf).
+            unsigned_f = all_pdfs.get(delete_name.lower())
 
             if unsigned_f:
                 matched_unsigned.add(unsigned_f)
