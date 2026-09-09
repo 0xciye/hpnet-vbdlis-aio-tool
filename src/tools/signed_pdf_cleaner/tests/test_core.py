@@ -2,7 +2,7 @@ import os
 import pytest
 from pathlib import Path
 from pypdf import PdfWriter
-from tools.signed_pdf_cleaner.core.scanner import FileScanner
+from tools.signed_pdf_cleaner.core.scanner import FileScanner, parse_suffixes
 from tools.signed_pdf_cleaner.core.processor import FileProcessor
 from tools.signed_pdf_cleaner.core.models import ActionType, FileActionPlan, ProcessStatus
 from tools.signed_pdf_cleaner.utils.logger import AppLogger
@@ -91,6 +91,43 @@ def test_4_multiple_pairs(temp_dir):
     assert not (temp_dir / "A.signed.pdf").exists()
     assert not (temp_dir / "B.signed.pdf").exists()
 
+def test_multiple_suffix_pairs_are_normalized_and_processed(temp_dir):
+    """Each configured keep suffix maps to its corresponding delete suffix."""
+    create_file(temp_dir, "A.signed.pdf", "OLD_SIGNED")
+    create_file(temp_dir, "A.signed.signed.pdf", "NEW_SIGNED")
+    create_file(temp_dir, "B.ldsigned.pdf", "OLD_LDSIGNED")
+    create_file(temp_dir, "B.ldsigned.signed.pdf", "NEW_LDSIGNED")
+
+    scanner = FileScanner(
+        validate_signatures=False,
+        delete_suffix=".signed, .ldsigned",
+        signed_suffix=".signed.signed, .ldsigned.signed",
+    )
+    assert scanner.delete_suffixes == [".signed.pdf", ".ldsigned.pdf"]
+    assert scanner.signed_suffixes == [".signed.signed.pdf", ".ldsigned.signed.pdf"]
+    plans = scanner.scan_directory(str(temp_dir))
+
+    ready = [p for p in plans if p.status == ProcessStatus.READY]
+    assert len(ready) == 2
+    assert {p.target_path.name for p in ready} == {"A.signed.pdf", "B.ldsigned.pdf"}
+    assert all(p.action == ActionType.DELETE_AND_RENAME for p in ready)
+
+    processor = FileProcessor(use_recycle_bin=False)
+    for plan in ready:
+        processor.process_plan(plan)
+
+    assert (temp_dir / "A.signed.pdf").read_text(encoding="utf-8") == "NEW_SIGNED"
+    assert (temp_dir / "B.ldsigned.pdf").read_text(encoding="utf-8") == "NEW_LDSIGNED"
+    assert not (temp_dir / "A.signed.signed.pdf").exists()
+    assert not (temp_dir / "B.ldsigned.signed.pdf").exists()
+
+def test_parse_suffixes_accepts_commas_and_legacy_pdf_form():
+    assert parse_suffixes("signed, .SIGNED.pdf, .ldsigned", ".signed") == [
+        ".signed.pdf", ".ldsigned.pdf"
+    ]
+    with pytest.raises(ValueError):
+        parse_suffixes("*.signed", ".signed")
+
 def test_5_complex_names(temp_dir):
     # CHUACOGIAY_10930_10_300-TBXN
     n1 = "CHUACOGIAY_10930_10_300-TBXN"
@@ -142,7 +179,7 @@ def test_abnormal_signed_name(temp_dir):
     assert len(plans) == 1
     assert plans[0].status == ProcessStatus.WARNING
     assert plans[0].action == ActionType.SKIP
-    assert plans[0].warning_message == "Tên file bất thường (có nhiều .signed)"
+    assert plans[0].warning_message == "Tên file có nhiều hậu tố đã cấu hình, cần kiểm tra lại"
 
 def test_file_lock(temp_dir):
     create_file(temp_dir, "A.pdf")

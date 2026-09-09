@@ -53,6 +53,7 @@ KẾT QUẢ: Sau khi chạy, kiểm tra danh sách kết quả và nhật ký tr
 5. PDF CLEANER
 MỤC ĐÍCH: Quét thư mục PDF, nhận diện các cặp file cần làm sạch và chuẩn hóa tên file sau ký số.
 QUY TRÌNH: Chọn thư mục → chọn quy tắc xử lý → Quét/Xem trước → kiểm tra danh sách hành động → xác nhận xử lý → xem nhật ký.
+Có thể nhập nhiều hậu tố ở mỗi ô, ngăn cách bằng dấu phẩy. Ví dụ xóa `.signed, .ldsigned` và đổi tên `.signed.signed, .ldsigned.signed`; phần mềm ghép theo cặp để `.signed.signed.pdf` thay cho `.signed.pdf` và `.ldsigned.signed.pdf` thay cho `.ldsigned.pdf`.
 LƯU Ý: Luôn kiểm tra kỹ danh sách xem trước và lựa chọn chuyển vào Thùng rác hay xóa vĩnh viễn trước khi xác nhận.
 Nên sao lưu thư mục hồ sơ khi thực hiện đợt xử lý lớn. Nhật ký của PDF Cleaner nằm trong thư mục logs cạnh file cấu hình.
 

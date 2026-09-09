@@ -94,11 +94,13 @@ class MainWindow(QMainWindow):
         options_layout = QHBoxLayout()
         self.chk_recursive = QCheckBox("Bao gồm thư mục con")
         options_layout.addWidget(self.chk_recursive)
-        options_layout.addWidget(QLabel("Hậu tố cần xóa:"))
-        self.txt_delete_suffix = QLineEdit(".pdf"); self.txt_delete_suffix.setMaximumWidth(110)
+        options_layout.addWidget(QLabel("Hậu tố file cần xóa:"))
+        self.txt_delete_suffix = QLineEdit(".pdf"); self.txt_delete_suffix.setMaximumWidth(220)
+        self.txt_delete_suffix.setToolTip("Nhập một hoặc nhiều hậu tố, cách nhau bằng dấu phẩy. Có thể bỏ phần .pdf.")
         options_layout.addWidget(self.txt_delete_suffix)
-        options_layout.addWidget(QLabel("Hậu tố giữ lại:"))
-        self.txt_signed_suffix = QLineEdit(".signed.pdf"); self.txt_signed_suffix.setMaximumWidth(130)
+        options_layout.addWidget(QLabel("Hậu tố file cần đổi tên:"))
+        self.txt_signed_suffix = QLineEdit(".signed.pdf"); self.txt_signed_suffix.setMaximumWidth(240)
+        self.txt_signed_suffix.setToolTip("Nhập một hoặc nhiều hậu tố, cách nhau bằng dấu phẩy. Có thể bỏ phần .pdf.")
         options_layout.addWidget(self.txt_signed_suffix)
         
         options_layout.addWidget(QLabel("Chế độ xóa:"))
@@ -107,6 +109,11 @@ class MainWindow(QMainWindow):
         options_layout.addWidget(self.cmb_delete_mode)
         options_layout.addStretch()
         main_layout.addLayout(options_layout)
+
+        suffix_hint = QLabel("Nhiều hậu tố cách nhau bằng dấu phẩy, ví dụ: xóa .signed, .ldsigned | đổi tên .signed.signed, .ldsigned.signed")
+        suffix_hint.setWordWrap(True)
+        suffix_hint.setStyleSheet("color: #64748b; font-size: 11px;")
+        main_layout.addWidget(suffix_hint)
 
         # 3. Stats
         self.lbl_stats = QLabel("Sẵn sàng.")
@@ -149,6 +156,8 @@ class MainWindow(QMainWindow):
                     self.txt_folder.setText(settings.get('folder', ''))
                     self.chk_recursive.setChecked(settings.get('recursive', False))
                     self.cmb_delete_mode.setCurrentIndex(settings.get('delete_mode', 0))
+                    self.txt_delete_suffix.setText(settings.get('delete_suffix', '.pdf'))
+                    self.txt_signed_suffix.setText(settings.get('signed_suffix', '.signed.pdf'))
             except:
                 pass
 
@@ -156,7 +165,9 @@ class MainWindow(QMainWindow):
         settings = {
             'folder': self.txt_folder.text(),
             'recursive': self.chk_recursive.isChecked(),
-            'delete_mode': self.cmb_delete_mode.currentIndex()
+            'delete_mode': self.cmb_delete_mode.currentIndex(),
+            'delete_suffix': self.txt_delete_suffix.text(),
+            'signed_suffix': self.txt_signed_suffix.text()
         }
         with self.settings_file.open('w', encoding='utf-8') as f:
             json.dump(settings, f)
@@ -189,7 +200,11 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Lỗi", "Vui lòng chọn thư mục hợp lệ.")
             return
 
-        scanner = FileScanner(delete_suffix=self.txt_delete_suffix.text().strip(), signed_suffix=self.txt_signed_suffix.text().strip())
+        try:
+            scanner = FileScanner(delete_suffix=self.txt_delete_suffix.text(), signed_suffix=self.txt_signed_suffix.text())
+        except ValueError as exc:
+            QMessageBox.warning(self, "Hậu tố không hợp lệ", str(exc))
+            return
         self.plans = scanner.scan_directory(folder, self.chk_recursive.isChecked())
         
         self.update_table()

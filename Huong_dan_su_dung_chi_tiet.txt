@@ -81,10 +81,12 @@ E. Đọc kết quả và nhật ký
   + Nhấp "Tạo File". Hệ thống sẽ trích xuất và kết tạo danh sách các tập tin đã được chuẩn hóa vào thư mục đích, bảo đảm tính toàn vẹn 100% đối với dữ liệu gốc ban đầu.
 
 2. HPNet PDF Cleaner (Tiện ích Làm sạch và hệ thống hóa tập tin sau ký số)
-- Chức năng: Rà soát, thanh lọc tự động các phiên bản PDF lưu trữ lỗi, chưa được ký số thành công. Đồng thời tiến hành đổi tên hàng loạt cho các tài liệu đã ký số hợp lệ (loại bỏ hậu tố định dạng bổ sung ".signed").
+- Chức năng: Rà soát, thanh lọc tự động các phiên bản PDF không còn cần thiết. Đồng thời đổi tên hàng loạt cho các tài liệu cần giữ lại theo quy tắc hậu tố do người dùng nhập.
 - Thao tác:
   + Lựa chọn tiện ích "PDF Cleaner".
   + Chọn "Chọn..." nhằm trỏ đường dẫn tới thư mục kho chứa văn bản hồ sơ.
+  + Nhập hậu tố cần xóa và hậu tố của file cần đổi tên. Có thể nhập nhiều hậu tố, ngăn cách bằng dấu phẩy; ví dụ xóa ".signed, .ldsigned" và đổi tên ".signed.signed, .ldsigned.signed". Phần mềm tự thêm ".pdf" nếu chưa nhập.
+  + Các hậu tố được ghép theo cặp tương ứng: file ".signed.signed.pdf" sẽ thay cho ".signed.pdf", file ".ldsigned.signed.pdf" sẽ thay cho ".ldsigned.pdf".
   + Bấm lệnh "Quét / Xem trước". Phần mềm sẽ kiểm đếm và thống kê số lượng hồ sơ hợp lệ.
   + Bấm lệnh "Thực hiện xử lý". Hệ thống sẽ tự động vô hiệu hóa và luân chuyển các tập tin tài liệu chưa ký vào thư mục Recycle Bin (Thùng rác), hoàn tất quy trình tinh gọn không gian lưu trữ hiệu quả.
 

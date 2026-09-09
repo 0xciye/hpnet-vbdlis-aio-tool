@@ -1,7 +1,7 @@
 # HPNet - Lọc & Đổi tên văn bản đã ký
 
-Ứng dụng giúp bạn tự động dọn dẹp các thư mục chứa cả file văn bản PDF gốc (chưa ký) và bản đã ký số (`.signed.pdf`).
-Ứng dụng sẽ xóa bản chưa ký và đổi tên bản đã ký trở về tên chuẩn ban đầu.
+Ứng dụng giúp bạn tự động dọn dẹp các thư mục chứa nhiều phiên bản PDF của cùng một văn bản.
+Ứng dụng sẽ xóa file có hậu tố cần bỏ và đổi tên file có hậu tố cần giữ về tên tương ứng.
 
 ## Cách sử dụng:
 
@@ -9,6 +9,9 @@
 2. **Chọn folder**: Nhấn nút "Chọn..." để duyệt tới thư mục chứa các file PDF, hoặc bạn có thể kéo thả thư mục vào giao diện ứng dụng.
 3. **Cấu hình (Tùy chọn)**:
    - "Bao gồm thư mục con": Tích vào nếu bạn muốn quét cả các thư mục nằm bên trong thư mục đã chọn.
+   - "Hậu tố file cần xóa": Nhập một hoặc nhiều hậu tố, ngăn cách bằng dấu phẩy. Ví dụ: `.signed, .ldsigned`.
+   - "Hậu tố file cần đổi tên": Nhập các hậu tố của bản muốn giữ lại. Ví dụ: `.signed.signed, .ldsigned.signed`.
+     Phần mềm tự thêm `.pdf` nếu bạn bỏ qua phần mở rộng này. Các hậu tố ở hai ô được ghép theo tên tương ứng; vì vậy `.signed.signed` sẽ thay cho `.signed`, còn `.ldsigned.signed` sẽ thay cho `.ldsigned`.
    - "Chế độ xóa": Mặc định là chuyển file chưa ký vào **Recycle Bin (Thùng rác)** để có thể khôi phục lại khi cần. Bạn cũng có thể chọn Xóa vĩnh viễn (sẽ có cảnh báo).
 4. **Nhấn Quét**: Nhấn nút "Quét / Xem trước" để ứng dụng phân tích dữ liệu. Chưa có file nào bị tác động ở bước này.
 5. **Kiểm tra Preview**: Xem danh sách các file sẽ được xử lý tại bảng hiển thị bên dưới. 
@@ -18,11 +21,11 @@
 7. **Kiểm tra kết quả**: Sau khi hoàn thành, ứng dụng sẽ thông báo. Bạn có thể mở thư mục để kiểm tra, hoặc nhấn "Xuất log CSV" để lưu lại báo cáo. Toàn bộ lịch sử các phiên cũng được lưu trong thư mục `logs/` ngay cạnh file ứng dụng.
 
 ## Lưu ý An toàn (Quy tắc hoạt động):
-- Ứng dụng **chỉ** xóa file bản chưa ký khi đã tìm thấy bản `.signed.pdf` tương ứng trong cùng thư mục.
-- Bản `.signed.pdf` phải là PDF đọc được và có trường chữ ký nhúng; nếu chỉ đổi tên file thường thành `.signed.pdf`, ứng dụng sẽ cảnh báo và bỏ qua.
+- Ứng dụng **chỉ** xóa file cần bỏ khi đã tìm thấy file có hậu tố cần đổi tên tương ứng trong cùng thư mục.
+- Khi bật kiểm tra chữ ký, file có hậu tố cần đổi tên phải là PDF đọc được và có trường chữ ký nhúng; nếu chỉ đổi tên file thường, ứng dụng sẽ cảnh báo và bỏ qua.
 - Công cụ chưa xác minh chuỗi chứng thư, thời hạn hoặc hiệu lực pháp lý của chữ ký số.
 - Nếu chỉ tồn tại bản chưa ký, ứng dụng sẽ **không xóa** (bỏ qua).
-- Nếu chỉ tồn tại bản đã ký (file có đuôi `.signed.pdf`), ứng dụng vẫn sẽ đổi tên bỏ đi đuôi `.signed` thành tên gốc bình thường.
+- Nếu chỉ tồn tại file cần đổi tên, ứng dụng vẫn đổi tên file theo hậu tố tương ứng.
 - Tuyệt đối không chạm vào các định dạng file khác ngoài PDF (như Word, Excel, ảnh...).
 
 ---
