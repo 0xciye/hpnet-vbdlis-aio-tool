@@ -7,9 +7,13 @@ import pytest
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows PowerShell")
-def test_downloader_reads_both_streams_and_keeps_exit_code(tmp_path):
-    source = (Path(__file__).resolve().parents[1] / "src/nodes_tools/Downloader/HPNet PDF Downloader - VNEID APP/HPNet-PDF-Downloader.ps1").read_text(encoding="utf-8-sig")
-    reader = source[source.index("function Read-DownloaderOutput"):source.index("function Normalize-CommuneCode")]
+@pytest.mark.parametrize("tool,script_name,reader_name,end_marker", [
+    ("Downloader/HPNet PDF Downloader - VNEID APP", "HPNet-PDF-Downloader.ps1", "Read-DownloaderOutput", "function Normalize-CommuneCode"),
+    ("Duyet/HPNet Duyet VB Du Thao - VNEID APP", "HPNet-Duyet-VB-Du-Thao.ps1", "Read-ApprovalOutput", "function Find-HPNetRuntime"),
+])
+def test_downloader_reads_both_streams_and_keeps_exit_code(tmp_path, tool, script_name, reader_name, end_marker):
+    source = (Path(__file__).resolve().parents[1] / "src/nodes_tools" / tool / script_name).read_text(encoding="utf-8-sig")
+    reader = source[source.index("function " + reader_name):source.index(end_marker)]
     child = tmp_path / "child.ps1"
     child.write_text('1..120 | ForEach-Object { [Console]::Out.WriteLine("out-$_"); [Console]::Error.WriteLine("err-$_") }; [Console]::Out.Write("tail"); exit 7', encoding="utf-8-sig")
     harness = tmp_path / "test.ps1"
@@ -34,7 +38,7 @@ try {
     if(-not $lines.Contains('tail') -or -not $lines.Contains('[LỖI] err-120')){throw 'Final output missing'}
     Write-Output 'PROCESS_OUTPUT_PASS'
 } finally { $p.Dispose() }
-""", encoding="utf-8-sig")
+""".replace("Read-DownloaderOutput", reader_name), encoding="utf-8-sig")
     result = subprocess.run(["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(harness), str(child)], capture_output=True, timeout=30)
     assert result.returncode == 0, result.stdout + result.stderr
     assert b"PROCESS_OUTPUT_PASS" in result.stdout

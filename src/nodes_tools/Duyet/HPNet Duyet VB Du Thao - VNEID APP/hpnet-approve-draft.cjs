@@ -147,7 +147,7 @@ function runSelfTest() {
   console.log("NODE_SELF_TEST_OK");
 }
 
-async function queryRecords(context, { key = "", allPages = true, pageSize = 100, onPage = null } = {}) {
+async function queryRecords(context, { key = "", allPages = true, pageSize = 100, onPage = null, targetId = null } = {}) {
   let startIndex = 0;
   let total = null;
   const records = [];
@@ -168,6 +168,7 @@ async function queryRecords(context, { key = "", allPages = true, pageSize = 100
     records.push(...batch);
     startIndex += batch.length;
     if (onPage) onPage(Math.min(startIndex, total), total);
+    if (targetId !== null && batch.some((item) => getRecordId(item) === String(targetId))) break;
     if (!allPages || !batch.length) break;
   } while (startIndex < total);
   return records;
@@ -204,24 +205,25 @@ async function ensureLoggedIn(page, context, log) {
 }
 
 async function findRecordById(context, id, exactTitle, { skipFullScan = false } = {}) {
-  const byTitle = await queryRecords(context, { key: exactTitle, allPages: true, pageSize: 100 });
+  const byTitle = await queryRecords(context, { key: exactTitle, allPages: true, pageSize: 100, targetId: id });
   let record = byTitle.find((item) => getRecordId(item) === id);
   if (record) return record;
   // Sau khi chuyển duyệt, văn bản thường rời khỏi danh sách đang xử lý.
   // Khi đó kết quả tìm theo trích yếu rỗng đã đủ xác nhận thay đổi trạng thái;
   // không cần tải lại toàn bộ danh sách nhiều trang.
   if (skipFullScan && byTitle.length === 0) return null;
-  const all = await queryRecords(context, { key: "", allPages: true, pageSize: 100 });
+  const all = await queryRecords(context, { key: "", allPages: true, pageSize: 100, targetId: id });
   return all.find((item) => getRecordId(item) === id) || null;
 }
 
-async function waitForStatusChange(context, id, exactTitle, expectedStatus, attempts = 12) {
+async function waitForStatusChange(context, id, exactTitle, expectedStatus, attempts = 15) {
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     const record = await findRecordById(context, id, exactTitle, { skipFullScan: true });
     if (!record) return { changed: true, newStatus: "Không còn trong danh sách đang xử lý" };
     const newStatus = String(record.TinhTrangXuly ?? "").trim();
     if (normalizeText(newStatus) !== normalizeText(expectedStatus)) return { changed: true, newStatus };
-    if (attempt < attempts) await new Promise((resolve) => setTimeout(resolve, 2000));
+    // Kiểm tra sớm khi HPNet phản hồi nhanh; vẫn dành hơn 22 giây cho máy chủ chậm.
+    if (attempt < attempts) await new Promise((resolve) => setTimeout(resolve, Math.min(250 * 2 ** (attempt - 1), 2000)));
   }
   return { changed: false, newStatus: expectedStatus };
 }
