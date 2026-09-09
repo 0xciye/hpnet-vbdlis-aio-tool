@@ -8,6 +8,28 @@ $toolRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $nodeScript = Join-Path $toolRoot 'hpnet-downloader.cjs'
 $configPath = Join-Path $toolRoot 'cau_hinh.json'
 
+function Read-DownloaderOutput($Process, [scriptblock]$OnLine) {
+    # Poll .NET tasks on the UI thread; PowerShell callbacks cannot run on pool threads.
+    $readers = @($Process.StandardOutput, $Process.StandardError)
+    $tasks = @($readers[0].ReadLineAsync(), $readers[1].ReadLineAsync())
+    while ($null -ne $tasks[0] -or $null -ne $tasks[1]) {
+        for ($i = 0; $i -lt 2; $i++) {
+            if ($null -ne $tasks[$i] -and $tasks[$i].IsCompleted) {
+                $line = $tasks[$i].GetAwaiter().GetResult()
+                if ($null -eq $line) { $tasks[$i] = $null }
+                else {
+                    if ($i -eq 1) { $line = "[LỖI] $line" }
+                    & $OnLine $line
+                    $tasks[$i] = $readers[$i].ReadLineAsync()
+                }
+            }
+        }
+        [Windows.Forms.Application]::DoEvents()
+        Start-Sleep -Milliseconds 10
+    }
+    $Process.WaitForExit()
+}
+
 function Normalize-CommuneCode([string]$text) {
     $code = if ($null -eq $text) { '' } else { $text.Trim() }
     if ($code -notmatch '^\d{5}$') { throw 'Mã xã phải gồm đúng 5 chữ số, ví dụ: 10930.' }
@@ -321,11 +343,14 @@ $startButton.Add_Click({
         $utf8NoBom=New-Object System.Text.UTF8Encoding($false);$psi.StandardOutputEncoding=$utf8NoBom;$psi.StandardErrorEncoding=$utf8NoBom
         $process=New-Object Diagnostics.Process;$process.StartInfo=$psi;$process.Start()|Out-Null;$script:activeProcess=$process
         $script:liveOutput=New-Object System.Collections.Concurrent.ConcurrentQueue[string]
-        $process.add_OutputDataReceived({param($sender,$event);if($null -ne $event.Data){[void]$script:liveOutput.Enqueue($event.Data)}})
-        $process.add_ErrorDataReceived({param($sender,$event);if($null -ne $event.Data){[void]$script:liveOutput.Enqueue("[LỖI] $($event.Data)")}})
-        $process.BeginOutputReadLine();$process.BeginErrorReadLine()
-        while(-not $process.HasExited){[Windows.Forms.Application]::DoEvents();$statusBox.Lines=@($script:liveOutput.ToArray());foreach($line in @($script:liveOutput.ToArray())){Update-HPNetProgressFromLine $progressBar $progressLabel $line};$statusBox.SelectionStart=$statusBox.TextLength;$statusBox.ScrollToCaret();Start-Sleep -Milliseconds 150}
-        $process.WaitForExit()
+        Read-DownloaderOutput $process {
+            param($line)
+            [void]$script:liveOutput.Enqueue($line)
+            $statusBox.AppendText($line + [Environment]::NewLine)
+            Update-HPNetProgressFromLine $progressBar $progressLabel $line
+            $statusBox.SelectionStart=$statusBox.TextLength
+            $statusBox.ScrollToCaret()
+        }
         $statusText=(@($script:liveOutput.ToArray()) -join [Environment]::NewLine).Trim()
         if($script:stopRequested){Set-HPNetProgressStopped $progressBar $progressLabel 'Đã dừng theo yêu cầu';Set-HPNetFooterState $footerLabel 'Đã dừng theo yêu cầu' 'Stopped';$statusBox.Text="Đã dừng theo yêu cầu.`r`n$statusText";[Windows.Forms.MessageBox]::Show('Tiến trình đã được dừng theo yêu cầu.','Đã dừng','OK','Information')|Out-Null}
         elseif($process.ExitCode -eq 0){Set-HPNetProgressCompleted $progressBar $progressLabel 'Hoàn tất';Set-HPNetFooterState $footerLabel 'Hoàn tất' 'Success';$statusBox.Text=$statusText;[Windows.Forms.MessageBox]::Show('Đã quét xong. Xem kết quả và nhật ký trong thư mục đã chọn.','Hoàn tất','OK','Information')|Out-Null}
