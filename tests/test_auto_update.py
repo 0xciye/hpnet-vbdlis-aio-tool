@@ -1,6 +1,7 @@
 import os
 import shutil
 import subprocess
+from pathlib import Path
 from types import SimpleNamespace
 from zipfile import ZipFile
 
@@ -72,8 +73,9 @@ def test_download_verifies_checksum_and_returns_extracted_app(tmp_path, monkeypa
     assert (app / EXE_NAME).read_bytes() == b"exe"
 
 
-def test_installer_replaces_app_and_keeps_previous_copy(tmp_path, monkeypatch):
-    current = tmp_path / "install" / APP_FOLDER
+@pytest.mark.parametrize("folder", [APP_FOLDER, "HPNet máy mới", "HPNET & VBDLIS Tools.previous"])
+def test_installer_replaces_app_and_keeps_previous_copy(tmp_path, monkeypatch, folder):
+    current = tmp_path / "install" / folder
     new_app = tmp_path / "download" / APP_FOLDER
     current.mkdir(parents=True); new_app.mkdir(parents=True)
     shutil.copy2(os.environ["COMSPEC"], current / EXE_NAME)
@@ -104,5 +106,8 @@ def test_installer_replaces_app_and_keeps_previous_copy(tmp_path, monkeypatch):
     environment = {**os.environ, "LOCALAPPDATA": str(tmp_path / "state")}
     subprocess.run(args, check=True, env=environment)
     assert (current / "marker.txt").read_text(encoding="ascii") == "new"
-    assert (tmp_path / "install" / f"{APP_FOLDER}.previous" / "marker.txt").read_text(encoding="ascii") == "old"
+    previous = Path(args[args.index("-Previous") + 1])
+    assert previous.parent == current.parent
+    assert previous != current
+    assert (previous / "marker.txt").read_text(encoding="ascii") == "old"
     assert (tmp_path / "state/HPNet VBDLIS AIO Tool/Upload/cau_hinh.json").is_file()

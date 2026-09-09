@@ -246,6 +246,7 @@ class ToolLauncher(QMainWindow):
             launch_installer(new_app)
         except Exception as error:
             self.setEnabled(True)
+            self.update_now_button.setEnabled(True)
             QMessageBox.warning(self, "Không thể cập nhật", f"Phiên bản hiện tại vẫn được giữ nguyên.\n\n{error}")
             return
         QApplication.quit()

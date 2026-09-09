@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import uuid
 from pathlib import Path, PurePosixPath
 from urllib.request import Request, urlopen
 from zipfile import ZipFile
@@ -152,18 +153,18 @@ def launch_installer(new_app):
         raise RuntimeError("Chỉ cập nhật tự động trên bản ứng dụng đã đóng gói.")
     current = Path(sys.executable).resolve().parent
     parent = current.parent
-    if current.name != APP_FOLDER or not (current / EXE_NAME).is_file():
-        raise RuntimeError("Không xác định được thư mục cài đặt hiện tại.")
+    if current == parent or not (current / EXE_NAME).is_file() or not (current / "_internal").is_dir():
+        raise RuntimeError("Thư mục ứng dụng thiếu file cần thiết. Hãy giải nén đầy đủ bản tải xuống rồi thử lại.")
+    previous = parent / f"{current.name}.previous-{uuid.uuid4().hex}"
     probe = parent / f".hpnet-update-write-test-{os.getpid()}"
     probe.write_text("ok", encoding="ascii")
     probe.unlink()
     script_fd, script_name = tempfile.mkstemp(prefix="hpnet-vbdlis-installer-", suffix=".ps1")
     os.close(script_fd)
     script_path = Path(script_name)
-    script_path.write_text(r'''param([int]$AppPid,[string]$Current,[string]$NewApp,[string]$Exe)
+    script_path.write_text(r'''param([int]$AppPid,[string]$Current,[string]$NewApp,[string]$Exe,[string]$Previous)
 $ErrorActionPreference = 'Stop'
 $parent = Split-Path -Parent $Current
-$previous = Join-Path $parent 'HPNET & VBDLIS Tools.previous'
 $log = Join-Path $env:TEMP 'hpnet-vbdlis-update.log'
 function Write-UpdateLog([string]$Message) {
     "$(Get-Date -Format o) $Message" | Add-Content -LiteralPath $log -Encoding utf8
@@ -195,7 +196,7 @@ Copy-UserState $Current
 for ($attempt = 1; $attempt -le 20; $attempt++) {
     $movedCurrent = $false
     try {
-        if (Test-Path -LiteralPath $previous) { Remove-Item -LiteralPath $previous -Recurse -Force }
+        if (Test-Path -LiteralPath $previous) { throw 'Backup path already exists.' }
         Move-Item -LiteralPath $Current -Destination $previous
         $movedCurrent = $true
         Move-Item -LiteralPath $NewApp -Destination $Current
@@ -217,5 +218,5 @@ throw 'Không thể thay thế bản cài đặt sau 20 lần thử.'
     subprocess.Popen([
         "powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden",
         "-File", str(script_path), "-AppPid", str(os.getpid()), "-Current", str(current),
-        "-NewApp", str(new_app), "-Exe", EXE_NAME,
+        "-NewApp", str(new_app), "-Exe", EXE_NAME, "-Previous", str(previous),
     ], cwd=str(parent), creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
