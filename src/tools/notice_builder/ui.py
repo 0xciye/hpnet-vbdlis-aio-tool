@@ -208,6 +208,7 @@ class MainWindow(QMainWindow):
         self.template_field_labels={}
         self.template_static_note=QLabel(); self.template_static_note.setObjectName("hint"); self.template_static_note.setWordWrap(True)
         form.addRow(self.template_static_note)
+        config=template_config_for_path(self.template.text())
         form.addRow(QLabel("NỘI DUNG BẮT BUỘC TRONG MẪU WORD"))
         available_fields={**REQUIRED_COMMON, **OPTIONAL_COMMON}
         for key,label in available_fields.items():
@@ -215,13 +216,15 @@ class MainWindow(QMainWindow):
                 derived_note=QLabel("Diện tích sử dụng chung tự động bằng Diện tích của từng thửa; không cần nhập.")
                 derived_note.setObjectName("hint"); derived_note.setWordWrap(True); form.addRow(derived_note)
                 form.addRow(QLabel("NỘI DUNG KHÔNG BẮT BUỘC"))
-            field=QLineEdit(defaults.get(key,"") if key in REQUIRED_COMMON else "")
+            field=QLineEdit(defaults.get(key, "") if key in REQUIRED_COMMON else "")
             field.setToolTip("Nội dung điền vào ô {{"+key+"}} trong mẫu Word."); field.textChanged.connect(self.invalidate)
             field.setPlaceholderText("Bắt buộc nhập" if key in REQUIRED_COMMON else "Có thể để trống")
             self.template_inputs[key]=field; form.addRow(label,field)
             self.template_field_labels[key]=form.labelForField(field)
         self.optional_empty=QComboBox(); self.optional_empty.addItem("Để trống", "blank"); self.optional_empty.addItem("Điền ....", "dots")
         self.optional_empty.currentIndexChanged.connect(self.invalidate); form.addRow("Ô không bắt buộc chưa có dữ liệu",self.optional_empty)
+        self.empty_location=QComboBox(); self.empty_location.addItem("Dùng tên thôn", "village"); self.empty_location.addItem("Để trống", "blank")
+        self.empty_location.currentIndexChanged.connect(self.invalidate); form.addRow("Xứ đồng khi bị trống", self.empty_location)
         form.addRow(self.button("Xem căn cứ và nội dung gốc",self.show_legal)); form.addRow(self.button("Lưu cấu hình để dùng lại",self.save_settings))
         self.numbering_changed()
 
@@ -347,6 +350,7 @@ class MainWindow(QMainWindow):
         config=BatchConfig(**fields,number_mode=self.number_mode.currentData(),start_number=self.start_number.value(),number_list=self.number_list.text(),
                            number_date_rules=self.number_date_rules(),
                            template_fields=template_fields,optional_empty=self.optional_empty.currentData(),
+                           empty_location=self.empty_location.currentData(),
                            continue_number=self.continue_number.value() if self.continue_check.isChecked() and self.number_mode.currentData()=="list" else None)
         config.validate(key for key in template_config.user_fields if key in template_config.required_fields)
         from .core.numbering import NumberPool
@@ -358,6 +362,8 @@ class MainWindow(QMainWindow):
         if not hasattr(self, "template_inputs"):
             return
         config=template_config_for_path(self.template.text())
+        if config.id == "MAO_DIEN" and self.optional_empty.currentData() == "blank":
+            self.optional_empty.setCurrentIndex(self.optional_empty.findData("dots"))
         static_text="; ".join(f"{FIELD_LABELS.get(key, key)}: {value}" for key,value in config.static_values.items()
                              if key in {"TEN_XA","DIA_DIEM","DON_VI_LUU"})
         self.template_static_note.setText(f"Mẫu đang dùng: {config.name}. Giá trị theo mẫu: {static_text or 'không có giá trị cố định'}. ")
@@ -545,6 +551,7 @@ class MainWindow(QMainWindow):
             for key,value in config.get("template_fields",{}).items():
                 if key in self.template_inputs: self.template_inputs[key].setText(str(value))
             self.optional_empty.setCurrentIndex(max(0,self.optional_empty.findData(config.get("optional_empty","blank"))))
+            self.empty_location.setCurrentIndex(max(0,self.empty_location.findData(config.get("empty_location","village"))))
             self.saved_source_settings=data
         except (OSError,ValueError,TypeError):
             self.statusBar().showMessage("Cấu hình cũ không đọc được. Đã giữ nguyên file, vui lòng nhập lại.")

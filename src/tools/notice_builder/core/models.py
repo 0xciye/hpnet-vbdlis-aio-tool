@@ -60,6 +60,7 @@ class BatchConfig:
     number_date_rules: list[dict[str, str]] = field(default_factory=list)
     template_fields: dict[str, str] = field(default_factory=dict)
     optional_empty: str = "blank"
+    empty_location: str = "blank"
     prefix: str = "CHUACOGIAY"
 
     def validate(self, required_template_fields=None):
@@ -74,6 +75,8 @@ class BatchConfig:
             raise UserError("Cần nhập: " + ", ".join(missing) + ".")
         if self.optional_empty not in ("blank", "dots"):
             raise UserError("Cách hiển thị ô không bắt buộc phải là để trống hoặc dấu chấm.")
+        if self.empty_location not in ("village", "blank"):
+            raise UserError("Cách điền xứ đồng khi thiếu dữ liệu không hợp lệ.")
         if not re.fullmatch(r"[0-9]{5}", self.commune_code.strip()):
             raise UserError("Mã đơn vị hành chính phải có đúng 5 chữ số.")
         if not re.fullmatch(r"[A-Za-z0-9_À-ỹ-]+", self.prefix.strip()):

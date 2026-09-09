@@ -78,9 +78,13 @@ class NoticeService:
                        "GIAY_TO_NHAN_THAN":record.identity, "DIA_CHI_NGUOI_SU_DUNG_DAT":config.owner_address.strip(),
                        "SO_TO":record.sheet,"SO_THUA":record.parcel,"DIEN_TICH":record.area,
                         "SU_DUNG_CHUNG":record.area,
-                        "XU_DONG":record.location, "TEN_THON":config.village.strip(),
+                        "XU_DONG":record.location or (config.village.strip() if config.empty_location == "village" else ""), "TEN_THON":config.village.strip(),
                         "DIA_CHI_HANH_CHINH":config.administrative_address.strip()})
         values.update(self.template_config.static_values)
+        # Giá trị mặc định theo mẫu vẫn cho phép người dùng sửa.
+        values.update({key: str(config.template_fields.get(key, "")).strip()
+                       for key in self.template_config.user_fields
+                       if str(config.template_fields.get(key, "")).strip()})
         if "NGAY_SINH" in self.template.tokens:
             values["NGAY_SINH"] = record.head.birth_date if record.head else ""
         if self.template_config.document_rules.get("member_table"):

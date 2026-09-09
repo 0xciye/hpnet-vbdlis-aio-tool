@@ -770,7 +770,8 @@ def test_template_configuration_keeps_mau_22_default_and_values_in_one_source():
     default=default_template_config()
     assert default.id=="MAO_DIEN" and default.is_default
     assert default.path==default_template_path()
-    assert default.static_values=={"TEN_XA":"MAO ĐIỀN","DIA_DIEM":"Mao Điền"}
+    assert default.static_values["TEN_XA"]=="MAO ĐIỀN"
+    assert default.static_values["NGUOI_KY"]=="Nguyễn Khắc Nghĩa"
     assert configs["CAM_GIANG"].static_values["TEN_XA"]=="CẨM GIANG"
     assert configs["CAM_GIANG"].static_values["DIA_DIEM"]=="Cẩm Giang"
     assert configs["CAM_GIANG"].static_values["DON_VI_LUU"]=="KT. (1)"

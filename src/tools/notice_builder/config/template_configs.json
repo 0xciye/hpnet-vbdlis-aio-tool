@@ -7,7 +7,11 @@
       "is_default": true,
       "static_values": {
         "TEN_XA": "MAO ĐIỀN",
-        "DIA_DIEM": "Mao Điền"
+        "DIA_DIEM": "Mao Điền",
+        "NGUOI_KY": "Nguyễn Khắc Nghĩa",
+        "CHI_NHANH_VP_DKDD": "Cẩm Giàng",
+        "CO_QUAN_THUE": "Thuế Cơ sở 11 TP Hải Phòng",
+        "DON_VI_LUU": "XDNN&MT"
       },
       "required_fields": [
         "TEN_XA", "SO_TB", "DIA_DIEM", "NGAY", "THANG", "NAM", "HO_TEN",
