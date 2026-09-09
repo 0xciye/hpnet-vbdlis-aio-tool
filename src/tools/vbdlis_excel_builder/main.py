@@ -375,6 +375,10 @@ def configure_window_appearance(window) -> None:
     window.setPalette(light_palette())
     window.setStyleSheet(window_stylesheet())
     window.setWindowIcon(QIcon(str(resource_path("resources/app_icon.ico"))))
+    advanced_page = getattr(window, "advanced_page", None)
+    if advanced_page is not None and hasattr(advanced_page, "apply_theme"):
+        app = QApplication.instance()
+        advanced_page.apply_theme(bool(app.property("darkMode")) if app and app.property("darkMode") is not None else False)
 
 
 def configure_appearance(app: QApplication) -> None:

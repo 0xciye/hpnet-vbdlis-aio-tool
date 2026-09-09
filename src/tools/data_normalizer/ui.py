@@ -5,11 +5,11 @@ from pathlib import Path
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QIcon
-from PySide6.QtWidgets import (QCheckBox, QComboBox, QFileDialog, QFormLayout, QHBoxLayout, QLabel,
+from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QFileDialog, QFormLayout, QHBoxLayout, QLabel,
     QLineEdit, QMainWindow, QMessageBox, QPushButton, QSpinBox, QTableWidget, QTableWidgetItem, QProgressBar,
     QVBoxLayout, QWidget)
 
-from launcher_ui.theme import STYLE, palette
+from launcher_ui.theme import palette, style_for_mode, system_dark_mode
 from tools.excel_safety import default_output, open_workbook, timestamp
 from tools.qt_worker import Worker
 from .models import NormalizeConfig
@@ -21,7 +21,10 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__(); self.setWindowTitle("Chuẩn hóa Họ tên & Ngày sinh")
         self.setWindowIcon(QIcon(str(Path(__file__).resolve().parent / "assets" / "app_icon.ico")))
-        self.resize(1180, 760); self.setMinimumSize(900, 620); self.setStyleSheet(STYLE); self.setPalette(palette())
+        self.resize(1180, 760); self.setMinimumSize(900, 620)
+        app = QApplication.instance(); mode = app.property("darkMode") if app else None
+        dark = bool(mode) if mode is not None else system_dark_mode()
+        self.setStyleSheet(style_for_mode(dark)); self.setPalette(palette(dark))
         self.result = None; self.worker = None; self._build()
 
     def _build(self):

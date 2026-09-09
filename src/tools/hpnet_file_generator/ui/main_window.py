@@ -5,7 +5,7 @@ from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
     QLineEdit, QPushButton, QCheckBox, QComboBox, QTableWidget, 
     QTableWidgetItem, QHeaderView, QFileDialog, QMessageBox, QProgressBar,
-    QTabWidget, QFormLayout, QGroupBox, QSplitter
+    QTabWidget, QFormLayout, QGroupBox, QSplitter, QApplication
 )
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtGui import QColor, QIcon
@@ -17,7 +17,7 @@ from tools.hpnet_file_generator.core.person_matcher import PersonMatcher
 from tools.hpnet_file_generator.core.action_planner import ActionPlanner
 from tools.hpnet_file_generator.core.file_generator import FileGenerator
 from tools.runtime_paths import tool_settings_path
-from launcher_ui.theme import STYLE, palette
+from launcher_ui.theme import palette, style_for_mode, system_dark_mode
 
 CONFIG_FILE = "settings.json"
 
@@ -50,8 +50,10 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("HPNet Excel File Generator")
         self.setWindowIcon(QIcon(str(Path(__file__).resolve().parents[1] / "assets" / "app_icon.ico")))
         self.resize(1000, 700)
-        self.setStyleSheet(STYLE)
-        self.setPalette(palette())
+        app = QApplication.instance(); mode = app.property("darkMode") if app else None
+        dark = bool(mode) if mode is not None else system_dark_mode()
+        self.setStyleSheet(style_for_mode(dark))
+        self.setPalette(palette(dark))
         
         self.config = ProfileConfig()
         self.excel_records = []

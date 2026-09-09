@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 import sys
 from PySide6.QtWidgets import (
-    QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
+    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QLineEdit, QPushButton, QCheckBox, QComboBox, QTableWidget, 
     QTableWidgetItem, QHeaderView, QFileDialog, QMessageBox, QProgressBar
 )
@@ -15,6 +15,7 @@ from tools.signed_pdf_cleaner.core.processor import FileProcessor
 from tools.signed_pdf_cleaner.utils.logger import AppLogger
 from tools.signed_pdf_cleaner.core.models import FileActionPlan, ActionType, ProcessStatus
 from tools.runtime_paths import tool_data_dir, tool_settings_path
+from launcher_ui.theme import palette, style_for_mode, system_dark_mode
 
 SETTINGS_FILE = "config.json"
 
@@ -53,6 +54,10 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("HPNet - Lọc & Đổi tên văn bản đã ký")
         self.resize(900, 600)
         self.setAcceptDrops(True)
+        app = QApplication.instance(); mode = app.property("darkMode") if app else None
+        dark = bool(mode) if mode is not None else system_dark_mode()
+        self.setStyleSheet(style_for_mode(dark))
+        self.setPalette(palette(dark))
         
         # Mod: Use __file__ resolution for unified onedir building instead of MEIPASS (Behavior preserved)
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

@@ -96,6 +96,13 @@ QListWidget { background: @surface; border: 1px solid @border; border-radius: @r
 QListWidget::item { padding: 10px 8px; border-radius: 5px; }
 QListWidget::item:selected { background: @tint; color: @primary; }
 QListWidget::item:hover { background: #F1F5FC; }
+QTableWidget { background: @surface; color: @text; alternate-background-color: @canvas;
+ border: 1px solid @border; gridline-color: @border; selection-background-color: @tint; selection-color: @text; }
+QTableWidget::item { padding: 4px 6px; }
+QTableWidget::item:selected { background: @tint; color: @text; }
+QHeaderView::section { background: @tint; color: @text; border: none; border-right: 1px solid @border;
+ padding: 6px 8px; font-weight: 600; }
+QTableCornerButton::section { background: @tint; border: none; }
 QStatusBar { background: @surface; color: @muted; border-top: 1px solid @border; padding: 5px 16px; }
 QScrollBar:vertical { background: @canvas; width: 12px; border: none; }
 QScrollBar::handle:vertical { background: #B3C2D6; border-radius: 5px; min-height: 32px; }

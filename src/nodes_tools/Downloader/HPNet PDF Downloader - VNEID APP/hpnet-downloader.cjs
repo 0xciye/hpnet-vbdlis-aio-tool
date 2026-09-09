@@ -487,19 +487,38 @@ function safeOutputPath(outputDir, fileName) {
   return destination;
 }
 
+function splitFolderPrefix(root) {
+  // Keep the parent folder name so users can identify each batch at a glance.
+  // Windows-invalid characters are replaced defensively for unusual input paths.
+  const raw = path.basename(path.resolve(root));
+  const safe = raw.replace(/[<>:"/\\|?*\x00-\x1F]/g, "_").replace(/[. ]+$/g, "").trim();
+  return safe || "Thu_muc";
+}
+
+function splitFolderPattern(root) {
+  const escaped = splitFolderPrefix(root).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`^${escaped}_\\d+$`, "u");
+}
+
+function isSplitFolderName(name, root) {
+  return /^Phan_\d+$/.test(name) || splitFolderPattern(root).test(name);
+}
+
 async function chooseOutputDir(root, limit, name) {
   if (!limit) return root;
+  const folderPattern = splitFolderPattern(root);
   // Find existing originals across batches before selecting a free folder.
   if (fs.existsSync(safeOutputPath(root, name))) return root;
   const entries = await fsp.readdir(root, { withFileTypes: true });
   for (const entry of entries) {
-    if (entry.isDirectory() && !entry.isSymbolicLink() && /^Phan_\d+$/.test(entry.name)) {
+    if (entry.isDirectory() && !entry.isSymbolicLink() && (folderPattern.test(entry.name) || /^Phan_\d+$/.test(entry.name))) {
       const folder = path.join(root, entry.name);
       if (fs.existsSync(safeOutputPath(folder, name))) return folder;
     }
   }
+  const prefix = splitFolderPrefix(root);
   for (let index = 1; ; index++) {
-    const folder = path.join(root, `Phan_${String(index).padStart(3, "0")}`);
+    const folder = path.join(root, `${prefix}_${String(index).padStart(3, "0")}`);
     if (!fs.existsSync(folder)) { await fsp.mkdir(folder); return folder; }
     const info = await fsp.lstat(folder);
     if (!info.isDirectory() || info.isSymbolicLink()) continue;
@@ -565,19 +584,23 @@ function isUnread(value) {
 
 async function runSelfTest() {
   const batchRoot = await fsp.mkdtemp(path.join(require("os").tmpdir(), "hpnet-batch-"));
+  const namedRoot = path.join(batchRoot, "Đông Phòng (chùa)");
+  await fsp.mkdir(namedRoot);
   try {
     const check = require("assert");
-    check.strictEqual(await chooseOutputDir(batchRoot, 0, "a.pdf"), batchRoot);
-    const first = await chooseOutputDir(batchRoot, 2, "a.pdf");
+    check.strictEqual(await chooseOutputDir(namedRoot, 0, "a.pdf"), namedRoot);
+    const first = await chooseOutputDir(namedRoot, 2, "a.pdf");
+    check.strictEqual(path.basename(first), "Đông Phòng (chùa)_001");
     await writePdfAtomic(path.join(first, "a.pdf"), Buffer.from("%PDF-a"));
-    check.strictEqual(await chooseOutputDir(batchRoot, 2, "b.pdf"), first);
+    check.strictEqual(await chooseOutputDir(namedRoot, 2, "b.pdf"), first);
     await writePdfAtomic(path.join(first, "b.pdf"), Buffer.from("%PDF-b"));
-    const second = await chooseOutputDir(batchRoot, 2, "c.pdf");
+    const second = await chooseOutputDir(namedRoot, 2, "c.pdf");
+    check.strictEqual(path.basename(second), "Đông Phòng (chùa)_002");
     check.notStrictEqual(second, first);
-    check.strictEqual(await chooseOutputDir(batchRoot, 2, "a.pdf"), first);
+    check.strictEqual(await chooseOutputDir(namedRoot, 2, "a.pdf"), first);
     await writePdfAtomic(path.join(second, "c.pdf"), Buffer.from("%PDF-c"));
     await saveNameCollision(second, "c.pdf", Buffer.from("%PDF-d"));
-    check.notStrictEqual(await chooseOutputDir(batchRoot, 2, "e.pdf"), second);
+    check.notStrictEqual(await chooseOutputDir(namedRoot, 2, "e.pdf"), second);
   } finally { await fsp.rm(batchRoot, { recursive: true, force: true }); }
 
   const pattern = buildValidPdfNamePattern("10930");
@@ -1023,7 +1046,8 @@ async function main({ configPath = process.argv[2], chromium: suppliedChromium }
             if (splitLimit) {
               collisionDir = null;
               const folders = [outputDir, ...(await fsp.readdir(outputDir, { withFileTypes: true }))
-                .filter(item => item.isDirectory() && /^Phan_\d+$/.test(item.name)).map(item => path.join(outputDir, item.name))];
+                .filter(item => item.isDirectory() && !item.isSymbolicLink() && isSplitFolderName(item.name, outputDir))
+                .map(item => path.join(outputDir, item.name))];
               for (const folder of folders) {
                 const duplicates = path.join(folder, "Trùng");
                 if (!fs.existsSync(duplicates)) continue;

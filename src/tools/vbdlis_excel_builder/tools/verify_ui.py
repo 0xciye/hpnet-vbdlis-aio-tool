@@ -36,6 +36,8 @@ def main() -> None:
         dark = QPalette()
         dark.setColor(QPalette.Base, QColor("#202020"))
         app.setPalette(dark)
+        # Keep this geometry/popup check deterministic on dark Windows desktops.
+        app.setProperty("darkMode", False)
         configure_appearance(app)
         assert not app.windowIcon().isNull(), "Application icon missing"
         window = MainWindow()

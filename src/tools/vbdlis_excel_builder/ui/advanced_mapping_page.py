@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QToolButton,
     QVBoxLayout,
     QWidget,
+    QApplication,
 )
 
 
@@ -42,6 +43,16 @@ _CLASS_COLORS: dict[str, QColor] = {
     "USER_CONFIGURABLE": QColor("#fefce8"),
 }
 
+_CLASS_COLORS_DARK: dict[str, QColor] = {
+    "ACTIVE_REQUIRED":   QColor("#243853"),
+    "ACTIVE_OPTIONAL":   QColor("#1F3A2B"),
+    "COMPUTED":          QColor("#33244D"),
+    "GCN_OPTIONAL":      QColor("#4A321B"),
+    "TEMPLATE_DEFAULT":  QColor("#30343B"),
+    "TEMPLATE_OPTIONAL": QColor("#30343B"),
+    "USER_CONFIGURABLE": QColor("#443B1B"),
+}
+
 # Dịch phân loại sang tiếng Việt
 _CLASS_LABELS: dict[str, str] = {
     "ACTIVE_REQUIRED":   "Bắt buộc",
@@ -60,6 +71,8 @@ class AdvancedMappingPage(QWidget):
     def __init__(self, schemas):
         super().__init__()
         self.schemas = list(schemas)
+        app = QApplication.instance()
+        self._dark_mode = bool(app.property("darkMode")) if app and app.property("darkMode") is not None else False
 
         warning = QLabel(
             "⚠️  Lưu ý: thay đổi Mục 49 hoặc trường bắt buộc có thể làm file không tương thích VBDLIS. "
@@ -130,7 +143,7 @@ class AdvancedMappingPage(QWidget):
         self.table.horizontalHeader().setStretchLastSection(True)
 
         for row, schema in enumerate(self.schemas):
-            row_bg = _CLASS_COLORS.get(schema.classification.value, QColor("#ffffff"))
+            row_bg = self._row_color(schema.classification.value)
             cls_label = _CLASS_LABELS.get(schema.classification.value, schema.classification.value)
 
             item_cell = QTableWidgetItem(schema.item or "—")
@@ -148,12 +161,14 @@ class AdvancedMappingPage(QWidget):
             cls_item = QTableWidgetItem(cls_label)
             cls_item.setBackground(row_bg)
             cls_item.setTextAlignment(Qt.AlignCenter)
-            cls_item.setForeground(QColor("#374151"))
+            cls_item.setForeground(self._text_color())
 
             self.table.setItem(row, 0, item_cell)
             self.table.setItem(row, 1, col_item)
             self.table.setItem(row, 2, name_item)
             self.table.setItem(row, 3, cls_item)
+            for item in (item_cell, col_item, name_item):
+                item.setForeground(self._text_color())
 
             mode = QComboBox()
             mode.setFrame(False)
@@ -221,6 +236,25 @@ class AdvancedMappingPage(QWidget):
         layout.addWidget(self.table)
         self.search.textChanged.connect(self._filter_rows)
         self.table.currentCellChanged.connect(self._show_field_details)
+
+    def _row_color(self, classification: str) -> QColor:
+        colors = _CLASS_COLORS_DARK if self._dark_mode else _CLASS_COLORS
+        return colors.get(classification, QColor("#30343B" if self._dark_mode else "#ffffff"))
+
+    def _text_color(self) -> QColor:
+        return QColor("#F2F4F7" if self._dark_mode else "#1F2937")
+
+    def apply_theme(self, dark: bool) -> None:
+        """Refresh explicit cell colors when the launcher switches theme."""
+        self._dark_mode = bool(dark)
+        foreground = self._text_color()
+        for row, schema in enumerate(self.schemas):
+            background = self._row_color(schema.classification.value)
+            for column in range(4):
+                item = self.table.item(row, column)
+                if item is not None:
+                    item.setBackground(background)
+                    item.setForeground(foreground)
 
     @staticmethod
     def _search_text(text: str) -> str:

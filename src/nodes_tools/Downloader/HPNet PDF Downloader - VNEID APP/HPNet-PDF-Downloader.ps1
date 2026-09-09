@@ -232,7 +232,7 @@ $splitCheck=New-Object Windows.Forms.CheckBox; $splitCheck.Text='Chia thư mục
 $splitLimitBox=New-Object Windows.Forms.TextBox; $splitLimitBox.Location=New-Object Drawing.Point(180,68); $splitLimitBox.Size=New-Object Drawing.Size(90,25); $splitLimitBox.Text=if($savedConfig.splitFolderLimit){[string]$savedConfig.splitFolderLimit}else{'100'}; $group3.Controls.Add($splitLimitBox)
 $splitLimitBox.Enabled=$splitCheck.Checked
 $splitCheck.Add_CheckedChanged({$splitLimitBox.Enabled=$splitCheck.Checked})
-$null=New-Label $group3 'Số PDF tối đa / thư mục con' 280 70 400 25 $fontNormal
+$null=New-Label $group3 'Số PDF tối đa / thư mục con (Tên cha_001, cha_002…)' 280 70 500 25 $fontNormal
 $browseButton=New-Object Windows.Forms.Button; $browseButton.Text='Chọn thư mục'; $browseButton.Location=New-Object Drawing.Point(685,30); $browseButton.Size=New-Object Drawing.Size(150,30); $browseButton.FlatStyle='Flat'; $browseButton.BackColor=[Drawing.Color]::White; $group3.Controls.Add($browseButton)
 
 $actions=New-Object Windows.Forms.Panel; $actions.Size=New-Object Drawing.Size(860,45); $actions.Margin=New-Object Windows.Forms.Padding(0,0,0,12); $main.Controls.Add($actions)
