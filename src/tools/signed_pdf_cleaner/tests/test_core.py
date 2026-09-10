@@ -155,6 +155,11 @@ def test_parse_suffixes_accepts_commas_and_legacy_pdf_form():
     with pytest.raises(ValueError):
         parse_suffixes("*.signed", ".signed")
 
+
+def test_signed_suffix_cannot_be_plain_pdf():
+    with pytest.raises(ValueError, match="phải có phần đứng trước"):
+        FileScanner(validate_signatures=False, signed_suffix=".pdf")
+
 def test_5_complex_names(temp_dir):
     # CHUACOGIAY_10930_10_300-TBXN
     n1 = "CHUACOGIAY_10930_10_300-TBXN"

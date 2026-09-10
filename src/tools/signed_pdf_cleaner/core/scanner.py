@@ -47,6 +47,8 @@ class FileScanner:
         self.validate_signatures = validate_signatures
         self.delete_suffixes = parse_suffixes(delete_suffix, ".pdf")
         self.signed_suffixes = parse_suffixes(signed_suffix, ".signed")
+        if ".pdf" in self.signed_suffixes:
+            raise ValueError("Hậu tố file ký phải có phần đứng trước .pdf, ví dụ: .signed.pdf")
         # Keep the singular attributes for callers that used the old API.
         self.delete_suffix = self.delete_suffixes[0]
         self.signed_suffix = self.signed_suffixes[0]

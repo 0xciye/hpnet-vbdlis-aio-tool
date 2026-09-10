@@ -72,6 +72,7 @@ class MainWindow(QMainWindow):
         self.logger = AppLogger(str(tool_data_dir("PDF Cleaner") / "logs"))
         self.setup_ui()
         self.load_settings()
+        self.update_target_ui(reset_preview=False)
 
     def setup_ui(self):
         central_widget = QWidget()
@@ -90,40 +91,45 @@ class MainWindow(QMainWindow):
         folder_layout.addWidget(btn_browse)
         main_layout.addLayout(folder_layout)
 
-        # 2. Options
-        options_layout = QHBoxLayout()
-        self.chk_recursive = QCheckBox("Bao gồm thư mục con")
-        options_layout.addWidget(self.chk_recursive)
-        options_layout.addWidget(QLabel("Hậu tố file cần xóa:"))
-        self.txt_delete_suffix = QLineEdit(".pdf"); self.txt_delete_suffix.setMaximumWidth(220)
-        self.txt_delete_suffix.setToolTip("Nhập một hoặc nhiều hậu tố, cách nhau bằng dấu phẩy. Có thể bỏ phần .pdf.")
-        options_layout.addWidget(self.txt_delete_suffix)
-        options_layout.addWidget(QLabel("Hậu tố file cần đổi tên:"))
-        self.txt_signed_suffix = QLineEdit(".signed.pdf"); self.txt_signed_suffix.setMaximumWidth(240)
-        self.txt_signed_suffix.setToolTip("Nhập một hoặc nhiều hậu tố, cách nhau bằng dấu phẩy. Có thể bỏ phần .pdf.")
-        options_layout.addWidget(self.txt_signed_suffix)
-        
-        options_layout.addWidget(QLabel("Chế độ xóa:"))
-        self.cmb_delete_mode = QComboBox()
-        self.cmb_delete_mode.addItems(["Đưa vào Recycle Bin", "Xóa vĩnh viễn"])
-        options_layout.addWidget(self.cmb_delete_mode)
-        options_layout.addStretch()
-        main_layout.addLayout(options_layout)
-
+        # 2. Processing target
         target_layout = QHBoxLayout()
         target_layout.addWidget(QLabel("Mục tiêu xử lý:"))
         self.cmb_target_mode = QComboBox()
         self.cmb_target_mode.addItem("Cả cặp và file ký đơn độc", TARGET_ALL)
         self.cmb_target_mode.addItem("Chỉ cặp có file gốc + file ký", TARGET_PAIRS)
         self.cmb_target_mode.addItem("Chỉ file ký không có file gốc: xóa hậu tố", TARGET_ORPHAN_SIGNED)
-        self.cmb_target_mode.setToolTip("Chọn riêng quy trình mới: đổi file ký đơn độc về tên PDF không còn hậu tố.")
+        self.cmb_target_mode.setToolTip("Giao diện và danh sách xem trước sẽ đổi theo mục tiêu đã chọn.")
+        self.cmb_target_mode.currentIndexChanged.connect(self.update_target_ui)
         target_layout.addWidget(self.cmb_target_mode, 1)
         main_layout.addLayout(target_layout)
 
-        suffix_hint = QLabel("Nhiều hậu tố cách nhau bằng dấu phẩy. Ví dụ: xóa .signed, .ldsigned | đổi tên .signed.signed, .ldsigned.signed → kết quả chỉ còn tên gốc.pdf")
-        suffix_hint.setWordWrap(True)
-        suffix_hint.setStyleSheet("color: #64748b; font-size: 11px;")
-        main_layout.addWidget(suffix_hint)
+        # 3. Options
+        options_layout = QHBoxLayout()
+        self.chk_recursive = QCheckBox("Bao gồm thư mục con")
+        options_layout.addWidget(self.chk_recursive)
+        self.lbl_delete_suffix = QLabel("Hậu tố file cũ cần xóa:")
+        options_layout.addWidget(self.lbl_delete_suffix)
+        self.txt_delete_suffix = QLineEdit(".pdf"); self.txt_delete_suffix.setMaximumWidth(220)
+        self.txt_delete_suffix.setToolTip("Nhập một hoặc nhiều hậu tố, cách nhau bằng dấu phẩy. Có thể bỏ phần .pdf.")
+        options_layout.addWidget(self.txt_delete_suffix)
+        self.lbl_signed_suffix = QLabel("Hậu tố file ký cần giữ:")
+        options_layout.addWidget(self.lbl_signed_suffix)
+        self.txt_signed_suffix = QLineEdit(".signed.pdf"); self.txt_signed_suffix.setMaximumWidth(240)
+        self.txt_signed_suffix.setToolTip("Nhập một hoặc nhiều hậu tố, cách nhau bằng dấu phẩy. Có thể bỏ phần .pdf.")
+        options_layout.addWidget(self.txt_signed_suffix)
+        
+        self.lbl_delete_mode = QLabel("Chế độ xóa:")
+        options_layout.addWidget(self.lbl_delete_mode)
+        self.cmb_delete_mode = QComboBox()
+        self.cmb_delete_mode.addItems(["Đưa vào Recycle Bin", "Xóa vĩnh viễn"])
+        options_layout.addWidget(self.cmb_delete_mode)
+        options_layout.addStretch()
+        main_layout.addLayout(options_layout)
+
+        self.suffix_hint = QLabel()
+        self.suffix_hint.setWordWrap(True)
+        self.suffix_hint.setStyleSheet("color: #64748b; font-size: 11px;")
+        main_layout.addWidget(self.suffix_hint)
 
         # 3. Stats
         self.lbl_stats = QLabel("Sẵn sàng.")
@@ -157,6 +163,37 @@ class MainWindow(QMainWindow):
         self.progress_bar = QProgressBar()
         self.progress_bar.setVisible(False)
         main_layout.addWidget(self.progress_bar)
+
+    def update_target_ui(self, _index=None, reset_preview=True):
+        mode = self.cmb_target_mode.currentData()
+        orphan_only = mode == TARGET_ORPHAN_SIGNED
+        for widget in (self.lbl_delete_suffix, self.txt_delete_suffix, self.lbl_delete_mode, self.cmb_delete_mode):
+            widget.setVisible(not orphan_only)
+
+        self.lbl_signed_suffix.setText("Hậu tố ký cần bỏ (vẫn giữ .pdf):" if orphan_only else "Hậu tố file ký cần giữ:")
+        headers = (["File cần xóa hậu tố", "File gốc", "Hành động", "Tên mới", "Trạng thái"] if orphan_only else
+                   ["File ký cần giữ", "File cũ sẽ xóa", "Hành động", "Tên sau xử lý", "Trạng thái"])
+        self.table.setHorizontalHeaderLabels(headers)
+        self.table.setColumnHidden(1, orphan_only)
+        if orphan_only:
+            self.suffix_hint.setText("Ví dụ nhập .signed.pdf: A.signed.pdf → A.pdf. Chỉ bỏ .signed, luôn giữ định dạng .pdf và không xóa file nào.")
+            self.btn_scan.setText("Quét file cần xóa hậu tố")
+            self.btn_process.setText("Xóa hậu tố")
+        elif mode == TARGET_PAIRS:
+            self.suffix_hint.setText("Chỉ tìm theo cặp. Ví dụ: xóa A.pdf, sau đó đổi A.signed.pdf thành A.pdf.")
+            self.btn_scan.setText("Quét cặp file")
+            self.btn_process.setText("Xóa file cũ và đổi tên")
+        else:
+            self.suffix_hint.setText("Xử lý cả cặp file và file ký đơn độc. Có thể nhập nhiều hậu tố, cách nhau bằng dấu phẩy.")
+            self.btn_scan.setText("Quét / Xem trước")
+            self.btn_process.setText("Thực hiện xử lý")
+
+        if reset_preview:
+            self.plans = []
+            self.table.setRowCount(0)
+            self.btn_process.setEnabled(False)
+            self.btn_export.setEnabled(False)
+            self.lbl_stats.setText("Đã đổi mục tiêu xử lý. Hãy quét lại.")
 
     def load_settings(self):
         if self.settings_file.exists():
@@ -214,12 +251,14 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Lỗi", "Vui lòng chọn thư mục hợp lệ.")
             return
 
+        target_mode = self.cmb_target_mode.currentData()
+        delete_suffix = ".pdf" if target_mode == TARGET_ORPHAN_SIGNED else self.txt_delete_suffix.text()
         try:
-            scanner = FileScanner(delete_suffix=self.txt_delete_suffix.text(), signed_suffix=self.txt_signed_suffix.text())
+            scanner = FileScanner(delete_suffix=delete_suffix, signed_suffix=self.txt_signed_suffix.text())
         except ValueError as exc:
             QMessageBox.warning(self, "Hậu tố không hợp lệ", str(exc))
             return
-        self.plans = scanner.scan_directory(folder, self.chk_recursive.isChecked(), self.cmb_target_mode.currentData())
+        self.plans = scanner.scan_directory(folder, self.chk_recursive.isChecked(), target_mode)
         
         self.update_table()
         self.update_stats()
@@ -270,13 +309,18 @@ class MainWindow(QMainWindow):
         has_unsigned = sum(1 for p in self.plans if p.unsigned_path and p.signed_path)
         only_signed = sum(1 for p in self.plans if p.signed_path and not p.unsigned_path)
         only_unsigned = sum(1 for p in self.plans if p.unsigned_path and not p.signed_path)
+        ready = sum(1 for p in self.plans if p.status == ProcessStatus.READY)
         errors = sum(1 for p in self.plans if p.status in (ProcessStatus.ERROR, ProcessStatus.WARNING))
-        
-        stats = (f"File signed tìm thấy: {total_signed} | "
-                 f"Có bản chưa ký: {has_unsigned} | "
-                 f"Chỉ có bản signed: {only_signed} | "
-                 f"Chỉ có bản chưa ký (bỏ qua): {only_unsigned} | "
-                 f"Lỗi/Xung đột: {errors}")
+
+        mode = self.cmb_target_mode.currentData()
+        if mode == TARGET_ORPHAN_SIGNED:
+            stats = f"File cần xóa hậu tố: {total_signed} | Sẵn sàng: {ready} | Cảnh báo: {errors}"
+        elif mode == TARGET_PAIRS:
+            stats = f"Cặp file tìm thấy: {has_unsigned} | Sẵn sàng: {ready} | Cảnh báo: {errors}"
+        else:
+            stats = (f"File ký tìm thấy: {total_signed} | Có file gốc: {has_unsigned} | "
+                     f"File ký đơn độc: {only_signed} | File gốc đơn độc (bỏ qua): {only_unsigned} | "
+                     f"Lỗi/Xung đột: {errors}")
         self.lbl_stats.setText(stats)
 
     def process_files(self):
@@ -285,10 +329,11 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self, "Thông báo", "Không có file nào cần xử lý.")
             return
             
+        deletes_old_files = any(p.action == ActionType.DELETE_AND_RENAME for p in ready_plans)
         use_recycle_bin = self.cmb_delete_mode.currentIndex() == 0
-        if not use_recycle_bin:
+        if deletes_old_files and not use_recycle_bin:
             reply = QMessageBox.question(self, 'Xác nhận', 
-                                         'Bạn chọn Xóa Vĩnh Viễn. File chưa ký sẽ bị xóa hoàn toàn. Bạn có chắc chắn không?',
+                                         'Bạn chọn Xóa Vĩnh Viễn. File cũ sẽ bị xóa hoàn toàn. Bạn có chắc chắn không?',
                                          QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
             if reply == QMessageBox.No:
                 return
@@ -319,8 +364,9 @@ class MainWindow(QMainWindow):
         errors = sum(1 for p in self.plans if p.status == ProcessStatus.ERROR)
         
         msg = f"HOÀN THÀNH\nFile xử lý thành công: {completed}\nLỗi: {errors}"
-        if self.cmb_delete_mode.currentIndex() == 0:
-            msg += "\n\nCác file chưa ký đã được chuyển vào Recycle Bin."
+        recycled = any(p.status == ProcessStatus.COMPLETED and p.action == ActionType.DELETE_AND_RENAME for p in self.plans)
+        if recycled and self.cmb_delete_mode.currentIndex() == 0:
+            msg += "\n\nCác file cũ đã được chuyển vào Recycle Bin."
             
         QMessageBox.information(self, "Kết quả", msg)
         self.update_stats()
