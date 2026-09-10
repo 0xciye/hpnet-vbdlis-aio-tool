@@ -21,10 +21,12 @@ REMOTE_ASSET_NAME = "HPNet.VBDLIS.AIO.Tool.zip"
 APP_FOLDER = "HPNET & VBDLIS Tools"
 EXE_NAME = f"{APP_FOLDER}.exe"
 API_URL = f"https://api.github.com/repos/{REPOSITORY}/releases/latest"
+RELEASES_API_URL = f"https://api.github.com/repos/{REPOSITORY}/releases?per_page=100"
 MAX_DOWNLOAD_BYTES = 1_000_000_000
 MAX_EXTRACTED_BYTES = 2_000_000_000
 MAX_DOWNLOAD_SECONDS = 20 * 60
 MAX_DOWNLOAD_ATTEMPTS = 5
+MAX_RELEASE_NOTES_CHARS = 8_000
 
 
 def _semantic_version(value):
@@ -40,6 +42,13 @@ def _release_asset_url(value, tag=None):
         return False
     prefix = f"/{REPOSITORY}/releases/download/{tag}/" if tag else f"/{REPOSITORY}/releases/download/"
     return url.scheme == "https" and url.hostname == "github.com" and url.path.startswith(prefix)
+
+
+def _release_notes(value):
+    notes = str(value or "").strip()
+    if len(notes) > MAX_RELEASE_NOTES_CHARS:
+        return notes[:MAX_RELEASE_NOTES_CHARS].rstrip() + "\n\n[Đã rút gọn]"
+    return notes
 
 
 def build_info():
@@ -96,8 +105,30 @@ def parse_release(payload, current_version):
         checksum_name = f"{asset_name}.sha256"
         if (_release_asset_url(assets.get(asset_name), tag) and
                 _release_asset_url(assets.get(checksum_name), tag)):
-            return {"version": tag, "zip_url": assets[asset_name], "checksum_url": assets[checksum_name]}
+            return {
+                "version": tag,
+                "zip_url": assets[asset_name],
+                "checksum_url": assets[checksum_name],
+                "release_notes": _release_notes(payload.get("body")),
+            }
     return None
+
+
+def parse_release_history(payloads, current_version, target_version):
+    current = _semantic_version(current_version)
+    target = _semantic_version(target_version)
+    if current is None or target is None:
+        return []
+    history = []
+    for payload in payloads if isinstance(payloads, list) else []:
+        if payload.get("draft") or payload.get("prerelease"):
+            continue
+        tag = str(payload.get("tag_name", "")).strip()
+        version = _semantic_version(tag)
+        if version is None or not current < version <= target:
+            continue
+        history.append({"version": tag, "release_notes": _release_notes(payload.get("body"))})
+    return sorted(history, key=lambda item: _semantic_version(item["version"]))
 
 
 def check_for_update():
@@ -108,7 +139,24 @@ def check_for_update():
     })
     with urlopen(request, timeout=8) as response:
         payload = json.loads(response.read(2_000_000))
-    return parse_release(payload, build_info().get("version", "development"))
+    current_version = build_info().get("version", "development")
+    release = parse_release(payload, current_version)
+    if not release:
+        return None
+    try:
+        history_request = Request(RELEASES_API_URL, headers={
+            "Accept": "application/vnd.github+json",
+            "User-Agent": "HPNet-VBDLIS-AIO-Updater",
+            "X-GitHub-Api-Version": "2022-11-28",
+        })
+        with urlopen(history_request, timeout=8) as response:
+            history_payload = json.loads(response.read(4_000_000))
+        release["release_history"] = parse_release_history(
+            history_payload, current_version, release["version"]
+        ) or [{"version": release["version"], "release_notes": release["release_notes"]}]
+    except (OSError, ValueError, TypeError):
+        release["release_history"] = [{"version": release["version"], "release_notes": release["release_notes"]}]
+    return release
 
 
 def fetch_latest_version():

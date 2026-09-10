@@ -262,9 +262,23 @@ class ToolLauncher(QMainWindow):
                 QMessageBox.information(self, "Đã là phiên bản mới nhất",
                     f"Bạn đang sử dụng phiên bản mới nhất ({self.current_version}).")
             return
-        answer = QMessageBox.question(self, "Có phiên bản mới",
-            f"Phiên bản {release['version']} đã sẵn sàng. Bạn có muốn tải xuống và cài đặt ngay không?",
-            QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
+        history = release.get("release_history") or [release]
+        note_sections = []
+        for item in history:
+            notes = str(item.get("release_notes", "")).strip() or "Chưa có ghi chú chi tiết."
+            note_sections.append(f"{item.get('version', release['version'])}\n{notes}")
+        notes = "\n\n".join(note_sections)
+        message = QMessageBox(self)
+        message.setIcon(QMessageBox.Question)
+        message.setWindowTitle("Có phiên bản mới")
+        message.setText(f"Phiên bản {release['version']} đã sẵn sàng.")
+        message.setInformativeText(
+            f"Nội dung cập nhật từ các phiên bản còn thiếu:\n{notes}\n\nBạn có muốn tải xuống và cài đặt ngay không?"
+        )
+        message.setTextFormat(Qt.PlainText)
+        message.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        message.setDefaultButton(QMessageBox.Yes)
+        answer = message.exec()
         if answer != QMessageBox.Yes:
             self.update_now_button.setEnabled(True)
             return

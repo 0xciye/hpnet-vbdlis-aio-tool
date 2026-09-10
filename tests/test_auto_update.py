@@ -9,23 +9,44 @@ from zipfile import ZipFile
 import pytest
 
 import auto_update
-from auto_update import APP_FOLDER, ASSET_NAME, EXE_NAME, REMOTE_ASSET_NAME, _safe_extract, parse_release
+from auto_update import APP_FOLDER, ASSET_NAME, EXE_NAME, REMOTE_ASSET_NAME, _safe_extract, parse_release, parse_release_history
 
 
 def payload(tag="v1.0.1"):
     return {"tag_name": tag, "draft": False, "prerelease": False, "assets": [
         {"name": REMOTE_ASSET_NAME, "browser_download_url": f"https://github.com/{auto_update.REPOSITORY}/releases/download/{tag}/app.zip"},
         {"name": f"{REMOTE_ASSET_NAME}.sha256", "browser_download_url": f"https://github.com/{auto_update.REPOSITORY}/releases/download/{tag}/app.zip.sha256"},
-    ]}
+    ], "body": "## Thay đổi\n- Cải thiện cập nhật."}
 
 
 def test_release_requires_new_version_and_both_verified_assets():
-    assert parse_release(payload(), "v1.0.0")["version"] == "v1.0.1"
+    release = parse_release(payload(), "v1.0.0")
+    assert release["version"] == "v1.0.1"
+    assert release["release_notes"] == "## Thay đổi\n- Cải thiện cập nhật."
     assert parse_release(payload(), "v1.0.1") is None
     assert parse_release(payload("v1.0.0"), "v2.0.0") is None
     assert parse_release(payload("auto-2-def456"), "v1.0.0") is None
     incomplete = payload(); incomplete["assets"].pop()
     assert parse_release(incomplete, "v1.0.0") is None
+
+
+def test_release_notes_are_bounded():
+    release_payload = payload()
+    release_payload["body"] = "x" * (auto_update.MAX_RELEASE_NOTES_CHARS + 50)
+    notes = parse_release(release_payload, "v1.0.0")["release_notes"]
+    assert len(notes) <= auto_update.MAX_RELEASE_NOTES_CHARS + len("\n\n[Đã rút gọn]")
+    assert notes.endswith("[Đã rút gọn]")
+
+
+def test_release_history_returns_missing_versions_in_order():
+    payloads = [
+        {"tag_name": "v1.3.0", "body": "new", "draft": False, "prerelease": False},
+        {"tag_name": "v1.2.1", "body": "old", "draft": False, "prerelease": False},
+        {"tag_name": "v1.2.0", "body": "current", "draft": False, "prerelease": False},
+        {"tag_name": "v1.2.2", "body": "draft", "draft": True, "prerelease": False},
+    ]
+    history = parse_release_history(payloads, "v1.2.0", "v1.3.0")
+    assert [item["version"] for item in history] == ["v1.2.1", "v1.3.0"]
 
 
 def test_release_rejects_assets_outside_repository():
