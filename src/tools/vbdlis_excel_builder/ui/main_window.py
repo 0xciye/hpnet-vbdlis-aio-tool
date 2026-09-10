@@ -136,6 +136,10 @@ class MainWindow(QMainWindow):
         self.export_page.filename.setText(profile.output_filename)
         self.export_page.folder.setText(profile.output_folder)
         self.export_page.report.setChecked(profile.export_audit_report)
+        self.data_page.header_spin.setValue(profile.header_row or 1)
+        self.data_page.two_level.setChecked(profile.header_row_2 is not None)
+        if profile.header_row_2 is not None:
+            self.data_page.header_spin_2.setValue(profile.header_row_2)
         self.profile_store.save_last_profile(name)
 
     def _current_profile(self) -> MappingProfile:
@@ -149,6 +153,7 @@ class MainWindow(QMainWindow):
         profile.export_audit_report = self.export_page.report.isChecked()
         profile.last_sheet = self.data_page.sheet_combo.currentText()
         profile.header_row = self.data_page.header_spin.value()
+        profile.header_row_2 = self.data_page.header_spin_2.value() if self.data_page.two_level.isChecked() else None
         self.profiles[name] = profile
         return profile
 
@@ -204,6 +209,7 @@ class MainWindow(QMainWindow):
             self.source_columns = columns
             self.data_page.set_sheets(sheets, selected)
             self.data_page.header_spin.setValue(header)
+            self.data_page.two_level.setChecked(False)
             self.data_page.show_preview(columns, preview)
             self.mapping_page.set_columns(columns)
             self.mapping_page.set_mapping(profile.source_mapping)
@@ -212,12 +218,13 @@ class MainWindow(QMainWindow):
             logging.exception("Cannot load source")
             self._worker_failed(exc)
 
-    def _load_source_preview(self, path: str, sheet: str, header_row: int) -> None:
+    def _load_source_preview(self, path: str, sheet: str, header_row: int, header_row_2: int) -> None:
         if not path:
             QMessageBox.warning(self, "Thiếu file", "Hãy chọn file dữ liệu trước.")
             return
         try:
-            columns, preview = self.service.source_reader.preview(path, sheet, header_row, 50)
+            second = header_row_2 or None
+            columns, preview = self.service.source_reader.preview(path, sheet, header_row, 50, second)
             self.source_columns = columns
             self.data_page.show_preview(columns, preview)
             self.mapping_page.set_columns(columns)
@@ -240,16 +247,18 @@ class MainWindow(QMainWindow):
             path,
             self.data_page.sheet_combo.currentText(),
             self.data_page.header_spin.value(),
+            self.data_page.header_spin_2.value() if self.data_page.two_level.isChecked() else None,
             profile,
         )
 
     def _process_sync(self, parameters):
-        path, sheet, header_row, profile = parameters
+        path, sheet, header_row, header_row_2, profile = parameters
         return self.service.process(
             path,
             sheet,
             header_row,
             profile,
+            header_row_2,
         )
 
     def _run_worker(self, function: Callable[[], Any], finished: Callable[[Any], None], message: str) -> None:
@@ -302,7 +311,7 @@ class MainWindow(QMainWindow):
             result = self._process_sync(parameters)
             if not result.can_export:
                 return (result, None)
-            profile = parameters[3]
+            profile = parameters[4]
             if not profile.output_folder:
                 raise ValueError("Chưa chọn thư mục xuất.")
             exported = self.service.export(

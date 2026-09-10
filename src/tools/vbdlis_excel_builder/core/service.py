@@ -71,6 +71,7 @@ class BuilderService:
         sheet_name: str,
         header_row: int,
         profile: MappingProfile,
+        header_row_2: int | None = None,
     ) -> ProcessResult:
         context = DiagnosticContext(str(Path(source_path).resolve()), sheet_name, header_row,
                                     deepcopy(profile), schemas=self.schemas)
@@ -80,8 +81,8 @@ class BuilderService:
         try:
             issues = self.validator.validate_profile(profile)
             stage = "Đọc dữ liệu nguồn"
-            context.columns = self.source_reader.headers(source_path, sheet_name, header_row)
-            context.source_rows = self.source_reader.read_rows(source_path, sheet_name, header_row)
+            context.columns = self.source_reader.headers(source_path, sheet_name, header_row, header_row_2)
+            context.source_rows = self.source_reader.read_rows(source_path, sheet_name, header_row, header_row_2=header_row_2)
             stage = "Nhận diện hộ, người và thửa"
             households, parse_issues, base_stats = self.household_parser.parse(context.source_rows, profile)
             context.households = households

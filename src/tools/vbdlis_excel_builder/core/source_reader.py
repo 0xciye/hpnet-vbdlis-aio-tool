@@ -50,15 +50,59 @@ class SourceReader:
         finally:
             workbook.close()
 
-    def headers(self, path: str | Path, sheet_name: str, header_row: int) -> list[SourceColumn]:
+    @staticmethod
+    def _merge_header_values(top_values: list[Any], bottom_values: list[Any]) -> list[str]:
+        """Build stable column names from one or two header rows.
+
+        Excel merged cells expose the value only in the first cell. Carrying
+        that value to the right keeps a two-level header useful for mapping.
+        """
+        size = max(len(top_values), len(bottom_values))
+        merged: list[str] = []
+        current_top = ""
+        for index in range(size):
+            top = top_values[index] if index < len(top_values) else None
+            bottom = bottom_values[index] if index < len(bottom_values) else None
+            top_text = "" if top is None else str(top).strip()
+            bottom_text = "" if bottom is None else str(bottom).strip()
+            if top_text:
+                current_top = top_text
+            if top_text == bottom_text:
+                merged.append(top_text or bottom_text)
+            elif current_top and bottom_text:
+                merged.append(f"{current_top} - {bottom_text}")
+            else:
+                merged.append(bottom_text or current_top)
+        return merged
+
+    def _header_values(
+        self,
+        ws,
+        header_row: int,
+        header_row_2: int | None = None,
+    ) -> list[str]:
+        top_values = list(next(ws.iter_rows(min_row=header_row, max_row=header_row, values_only=True)))
+        if header_row_2 is None:
+            return ["" if value is None else str(value).strip() for value in top_values]
+        if header_row_2 <= header_row:
+            raise ValueError("Dòng tiêu đề thứ hai phải lớn hơn dòng tiêu đề thứ nhất.")
+        bottom_values = list(next(ws.iter_rows(min_row=header_row_2, max_row=header_row_2, values_only=True)))
+        return self._merge_header_values(top_values, bottom_values)
+
+    def headers(
+        self,
+        path: str | Path,
+        sheet_name: str,
+        header_row: int,
+        header_row_2: int | None = None,
+    ) -> list[SourceColumn]:
         workbook = load_workbook(path, read_only=True, data_only=True)
         try:
             ws = workbook[sheet_name]
+            values = self._header_values(ws, header_row, header_row_2)
             return [
-                SourceColumn(index, get_column_letter(index), "" if value is None else str(value).strip())
-                for index, value in enumerate(
-                    next(ws.iter_rows(min_row=header_row, max_row=header_row, values_only=True)), 1
-                )
+                SourceColumn(index, get_column_letter(index), value)
+                for index, value in enumerate(values, 1)
             ]
         finally:
             workbook.close()
@@ -69,9 +113,10 @@ class SourceReader:
         sheet_name: str,
         header_row: int,
         limit: int = 50,
+        header_row_2: int | None = None,
     ) -> tuple[list[SourceColumn], list[dict[str, Any]]]:
-        headers = self.headers(path, sheet_name, header_row)
-        rows = self.read_rows(path, sheet_name, header_row, max_rows=limit)
+        headers = self.headers(path, sheet_name, header_row, header_row_2)
+        rows = self.read_rows(path, sheet_name, header_row, max_rows=limit, header_row_2=header_row_2)
         return headers, rows
 
     def read_rows(
@@ -80,16 +125,16 @@ class SourceReader:
         sheet_name: str,
         header_row: int,
         max_rows: int | None = None,
+        header_row_2: int | None = None,
     ) -> list[dict[str, Any]]:
         workbook = load_workbook(path, read_only=True, data_only=True)
         try:
             ws = workbook[sheet_name]
-            header_values = list(
-                next(ws.iter_rows(min_row=header_row, max_row=header_row, values_only=True))
-            )
+            header_values = self._header_values(ws, header_row, header_row_2)
+            data_start = max(header_row, header_row_2 or header_row) + 1
             result: list[dict[str, Any]] = []
             for offset, values in enumerate(
-                ws.iter_rows(min_row=header_row + 1, values_only=True), start=header_row + 1
+                ws.iter_rows(min_row=data_start, values_only=True), start=data_start
             ):
                 if max_rows is not None and len(result) >= max_rows:
                     break
@@ -101,8 +146,8 @@ class SourceReader:
                     row[letter] = value
                     if index <= len(header_values):
                         header = header_values[index - 1]
-                        if header is not None and str(header).strip():
-                            row[str(header).strip()] = value
+                        if header:
+                            row[header] = value
                 result.append(row)
             return result
         finally:

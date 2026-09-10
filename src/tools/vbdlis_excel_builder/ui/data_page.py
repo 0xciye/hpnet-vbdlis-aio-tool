@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QCheckBox,
     QPushButton,
     QSpinBox,
     QTableWidget,
@@ -21,7 +22,7 @@ from .widgets import ComboBox as QComboBox
 
 
 class DataPage(QWidget):
-    load_requested = Signal(str, str, int)
+    load_requested = Signal(str, str, int, int)
     file_selected = Signal(str)
 
     def __init__(self):
@@ -52,6 +53,13 @@ class DataPage(QWidget):
         self.header_spin.setValue(1)
         self.header_spin.setFixedWidth(80)
         self.header_spin.setToolTip("Số dòng trong Excel chứa tên các cột; không phải số dòng dữ liệu. Ví dụ tên cột ở dòng 6 thì nhập 6.")
+        self.two_level = QCheckBox("Tiêu đề 2 tầng")
+        self.header_spin_2 = QSpinBox()
+        self.header_spin_2.setRange(2, 1000)
+        self.header_spin_2.setValue(2)
+        self.header_spin_2.setFixedWidth(80)
+        self.header_spin_2.setEnabled(False)
+        self.two_level.toggled.connect(self.header_spin_2.setEnabled)
 
         form = QFormLayout()
         form.setVerticalSpacing(8)
@@ -65,13 +73,21 @@ class DataPage(QWidget):
         hint.setStyleSheet("color: palette(mid);")
         header_row.addWidget(hint, 1)
         form.addRow("Dòng tiêu đề", header_row)
+        second_header_row = QHBoxLayout()
+        second_header_row.addWidget(self.two_level)
+        second_header_row.addWidget(QLabel("Dòng dưới"))
+        second_header_row.addWidget(self.header_spin_2)
+        second_header_row.addWidget(QLabel("Ghép tiêu đề trên + dưới để nhận diện cột."))
+        second_header_row.addStretch(1)
+        form.addRow("Kiểu tiêu đề", second_header_row)
 
         read = QPushButton("▶  Đọc dữ liệu")
         read.setProperty("accent", True)
         read.setMinimumHeight(40)
         read.clicked.connect(
             lambda: self.load_requested.emit(
-                self.file_edit.text(), self.sheet_combo.currentText(), self.header_spin.value()
+                self.file_edit.text(), self.sheet_combo.currentText(), self.header_spin.value(),
+                self.header_spin_2.value() if self.two_level.isChecked() else 0,
             )
         )
 

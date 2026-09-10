@@ -43,9 +43,10 @@ def is_summary_label(value: Any) -> bool:
     text = unicodedata.normalize("NFC", normalize_whitespace(value)).casefold()
     text = re.sub(r"\s*\(\s*m[2²]\s*\)\s*$", "", text)
     text = normalize_whitespace(re.sub(r"[.:;,\-–—_=]+", " ", text))
-    # Keep Vietnamese accents: 'Tống Công' is a name, not 'Tổng cộng'.
+    # Match complete aggregate labels only. A real name such as 'Tống Công'
+    # or 'Nguyễn Văn Tổng' must remain a person.
     return text in {
-        "tổng dt", "tong dt", "tổng d t", "tong d t",
+        "tổng", "tong", "tổng dt", "tong dt", "tổng d t", "tong d t",
         "tổng diện tích", "tong dien tich", "tổng cộng", "tong cong",
         "cộng dt", "cong dt", "cộng diện tích", "cong dien tich",
     }

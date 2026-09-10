@@ -7,10 +7,7 @@ from dataclasses import replace
 from tools.vbdlis_excel_builder.models import Household, MappingProfile, Severity, ValidationIssue
 
 
-INCOMPLETE_HOUSEHOLD_CODES = {
-    "MISSING_CCCD", "MISSING_PERSON_NAME", "INVALID_PARCEL",
-    "HOUSEHOLD_WITHOUT_PERSON", "HOUSEHOLD_WITHOUT_PARCEL",
-}
+PERSON_SKIP_CODES = {"MISSING_CCCD", "INVALID_CCCD", "MISSING_PERSON_NAME"}
 
 
 def apply_input_policy(households: list[Household], issues: list[ValidationIssue], profile: MappingProfile):
@@ -28,26 +25,45 @@ def apply_input_policy(households: list[Household], issues: list[ValidationIssue
     extra = []
     for household in households:
         related = grouped[household.source_row]
-        incomplete = [i for i in related if i.code in INCOMPLETE_HOUSEHOLD_CODES]
-        invalid_rows = {i.source_row for i in related if i.code == "INVALID_CCCD"}
-        valid_people = [p for p in household.people if p.source_row not in invalid_rows]
-        if incomplete or not valid_people:
+        skipped_person_rows = {i.source_row for i in related if i.code in PERSON_SKIP_CODES}
+        valid_people = [p for p in household.people if p.source_row not in skipped_person_rows]
+        head_is_invalid = household.source_row in skipped_person_rows
+        if head_is_invalid:
             skipped_households.add(household.source_row)
-            reasons = "; ".join(f"dòng {i.source_row}: {i.message}" for i in incomplete)
-            if not incomplete:
-                reasons = "Không còn người có CCCD hợp lệ sau khi kiểm tra."
+            extra.append(ValidationIssue(
+                Severity.WARNING, "HOUSEHOLD_SKIPPED",
+                "Đã bỏ toàn bộ hộ vì chủ hộ (dòng có STT) thiếu hoặc sai tên/CCCD.",
+                household.source_row, household.household_id,
+                value=f"Không xuất {len(household.people)} người và {len(household.parcels)} thửa của hộ này.",
+                source_fields=("person_name", "cccd"),
+                disposition="household_skipped"))
+        elif not valid_people:
+            skipped_households.add(household.source_row)
+            reasons = "Không còn người có CCCD hợp lệ sau khi kiểm tra."
             extra.append(ValidationIssue(
                 Severity.WARNING, "HOUSEHOLD_SKIPPED", "Đã bỏ toàn bộ hộ. Lý do: " + reasons,
                 household.source_row, household.household_id,
                 value=f"Không xuất {len(household.people)} người và {len(household.parcels)} thửa của hộ này.",
                 source_fields=("person_name", "cccd", "sheet_number", "parcel_number", "area"),
                 disposition="household_skipped"))
+        elif not household.parcels:
+            skipped_households.add(household.source_row)
+            extra.append(ValidationIssue(
+                Severity.WARNING, "HOUSEHOLD_SKIPPED",
+                "Đã bỏ toàn bộ hộ vì không còn thửa hợp lệ để tạo dòng kết quả.",
+                household.source_row, household.household_id,
+                value=f"Không xuất {len(valid_people)} người của hộ này.",
+                source_fields=("sheet_number", "parcel_number", "area"),
+                disposition="household_skipped"))
         else:
             for person in household.people:
-                if person.source_row in invalid_rows:
+                if person.source_row in skipped_person_rows:
                     skipped_people.add(person.source_row)
+                    reason = "CCCD thiếu" if any(
+                        i.source_row == person.source_row and i.code == "MISSING_CCCD" for i in related
+                    ) else "CCCD sai định dạng 12 chữ số"
                     extra.append(ValidationIssue(
-                        Severity.WARNING, "PERSON_SKIPPED", "Đã bỏ người có CCCD sai định dạng 12 chữ số.",
+                        Severity.WARNING, "PERSON_SKIPPED", f"Đã bỏ người vì {reason}.",
                         person.source_row, household.household_id, person.name, person.cccd,
                         source_fields=("cccd",), disposition="person_skipped"))
                     if person.is_head:
@@ -67,6 +83,11 @@ def apply_input_policy(households: list[Household], issues: list[ValidationIssue
         elif issue.source_row in skipped_people:
             issue = replace(issue, severity=Severity.WARNING if issue.severity == Severity.ERROR else issue.severity,
                             disposition="person_skipped")
+        elif issue.code in PERSON_SKIP_CODES:
+            issue = replace(issue, severity=Severity.WARNING if issue.severity == Severity.ERROR else issue.severity,
+                            disposition="row_skipped")
+        elif issue.code == "INVALID_PARCEL":
+            issue = replace(issue, severity=Severity.WARNING, disposition="row_skipped")
         elif issue.code == "ROW_WITHOUT_HOUSEHOLD":
             issue = replace(issue, severity=Severity.WARNING, disposition="row_skipped")
         updated.append(issue)

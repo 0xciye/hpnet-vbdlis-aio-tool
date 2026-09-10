@@ -20,32 +20,47 @@ class InputPolicyTests(unittest.TestCase):
         kept, issues, stats = apply_input_policy(households, issues, self.profile)
         return households, kept, issues, stats
 
-    def test_missing_cccd_discards_whole_household_and_keeps_next(self):
+    def test_missing_cccd_discards_only_bad_person_and_keeps_household(self):
         source, kept, issues, stats = self.run_policy([
             self.head(), {"_row": 3, "B": "Trần Thị B"}, self.head(4, 2)])
-        self.assertEqual([h.source_row for h in kept], [4])
-        self.assertEqual(stats["households_skipped"], 1)
-        self.assertEqual(stats["people_skipped"], 2)
+        self.assertEqual([h.source_row for h in kept], [2, 4])
+        self.assertEqual(stats["households_skipped"], 0)
+        self.assertEqual(stats["people_skipped"], 1)
         self.assertEqual(len(source[0].people), 2)
         self.assertFalse(any(i.severity == Severity.ERROR for i in issues))
         missing = next(i for i in issues if i.code == "MISSING_CCCD")
-        self.assertEqual(missing.disposition, "household_skipped")
+        self.assertEqual(missing.disposition, "person_skipped")
 
-    def test_missing_person_name_with_identity_discards_household(self):
+    def test_missing_person_name_with_identity_discards_only_bad_row(self):
         source, kept, issues, _ = self.run_policy([self.head(), {"_row": 3, "C": "031185001235"}])
-        self.assertEqual(kept, [])
+        self.assertEqual([h.source_row for h in kept], [2])
         self.assertIn("MISSING_PERSON_NAME", [i.code for i in issues])
+        self.assertEqual(next(i for i in issues if i.code == "MISSING_PERSON_NAME").disposition, "row_skipped")
+
+    def test_missing_head_cccd_discards_whole_household(self):
+        head = self.head()
+        head["C"] = None
+        _, kept, issues, stats = self.run_policy([head, {"_row": 3, "B": "Trần Thị B", "C": "031185001235"}])
+        self.assertEqual(kept, [])
+        self.assertEqual(stats["households_skipped"], 1)
         self.assertIn("HOUSEHOLD_SKIPPED", [i.code for i in issues])
 
-    def test_invalid_cccd_discards_only_person_and_keeps_original_roles(self):
+    def test_missing_head_name_discards_whole_household(self):
+        head = self.head()
+        head["B"] = None
+        _, kept, issues, stats = self.run_policy([head, {"_row": 3, "B": "Trần Thị B", "C": "031185001235"}])
+        self.assertEqual(kept, [])
+        self.assertEqual(stats["households_skipped"], 1)
+        self.assertIn("MISSING_PERSON_NAME", [i.code for i in issues])
+
+    def test_invalid_head_cccd_discards_whole_household(self):
         self.profile.invalid_cccd_action = "error"  # Automatic exclusion overrides strict CCCD setting.
         head = self.head()
         head["C"] = "bad"
         source, kept, issues, stats = self.run_policy([head, {"_row": 3, "B": "Trần Thị B", "C": "031185001235"}])
-        self.assertEqual([p.source_row for p in kept[0].people], [3])
-        self.assertFalse(kept[0].people[0].is_head)
-        self.assertEqual(stats["people_skipped_individually"], 1)
-        self.assertIn("HOUSEHOLD_HEAD_SKIPPED", [i.code for i in issues])
+        self.assertEqual(kept, [])
+        self.assertEqual(stats["households_skipped"], 1)
+        self.assertIn("HOUSEHOLD_SKIPPED", [i.code for i in issues])
         self.assertFalse(any(i.severity == Severity.ERROR for i in issues))
         self.assertEqual(len(source[0].people), 2)
 
@@ -58,14 +73,14 @@ class InputPolicyTests(unittest.TestCase):
         self.assertEqual(stats["parcels_skipped"], 1)
         self.assertTrue(any(i.code == "HOUSEHOLD_SKIPPED" for i in issues))
 
-    def test_one_incomplete_parcel_discards_entire_household(self):
+    def test_one_incomplete_parcel_discards_only_bad_parcel_row(self):
         for missing in ("E", "F", "G"):
             with self.subTest(missing=missing):
                 parcel = {"_row": 3, "E": 20, "F": 400, "G": 200}
                 parcel[missing] = None
                 _, kept, issues, stats = self.run_policy([self.head(), parcel, self.head(4, 2)])
-                self.assertEqual([h.source_row for h in kept], [4])
-                self.assertEqual(stats["households_skipped"], 1)
+                self.assertEqual([h.source_row for h in kept], [2, 4])
+                self.assertEqual(stats["households_skipped"], 0)
                 self.assertIn("INVALID_PARCEL", [i.code for i in issues])
 
     def test_continuation_rows_and_totals_do_not_trigger_false_exclusions(self):

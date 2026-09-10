@@ -25,9 +25,11 @@ def _mapped(row: dict[str, Any], mapping: dict[str, str], key: str) -> Any:
 def _summary_label(row: dict[str, Any], mapping: dict[str, str]) -> str:
     # Identity information is evidence of a person; keep such rows for normal
     # validation even if their name happens to resemble a total label.
+    name = _mapped(row, mapping, "person_name")
+    if normalize_whitespace(name).casefold() in {"tổng", "tong"}:
+        return normalize_whitespace(name)
     if any(not is_blank(_mapped(row, mapping, key)) for key in ("cccd", "birth_date")):
         return ""
-    name = _mapped(row, mapping, "person_name")
     stt = _mapped(row, mapping, "household_stt")
     if is_summary_label(name):
         return normalize_whitespace(name)
@@ -200,7 +202,7 @@ class HouseholdParser:
                     raw=dict(row),
                 )
                 current.people.append(person)
-            elif any(not is_blank(_mapped(row, mapping, key)) for key in ("cccd", "birth_date")):
+            elif starts_household or any(not is_blank(_mapped(row, mapping, key)) for key in ("cccd", "birth_date")):
                 issues.append(ValidationIssue(
                     Severity.ERROR, "MISSING_PERSON_NAME", "Dòng có CCCD/ngày sinh nhưng chưa có họ tên.",
                     source_row, current.household_id, source_fields=("person_name", "cccd", "birth_date")))

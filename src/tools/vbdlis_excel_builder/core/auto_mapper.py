@@ -9,7 +9,7 @@ from .source_reader import SourceColumn
 
 SYNONYMS: dict[str, tuple[str, ...]] = {
     "household_stt": ("stt", "số thứ tự", "stt hộ", "số hộ"),
-    "person_name": ("họ tên", "họ và tên", "tên chủ sử dụng", "chủ hộ", "họ tên chủ hộ"),
+    "person_name": ("họ tên", "họ và tên", "tên hộ", "tên chủ sử dụng", "chủ hộ", "họ tên chủ hộ"),
     "cccd": ("cccd", "căn cước", "số cccd", "số định danh cá nhân", "cmnd"),
     "birth_date": ("ngày sinh", "năm sinh", "ngày tháng năm sinh"),
     "gender": ("giới tính", "phái"),

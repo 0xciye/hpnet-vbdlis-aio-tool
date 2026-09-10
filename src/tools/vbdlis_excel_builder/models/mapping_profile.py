@@ -40,6 +40,7 @@ class MappingProfile:
     keep_reference_sheets: bool = False
     last_sheet: str = ""
     header_row: int = 1
+    header_row_2: int | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

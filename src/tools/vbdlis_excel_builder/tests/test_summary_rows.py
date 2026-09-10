@@ -16,13 +16,14 @@ class SummaryRowTests(unittest.TestCase):
                 "F": 10, "G": 300, "H": 100}
 
     def test_label_variants_and_real_names(self):
-        for label in ("TỔNG DT", "  tổng\u00a0DT: ", "Tong DT", "TỔNG D.T.",
-                      "Tổng diện tích", "TONG DIEN TICH", "Tổng DT (m²)",
-                      "Tổng cộng", "Cộng diện tích", unicodedata.normalize("NFD", "TỔNG DT")):
+        for label in ("Tổng", "tổng", "TỔNG", "Tổng DT", "tổng dt", "TỔNG DT",
+                      "  tổng\u00a0DT: ", "Tong DT", "TỔNG D.T.", "Tổng diện tích",
+                      "TONG DIEN TICH", "Tổng DT (m²)", "Tổng cộng",
+                      "Cộng diện tích", unicodedata.normalize("NFD", "TỔNG DT")):
             with self.subTest(label=label):
                 self.assertTrue(is_summary_label(label))
         for name in (None, "", "Tống Công", "Nguyễn Văn Tổng", "Tổng Văn An",
-                     "Lê Thị Cộng", "Tổng DT Nguyễn Văn A", "Tổng", "Cộng"):
+                     "Lê Thị Cộng", "Tổng DT Nguyễn Văn A", "Cộng"):
             with self.subTest(name=name):
                 self.assertFalse(is_summary_label(name))
 
@@ -79,6 +80,13 @@ class SummaryRowTests(unittest.TestCase):
                     [self.head(), {"_row": 3, "B": "Tổng cộng", **identity}], profile())
                 self.assertEqual(stats["people"], 2)
                 self.assertEqual(stats["summary_rows_skipped"], 0)
+
+    def test_exact_total_label_is_skipped_even_if_total_column_has_value(self):
+        rows = [self.head(), {"_row": 3, "B": "Tổng", "C": "6", "H": 500}]
+        households, issues, stats = HouseholdParser().parse(rows, profile())
+        self.assertEqual(stats["summary_rows_skipped"], 1)
+        self.assertEqual(stats["people"], 1)
+        self.assertEqual([i.code for i in issues], ["SUMMARY_ROW_SKIPPED"])
 
     def test_do_not_search_unrelated_columns_or_discard_named_people(self):
         rows = [self.head(), {"_row": 3, "A": "Tổng cộng", "B": "Nguyễn Văn Tổng",
