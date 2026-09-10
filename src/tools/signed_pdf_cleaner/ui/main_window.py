@@ -48,6 +48,32 @@ class Worker(QThread):
     def stop(self):
         self.is_running = False
 
+
+class ScanWorker(QThread):
+    progress = Signal(int, int)
+    completed = Signal(object)
+    error = Signal(str)
+
+    def __init__(self, scanner, folder, recursive, target_mode):
+        super().__init__()
+        self.scanner = scanner
+        self.folder = folder
+        self.recursive = recursive
+        self.target_mode = target_mode
+
+    def run(self):
+        try:
+            plans = self.scanner.scan_directory(
+                self.folder,
+                self.recursive,
+                self.target_mode,
+                progress_callback=lambda done, total: self.progress.emit(done, total),
+            )
+            self.completed.emit(plans)
+        except Exception as exc:
+            self.error.emit(str(exc))
+
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -68,6 +94,7 @@ class MainWindow(QMainWindow):
         
         self.plans = []
         self.worker = None
+        self.scan_worker = None
         self.settings_file = tool_settings_path("PDF Cleaner", SETTINGS_FILE, Path(base_dir), {"folder", "recursive", "delete_mode"})
         self.logger = AppLogger(str(tool_data_dir("PDF Cleaner") / "logs"))
         self.setup_ui()
@@ -258,14 +285,49 @@ class MainWindow(QMainWindow):
         except ValueError as exc:
             QMessageBox.warning(self, "Hậu tố không hợp lệ", str(exc))
             return
-        self.plans = scanner.scan_directory(folder, self.chk_recursive.isChecked(), target_mode)
-        
+        self.plans = []
+        self.table.setRowCount(0)
+        self.btn_scan.setEnabled(False)
+        self.btn_process.setEnabled(False)
+        self.btn_export.setEnabled(False)
+        self.cmb_target_mode.setEnabled(False)
+        self.progress_bar.setVisible(True)
+        self.progress_bar.setRange(0, 1)
+        self.progress_bar.setValue(0)
+        self.lbl_stats.setText("Đang quét: 0 file...")
+
+        self.scan_worker = ScanWorker(scanner, folder, self.chk_recursive.isChecked(), target_mode)
+        self.scan_worker.progress.connect(self.on_scan_progress)
+        self.scan_worker.completed.connect(self.on_scan_finished)
+        self.scan_worker.error.connect(self.on_scan_error)
+        self.scan_worker.finished.connect(self.on_scan_thread_finished)
+        self.scan_worker.start()
+
+    def on_scan_progress(self, done, total):
+        total = max(total, 1)
+        self.progress_bar.setMaximum(total)
+        self.progress_bar.setValue(min(done, total))
+        percent = min(100, int(done * 100 / total)) if total else 100
+        self.lbl_stats.setText(f"Đang quét: {done}/{total} file ({percent}%)")
+
+    def on_scan_finished(self, plans):
+        self.plans = plans
         self.update_table()
         self.update_stats()
-        
         has_ready = any(p.status == ProcessStatus.READY for p in self.plans)
         self.btn_process.setEnabled(has_ready)
-        self.btn_export.setEnabled(len(self.plans) > 0)
+        self.btn_export.setEnabled(bool(self.plans))
+        self.progress_bar.setValue(self.progress_bar.maximum())
+
+    def on_scan_error(self, message):
+        self.lbl_stats.setText(f"Lỗi khi quét: {message}")
+        QMessageBox.warning(self, "Lỗi quét", message)
+
+    def on_scan_thread_finished(self):
+        self.btn_scan.setEnabled(True)
+        self.cmb_target_mode.setEnabled(True)
+        self.progress_bar.setVisible(False)
+        self.scan_worker = None
 
     def update_table(self):
         self.table.setRowCount(0)

@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List, Sequence, Union
+from typing import Callable, List, Sequence, Union
 from pypdf import PdfReader
 from tools.signed_pdf_cleaner.core.models import FileActionPlan, ActionType, ProcessStatus
 
@@ -79,7 +79,13 @@ class FileScanner:
         except Exception:
             return False
 
-    def scan_directory(self, folder_path: str, recursive: bool = False, target_mode: str = TARGET_ALL) -> List[FileActionPlan]:
+    def scan_directory(
+        self,
+        folder_path: str,
+        recursive: bool = False,
+        target_mode: str = TARGET_ALL,
+        progress_callback: Callable[[int, int], None] | None = None,
+    ) -> List[FileActionPlan]:
         if target_mode not in {TARGET_ALL, TARGET_PAIRS, TARGET_ORPHAN_SIGNED}:
             raise ValueError(f"Mục tiêu xử lý không hợp lệ: {target_mode}")
         plans = []
@@ -93,30 +99,50 @@ class FileScanner:
         if recursive:
             directories.extend([d for d in base_path.rglob("*") if d.is_dir()])
             
-        for current_dir in directories:
+        file_lists = [(current_dir, self._valid_files(current_dir)) for current_dir in directories]
+        total_files = sum(len(files) for _, files in file_lists)
+        if progress_callback:
+            progress_callback(0, total_files)
+
+        completed_files = 0
+        for current_dir, valid_files in file_lists:
             # We process files per directory (no cross-directory matching)
-            plans.extend(self._process_single_directory(current_dir, target_mode))
+            directory_completed = [completed_files]
+            def report_file_done():
+                directory_completed[0] += 1
+                if progress_callback:
+                    progress_callback(directory_completed[0], total_files)
+
+            plans.extend(self._process_single_directory(
+                current_dir, target_mode, valid_files,
+                report_file_done,
+            ))
+            completed_files = directory_completed[0]
             
         return plans
 
-    def _process_single_directory(self, directory: Path, target_mode: str = TARGET_ALL) -> List[FileActionPlan]:
-        plans = []
-        # Get all files, ignore dirs
+    @staticmethod
+    def _valid_files(directory: Path) -> List[Path]:
         try:
             files = [f for f in directory.iterdir() if f.is_file()]
         except PermissionError:
-            return plans
+            return []
+        return [
+            f for f in files
+            if not f.name.startswith('~$')
+            and not f.name.endswith(('.tmp', '.crdownload', '.part'))
+            and f.name.lower().endswith('.pdf')
+        ]
 
-        # Filter out hidden/temp files (basic check)
-        valid_files = []
-        for f in files:
-            name = f.name
-            if name.startswith('~$') or name.endswith('.tmp') or name.endswith('.crdownload') or name.endswith('.part'):
-                continue
-            # Also only process PDFs based on rules, but wait, if it's not a pdf we just ignore
-            if not name.lower().endswith('.pdf'):
-                continue
-            valid_files.append(f)
+    def _process_single_directory(
+        self,
+        directory: Path,
+        target_mode: str = TARGET_ALL,
+        valid_files: List[Path] | None = None,
+        on_file_processed: Callable[[], None] | None = None,
+    ) -> List[FileActionPlan]:
+        plans = []
+        valid_files = valid_files if valid_files is not None else self._valid_files(directory)
 
         # Separate signed and all pdfs
         signed_files = []
@@ -156,6 +182,8 @@ class FileScanner:
                     status=ProcessStatus.WARNING,
                     warning_message="Tên file có nhiều hậu tố đã cấu hình, cần kiểm tra lại"
                 ))
+                if on_file_processed:
+                    on_file_processed()
                 continue
 
             if self.validate_signatures and not self.has_embedded_signature(signed_f):
@@ -167,6 +195,8 @@ class FileScanner:
                     status=ProcessStatus.WARNING,
                     warning_message="File có hậu tố đã cấu hình nhưng không tìm thấy cấu trúc chữ ký số trong PDF"
                 ))
+                if on_file_processed:
+                    on_file_processed()
                 continue
 
             target_path = directory / target_name
@@ -176,8 +206,12 @@ class FileScanner:
             unsigned_f = all_pdfs.get(delete_name.lower())
 
             if target_mode == TARGET_PAIRS and unsigned_f is None:
+                if on_file_processed:
+                    on_file_processed()
                 continue
             if target_mode == TARGET_ORPHAN_SIGNED and unsigned_f is not None:
+                if on_file_processed:
+                    on_file_processed()
                 continue
 
             if unsigned_f:
@@ -197,10 +231,16 @@ class FileScanner:
                     action=ActionType.RENAME_SIGNED,
                     status=ProcessStatus.READY
                 ))
+            if on_file_processed:
+                on_file_processed()
 
         # Now handle unsigned only
         for f in valid_files:
+            if f in signed_files:
+                continue
             if target_mode == TARGET_ORPHAN_SIGNED:
+                if on_file_processed:
+                    on_file_processed()
                 continue
             if f not in matched_unsigned and f not in signed_files:
                 plans.append(FileActionPlan(
@@ -211,5 +251,7 @@ class FileScanner:
                     status=ProcessStatus.SKIPPED,
                     warning_message="Bỏ qua - không có bản đã ký tương ứng."
                 ))
+            if on_file_processed:
+                on_file_processed()
 
         return plans

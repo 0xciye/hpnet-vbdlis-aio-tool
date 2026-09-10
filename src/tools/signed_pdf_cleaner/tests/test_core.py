@@ -160,6 +160,21 @@ def test_signed_suffix_cannot_be_plain_pdf():
     with pytest.raises(ValueError, match="phải có phần đứng trước"):
         FileScanner(validate_signatures=False, signed_suffix=".pdf")
 
+
+def test_scan_progress_reports_each_pdf(temp_dir):
+    create_file(temp_dir, "A.pdf", "UNSIGNED")
+    create_file(temp_dir, "A.signed.pdf", "SIGNED")
+    create_file(temp_dir, "note.txt", "IGNORED")
+    progress = []
+
+    FileScanner(validate_signatures=False).scan_directory(
+        str(temp_dir),
+        progress_callback=lambda done, total: progress.append((done, total)),
+    )
+
+    assert progress[0] == (0, 2)
+    assert progress[-1] == (2, 2)
+
 def test_5_complex_names(temp_dir):
     # CHUACOGIAY_10930_10_300-TBXN
     n1 = "CHUACOGIAY_10930_10_300-TBXN"

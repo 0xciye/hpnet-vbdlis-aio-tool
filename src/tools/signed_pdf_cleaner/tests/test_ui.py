@@ -39,3 +39,11 @@ def test_orphan_mode_only_shows_suffix_removal_controls(window):
     assert window.btn_process.text() == "Xóa hậu tố"
     assert window.plans == []
     assert not window.btn_process.isEnabled()
+
+
+def test_scan_progress_updates_percent_and_count(window):
+    window.on_scan_progress(3, 10)
+    assert window.progress_bar.maximum() == 10
+    assert window.progress_bar.value() == 3
+    assert "3/10" in window.lbl_stats.text()
+    assert "30%" in window.lbl_stats.text()
