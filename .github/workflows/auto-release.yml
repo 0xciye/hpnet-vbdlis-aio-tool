@@ -14,9 +14,12 @@ concurrency:
 
 jobs:
   release:
+    if: ${{ github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[skip release]') }}
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
@@ -49,10 +52,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $versions = @(gh api "repos/$env:GITHUB_REPOSITORY/releases?per_page=100" --jq '.[].tag_name' |
-            Where-Object { $_ -match '^v\d+\.\d+\.\d+$' } |
-            ForEach-Object { [version]$_.Substring(1) })
-          $latest = $versions | Sort-Object -Descending | Select-Object -First 1
+          $releaseTags = @(gh api "repos/$env:GITHUB_REPOSITORY/releases?per_page=100" --jq '.[].tag_name' |
+            Where-Object { $_ -match '^v\d+\.\d+\.\d+$' })
+          $latestTag = $releaseTags |
+            Sort-Object { [version]$_.Substring(1) } -Descending |
+            Select-Object -First 1
+          $latest = if ($latestTag) { [version]$latestTag.Substring(1) } else { $null }
           # Transition the existing 1.2 line to the requested v1.3.0 release.
           $releaseId = if (-not $latest -or $latest -lt [version]'1.3.0') {
             'v1.3.0'
@@ -60,6 +65,7 @@ jobs:
             "v$($latest.Major).$($latest.Minor).$($latest.Build + 1)"
           }
           "RELEASE_ID=$releaseId" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "PREVIOUS_RELEASE_TAG=$latestTag" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Build and verify release
         shell: pwsh
@@ -83,20 +89,17 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          $notesPath = Join-Path $env:RUNNER_TEMP 'hpnet-release-notes.md'
+          $notes = @('## Thay đổi', '')
+          if ($env:PREVIOUS_RELEASE_TAG) {
+            $subjects = @(git log --pretty=format:'- %s' "$env:PREVIOUS_RELEASE_TAG..$env:GITHUB_SHA")
+            if ($subjects.Count) { $notes += $subjects }
+          }
+          if ($notes.Count -eq 2) { $notes += "- Cập nhật từ commit $env:GITHUB_SHA." }
+          $notes | Set-Content -LiteralPath $notesPath -Encoding utf8
           gh release create $env:RELEASE_ID `
             'release\HPNet VBDLIS AIO Tool.zip' `
             'release\HPNet VBDLIS AIO Tool.zip.sha256' `
             --repo $env:GITHUB_REPOSITORY --target $env:GITHUB_SHA `
             --title "HPNet VBDLIS AIO Tool $env:RELEASE_ID" `
-            --generate-notes --latest
-
-      - name: Keep only latest release
-        shell: pwsh
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          $oldTags = @(gh api "repos/$env:GITHUB_REPOSITORY/releases?per_page=100" --jq '.[].tag_name' |
-            Where-Object { $_ -ne $env:RELEASE_ID })
-          foreach ($tag in $oldTags) {
-            gh release delete $tag --repo $env:GITHUB_REPOSITORY --yes --cleanup-tag
-          }
+            --notes-file $notesPath --latest
