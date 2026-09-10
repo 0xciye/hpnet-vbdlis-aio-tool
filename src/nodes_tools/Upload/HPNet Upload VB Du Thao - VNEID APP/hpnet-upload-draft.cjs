@@ -308,11 +308,8 @@ async function submitOne(page, context, file, abstract, reviewerLevel1, reupload
   let updateStarted = false;
   try {
     const createButton = page.locator("a.btn.btn-danger", { hasText: "Dự thảo VB" }).first();
-    // Giữ lại trang danh sách sau lần upload trước. Chỉ tải lại khi phiên
-    // đăng nhập vừa chuyển sang trang khác hoặc nút tạo văn bản không còn.
-    if (!(await createButton.isVisible().catch(() => false))) {
-      await page.goto(MAIN_URL, { waitUntil: "domcontentloaded", timeout: 60000 });
-    }
+    // Giữ nguyên luồng ổn định: tải lại trang danh sách trước mỗi file.
+    await page.goto(MAIN_URL, { waitUntil: "domcontentloaded", timeout: 60000 });
     await createButton.waitFor({ state: "visible", timeout: 30000 });
     await createButton.click();
 
