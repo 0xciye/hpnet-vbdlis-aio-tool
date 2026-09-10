@@ -106,8 +106,10 @@ class ExportPage(QWidget):
         # Thanh tiến trình & thống kê
         self.progress = QProgressBar()
         self.progress.setVisible(False)
-        self.progress.setFixedHeight(8)
-        self.progress.setTextVisible(False)
+        self.progress.setFixedHeight(20)
+        self.progress.setTextVisible(True)
+        self.progress.setAlignment(Qt.AlignCenter)
+        self.progress.setFormat("%p%")
 
         self.stats = QLabel("Chưa kiểm tra dữ liệu.")
         self.stats.setWordWrap(True)
@@ -180,11 +182,18 @@ class ExportPage(QWidget):
         self.open_log_folder.setEnabled(not busy and bool(self.log_paths))
         self.progress.setVisible(busy)
         if busy:
-            self.progress.setRange(0, 0)
+            self.progress.setRange(0, 100)
+            self.progress.setValue(0)
             if text:
-                self.stats.setText(f"⏳  {text}")
+                self.stats.setText(f"⏳  {text} (0%)")
         else:
             self.progress.setRange(0, 100)
+
+    def set_progress(self, value: int, text: str = "") -> None:
+        value = max(0, min(100, int(value)))
+        self.progress.setValue(value)
+        if text:
+            self.stats.setText(f"⏳  {text} ({value}%)")
 
     def set_diagnostic_files(self, files) -> None:
         self.log_paths = list(files.paths)

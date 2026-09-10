@@ -51,16 +51,36 @@ class IntegrationExportTests(unittest.TestCase):
                     "gcn_issue_number": "I",
                 },
             )
-            result = service.process(source, "Du lieu", 1, profile)
+            process_progress = []
+            result = service.process(
+                source,
+                "Du lieu",
+                1,
+                profile,
+                progress=lambda value, message: process_progress.append((value, message)),
+            )
             self.assertTrue(result.can_export, [issue.to_dict() for issue in result.issues])
             self.assertEqual(result.stats["output_rows"], 4)
             self.assertEqual(result.stats["people"], 2)
             self.assertEqual(result.stats["summary_rows_skipped"], 1)
-            output, report, verification = service.export(result, profile, temp, "ket_qua.xlsx")
+            export_progress = []
+            output, report, verification = service.export(
+                result,
+                profile,
+                temp,
+                "ket_qua.xlsx",
+                progress=lambda value, message: export_progress.append((value, message)),
+            )
             self.assertTrue(verification["pass"])
             self.assertTrue(output.exists())
             self.assertIsNotNone(report)
             self.assertTrue(report.exists())
+            self.assertEqual(process_progress[-1][0], 65)
+            self.assertEqual(export_progress[-1][0], 100)
+            self.assertEqual(
+                [value for value, _ in export_progress],
+                sorted(value for value, _ in export_progress),
+            )
             produced = load_workbook(output, read_only=False)
             self.assertEqual([produced.active[f"K{row}"].value for row in range(5, 9)],
                              ["Nam", "Nữ", "Nam", "Nữ"])
@@ -78,6 +98,25 @@ class IntegrationExportTests(unittest.TestCase):
             summary = dict(report_wb["Tong_quan"].iter_rows(min_row=2, max_col=2, values_only=True))
             self.assertEqual(summary["Số dòng tổng hợp đã bỏ qua"], 1)
             report_wb.close()
+
+    def test_export_page_shows_percentage_progress(self):
+        from PySide6.QtWidgets import QApplication
+
+        from tools.vbdlis_excel_builder.ui.export_page import ExportPage
+
+        app = QApplication.instance() or QApplication(["vbdlis-progress-test", "-platform", "offscreen"])
+        page = ExportPage()
+        page.show()
+        page.set_busy(True, "Đang tạo file VBDLIS")
+        page.set_progress(42, "Đang ghi dữ liệu")
+        app.processEvents()
+
+        self.assertTrue(page.progress.isTextVisible())
+        self.assertEqual((page.progress.minimum(), page.progress.maximum()), (0, 100))
+        self.assertEqual(page.progress.value(), 42)
+        self.assertEqual(page.progress.format(), "%p%")
+        self.assertIn("42%", page.stats.text())
+        page.close()
 
 
 if __name__ == "__main__":

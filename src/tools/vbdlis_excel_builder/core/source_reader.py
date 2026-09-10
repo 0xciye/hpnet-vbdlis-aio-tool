@@ -126,21 +126,40 @@ class SourceReader:
         header_row: int,
         max_rows: int | None = None,
         header_row_2: int | None = None,
+        formula_presence_columns: set[str] | None = None,
     ) -> list[dict[str, Any]]:
         workbook = load_workbook(path, read_only=True, data_only=True)
+        formula_workbook = None
         try:
             ws = workbook[sheet_name]
+            formula_columns = {column.upper() for column in (formula_presence_columns or set()) if column}
+            formula_rows = None
+            if formula_columns:
+                formula_workbook = load_workbook(path, read_only=True, data_only=False)
+                formula_ws = formula_workbook[sheet_name]
             header_values = self._header_values(ws, header_row, header_row_2)
             data_start = max(header_row, header_row_2 or header_row) + 1
+            if formula_columns:
+                formula_rows = formula_ws.iter_rows(min_row=data_start, values_only=True)
             result: list[dict[str, Any]] = []
             for offset, values in enumerate(
                 ws.iter_rows(min_row=data_start, values_only=True), start=data_start
             ):
                 if max_rows is not None and len(result) >= max_rows:
                     break
-                if not any(value is not None and str(value).strip() for value in values):
+                formula_values = next(formula_rows) if formula_rows is not None else ()
+                formula_cells = tuple(
+                    get_column_letter(index)
+                    for index, value in enumerate(formula_values, 1)
+                    if get_column_letter(index) in formula_columns
+                    and isinstance(value, str)
+                    and value.startswith("=")
+                )
+                if not formula_cells and not any(value is not None and str(value).strip() for value in values):
                     continue
                 row: dict[str, Any] = {"_row": offset}
+                if formula_cells:
+                    row["_formula_cells"] = formula_cells
                 for index, value in enumerate(values, 1):
                     letter = get_column_letter(index)
                     row[letter] = value
@@ -152,3 +171,5 @@ class SourceReader:
             return result
         finally:
             workbook.close()
+            if formula_workbook is not None:
+                formula_workbook.close()

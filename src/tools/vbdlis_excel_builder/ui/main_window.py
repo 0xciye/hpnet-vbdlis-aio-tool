@@ -34,10 +34,11 @@ from .settings_page import SettingsPage
 class WorkerSignals(QObject):
     finished = Signal(object)
     failed = Signal(object)
+    progress = Signal(int, str)
 
 
 class TaskWorker(QRunnable):
-    def __init__(self, function: Callable[[], Any]):
+    def __init__(self, function: Callable[[Callable[[int, str], None]], Any]):
         super().__init__()
         self.function = function
         self.signals = WorkerSignals()
@@ -45,7 +46,7 @@ class TaskWorker(QRunnable):
     @Slot()
     def run(self) -> None:
         try:
-            self.signals.finished.emit(self.function())
+            self.signals.finished.emit(self.function(self.signals.progress.emit))
         except Exception as exc:  # UI boundary: log full traceback, show concise error.
             logging.exception("Background task failed")
             self.signals.failed.emit(exc)
@@ -251,7 +252,7 @@ class MainWindow(QMainWindow):
             profile,
         )
 
-    def _process_sync(self, parameters):
+    def _process_sync(self, parameters, progress=None):
         path, sheet, header_row, header_row_2, profile = parameters
         return self.service.process(
             path,
@@ -259,15 +260,18 @@ class MainWindow(QMainWindow):
             header_row,
             profile,
             header_row_2,
+            progress,
         )
 
-    def _run_worker(self, function: Callable[[], Any], finished: Callable[[Any], None], message: str) -> None:
+    def _run_worker(self, function: Callable[[Callable[[int, str], None]], Any],
+                    finished: Callable[[Any], None], message: str) -> None:
         self.current_result = None
         self.export_page.set_diagnostic_files(DiagnosticFiles())
         self.export_page.set_busy(True, message)
         worker = TaskWorker(function)
         worker.signals.finished.connect(lambda value: self._worker_finished(value, finished))
         worker.signals.failed.connect(self._worker_failed)
+        worker.signals.progress.connect(self.export_page.set_progress)
         self.thread_pool.start(worker)
 
     def _worker_finished(self, value: Any, callback: Callable[[Any], None]) -> None:
@@ -301,14 +305,14 @@ class MainWindow(QMainWindow):
             return
         if action in {"validate", "preview"}:
             self._run_worker(
-                lambda: self._process_sync(parameters),
+                lambda progress: self._process_sync(parameters, progress),
                 self._show_process_result,
                 "Đang phân tích, biến đổi và kiểm tra dữ liệu…",
             )
             return
 
-        def export_task():
-            result = self._process_sync(parameters)
+        def export_task(progress):
+            result = self._process_sync(parameters, progress)
             if not result.can_export:
                 return (result, None)
             profile = parameters[4]
@@ -319,6 +323,7 @@ class MainWindow(QMainWindow):
                 profile,
                 profile.output_folder,
                 profile.output_filename,
+                progress,
             )
             return (result, exported)
 

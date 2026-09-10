@@ -131,7 +131,11 @@ class HouseholdParser:
                 )
                 continue
             household_value = _mapped(row, mapping, "household_stt")
-            starts_household = not is_blank(household_value)
+            household_column = mapping.get("household_stt", "").upper()
+            starts_household = (
+                not is_blank(household_value)
+                or household_column in row.get("_formula_cells", ())
+            )
             if not profile.household_mode:
                 starts_household = True
                 household_value = source_row

@@ -4,7 +4,7 @@ import logging
 from copy import deepcopy
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from tools.vbdlis_excel_builder.models import FieldSchema, Household, MappingProfile, Severity, ValidationIssue
 
@@ -72,18 +72,30 @@ class BuilderService:
         header_row: int,
         profile: MappingProfile,
         header_row_2: int | None = None,
+        progress: Callable[[int, str], None] | None = None,
     ) -> ProcessResult:
+        notify = progress or (lambda _value, _message: None)
         context = DiagnosticContext(str(Path(source_path).resolve()), sheet_name, header_row,
                                     deepcopy(profile), schemas=self.schemas)
         issues: list[ValidationIssue] = []
         stats: dict[str, Any] = {}
         stage = "Kiểm tra cấu hình"
         try:
+            notify(5, stage)
             issues = self.validator.validate_profile(profile)
             stage = "Đọc dữ liệu nguồn"
+            notify(10, stage)
             context.columns = self.source_reader.headers(source_path, sheet_name, header_row, header_row_2)
-            context.source_rows = self.source_reader.read_rows(source_path, sheet_name, header_row, header_row_2=header_row_2)
+            household_column = profile.source_mapping.get("household_stt", "")
+            context.source_rows = self.source_reader.read_rows(
+                source_path,
+                sheet_name,
+                header_row,
+                header_row_2=header_row_2,
+                formula_presence_columns={household_column} if household_column else None,
+            )
             stage = "Nhận diện hộ, người và thửa"
+            notify(30, stage)
             households, parse_issues, base_stats = self.household_parser.parse(context.source_rows, profile)
             context.households = households
             households, parse_issues, policy_stats = apply_input_policy(households, parse_issues, profile)
@@ -91,11 +103,13 @@ class BuilderService:
             stats.update(base_stats)
             stats.update(policy_stats)
             stage = "Tạo dữ liệu kết quả theo quy tắc"
+            notify(45, stage)
             transformed, transform_issues, transform_stats = self.transform_engine.transform(households, self.schemas, profile)
             context.output_rows = transformed
             issues.extend(transform_issues)
             stats.update(transform_stats)
             stage = "Kiểm tra các trường kết quả"
+            notify(60, stage)
             issues.extend(self.validator.validate_output(transformed, self.schemas, profile))
             if not transformed:
                 issues.append(ValidationIssue(Severity.ERROR, "NO_OUTPUT_ROWS", "Chưa có người và thửa đủ điều kiện để tạo dòng kết quả."))
@@ -104,6 +118,7 @@ class BuilderService:
         stats["errors"] = sum(issue.severity == Severity.ERROR for issue in issues)
         stats["warnings"] = sum(issue.severity == Severity.WARNING for issue in issues)
         stats["info"] = sum(issue.severity == Severity.INFO for issue in issues)
+        notify(65, "Đã xử lý và kiểm tra dữ liệu")
         logging.info(
             "Processed source=%s sheet=%s profile=%s stats=%s",
             source_path,
@@ -131,11 +146,12 @@ class BuilderService:
         profile: MappingProfile,
         output_folder: str | Path,
         output_filename: str,
+        progress: Callable[[int, str], None] | None = None,
     ) -> tuple[Path, Path | None, dict[str, Any]]:
         context = result.diagnostic_context or DiagnosticContext(profile=deepcopy(profile), schemas=self.schemas,
                                                                  households=result.households, output_rows=result.rows)
         try:
-            exported = self._export(result, profile, output_folder, output_filename)
+            exported = self._export(result, profile, output_folder, output_filename, progress)
         except Exception as exc:
             failure = self.failure(exc, context, "Xuất file VBDLIS", result.issues, result.stats)
             result.diagnostic_files = failure.diagnostic_files
@@ -146,7 +162,9 @@ class BuilderService:
         return exported
 
     def _export(self, result: ProcessResult, profile: MappingProfile, output_folder: str | Path,
-                output_filename: str) -> tuple[Path, Path | None, dict[str, Any]]:
+                output_filename: str,
+                progress: Callable[[int, str], None] | None = None) -> tuple[Path, Path | None, dict[str, Any]]:
+        notify = progress or (lambda _value, _message: None)
         if not result.can_export:
             raise ValueError("Dữ liệu còn lỗi hoặc chưa có dòng kết quả; chưa thể xuất.")
         output_path, verification = self.writer.write(
@@ -155,11 +173,13 @@ class BuilderService:
             profile,
             output_folder,
             output_filename,
+            progress=progress,
         )
         if not verification.get("pass"):
             raise RuntimeError(f"Kiểm tra sau khi lưu không đạt: {verification}")
         report_path = None
         if profile.export_audit_report:
+            notify(98, "Đang tạo báo cáo kiểm tra")
             report_path = output_path.with_name(f"{output_path.stem}_bao_cao_kiem_tra.xlsx")
             self.report_writer.write(
                 report_path,
@@ -171,4 +191,5 @@ class BuilderService:
                 diagnostic_context=result.diagnostic_context,
             )
         logging.info("Exported output=%s report=%s", output_path, report_path)
+        notify(100, "Đã tạo xong file VBDLIS")
         return output_path, report_path, verification

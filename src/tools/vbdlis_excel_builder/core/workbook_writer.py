@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 from copy import copy
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from openpyxl import load_workbook
 from openpyxl.utils import column_index_from_string
@@ -80,9 +80,12 @@ class WorkbookWriter:
         output_folder: str | Path,
         output_filename: str,
         overwrite: bool = False,
+        progress: Callable[[int, str], None] | None = None,
     ) -> tuple[Path, dict[str, Any]]:
+        notify = progress or (lambda _value, _message: None)
         if not self.template_path.exists():
             raise FileNotFoundError(f"Không tìm thấy template: {self.template_path}")
+        notify(68, "Đang chuẩn bị file mẫu VBDLIS")
         template_hash_before = _sha256(self.template_path)
         output_path = unique_output_path(output_folder, output_filename, overwrite)
         workbook = load_workbook(self.template_path, data_only=False)
@@ -94,7 +97,11 @@ class WorkbookWriter:
         if main_ws.max_row > item_row:
             main_ws.delete_rows(item_row + 1, main_ws.max_row - item_row)
 
-        for index, row in enumerate(rows, start=item_row + 1):
+        total_rows = len(rows)
+        last_percent = -1
+        for completed, (index, row) in enumerate(
+            enumerate(rows, start=item_row + 1), start=1
+        ):
             self._copy_row_style(style_ws, style_row, main_ws, index, max_col)
             for schema in schemas:
                 cell = main_ws[f"{schema.column}{index}"]
@@ -102,17 +109,24 @@ class WorkbookWriter:
                 cell.value = None if value == "" else value
                 if schema.column in TEXT_COLUMNS:
                     cell.number_format = "@"
+            percent = 70 + (18 * completed // max(total_rows, 1))
+            if percent != last_percent:
+                notify(percent, f"Đang ghi dòng {completed:,}/{total_rows:,}")
+                last_percent = percent
 
         if not profile.keep_reference_sheets:
             for ws in list(workbook.worksheets):
                 if ws.title != main_ws.title:
                     workbook.remove(ws)
 
+        notify(90, "Đang căn chỉnh độ rộng cột")
         self._fit_column_widths(main_ws, schemas, item_row + 1, item_row + len(rows))
+        notify(94, "Đang lưu file Excel")
         workbook.save(output_path)
         workbook.close()
         if _sha256(self.template_path) != template_hash_before:
             raise RuntimeError("Template gốc đã thay đổi ngoài ý muốn.")
+        notify(96, "Đang kiểm tra file sau khi lưu")
         verification = self.verify(output_path, len(rows), main_ws.title, item_row)
         return output_path, verification
 
