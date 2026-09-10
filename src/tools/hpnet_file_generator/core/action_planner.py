@@ -15,6 +15,7 @@ class ActionPlanner:
     def build_plan(self) -> List[GenerationAction]:
         actions = []
         target_map = {} # target_path: Action to detect conflicts
+        reserved_conflict_paths = set()
 
         for sf in self.source_files:
             if sf.is_ambiguous:
@@ -26,7 +27,7 @@ class ActionPlanner:
                     target_filename="",
                     target_path=Path(""),
                     status=ActionStatus.WARNING,
-                    reason="Ambiguous person match"
+                    reason=sf.match_issue or "Không thể xác định duy nhất người trong Excel"
                 ))
                 continue
                 
@@ -38,7 +39,7 @@ class ActionPlanner:
                     target_filename="",
                     target_path=Path(""),
                     status=ActionStatus.WARNING,
-                    reason="Không tìm thấy tên trong Excel"
+                    reason=sf.match_issue or "Không tìm thấy tên trong Excel"
                 ))
                 continue
                 
@@ -76,7 +77,8 @@ class ActionPlanner:
                         # Existing action generated same path!
                         action.status = ActionStatus.CONFLICT
                         action.reason = "Trùng tên file được tạo ra bởi người khác"
-                        action.conflict_path = get_unique_path(target_path, self.conflict_folder)
+                        action.conflict_path = get_unique_path(target_path, self.conflict_folder, reserved_conflict_paths)
+                        reserved_conflict_paths.add(action.conflict_path)
                         
                         # Also mark the original action as conflict if it's the first time we see the clash
                         # Actually, no, the first action will successfully copy to normal output
@@ -86,7 +88,8 @@ class ActionPlanner:
                         # File already exists on disk
                         action.status = ActionStatus.CONFLICT
                         action.reason = "File đích đã tồn tại trên ổ cứng"
-                        action.conflict_path = get_unique_path(target_path, self.conflict_folder)
+                        action.conflict_path = get_unique_path(target_path, self.conflict_folder, reserved_conflict_paths)
+                        reserved_conflict_paths.add(action.conflict_path)
                     else:
                         action.status = ActionStatus.READY
                         target_map[target_path] = action

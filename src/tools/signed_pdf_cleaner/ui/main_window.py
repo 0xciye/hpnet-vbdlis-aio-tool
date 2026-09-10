@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtGui import QColor, QIcon
 
-from tools.signed_pdf_cleaner.core.scanner import FileScanner
+from tools.signed_pdf_cleaner.core.scanner import FileScanner, TARGET_ALL, TARGET_PAIRS, TARGET_ORPHAN_SIGNED
 from tools.signed_pdf_cleaner.core.processor import FileProcessor
 from tools.signed_pdf_cleaner.utils.logger import AppLogger
 from tools.signed_pdf_cleaner.core.models import FileActionPlan, ActionType, ProcessStatus
@@ -110,6 +110,16 @@ class MainWindow(QMainWindow):
         options_layout.addStretch()
         main_layout.addLayout(options_layout)
 
+        target_layout = QHBoxLayout()
+        target_layout.addWidget(QLabel("Mục tiêu xử lý:"))
+        self.cmb_target_mode = QComboBox()
+        self.cmb_target_mode.addItem("Cả cặp và file ký đơn độc", TARGET_ALL)
+        self.cmb_target_mode.addItem("Chỉ cặp có file gốc + file ký", TARGET_PAIRS)
+        self.cmb_target_mode.addItem("Chỉ file ký không có file gốc: xóa hậu tố", TARGET_ORPHAN_SIGNED)
+        self.cmb_target_mode.setToolTip("Chọn riêng quy trình mới: đổi file ký đơn độc về tên PDF không còn hậu tố.")
+        target_layout.addWidget(self.cmb_target_mode, 1)
+        main_layout.addLayout(target_layout)
+
         suffix_hint = QLabel("Nhiều hậu tố cách nhau bằng dấu phẩy. Ví dụ: xóa .signed, .ldsigned | đổi tên .signed.signed, .ldsigned.signed → kết quả chỉ còn tên gốc.pdf")
         suffix_hint.setWordWrap(True)
         suffix_hint.setStyleSheet("color: #64748b; font-size: 11px;")
@@ -158,6 +168,9 @@ class MainWindow(QMainWindow):
                     self.cmb_delete_mode.setCurrentIndex(settings.get('delete_mode', 0))
                     self.txt_delete_suffix.setText(settings.get('delete_suffix', '.pdf'))
                     self.txt_signed_suffix.setText(settings.get('signed_suffix', '.signed.pdf'))
+                    target_mode = settings.get('target_mode', TARGET_ALL)
+                    index = self.cmb_target_mode.findData(target_mode)
+                    self.cmb_target_mode.setCurrentIndex(index if index >= 0 else 0)
             except:
                 pass
 
@@ -167,7 +180,8 @@ class MainWindow(QMainWindow):
             'recursive': self.chk_recursive.isChecked(),
             'delete_mode': self.cmb_delete_mode.currentIndex(),
             'delete_suffix': self.txt_delete_suffix.text(),
-            'signed_suffix': self.txt_signed_suffix.text()
+            'signed_suffix': self.txt_signed_suffix.text(),
+            'target_mode': self.cmb_target_mode.currentData()
         }
         with self.settings_file.open('w', encoding='utf-8') as f:
             json.dump(settings, f)
@@ -205,7 +219,7 @@ class MainWindow(QMainWindow):
         except ValueError as exc:
             QMessageBox.warning(self, "Hậu tố không hợp lệ", str(exc))
             return
-        self.plans = scanner.scan_directory(folder, self.chk_recursive.isChecked())
+        self.plans = scanner.scan_directory(folder, self.chk_recursive.isChecked(), self.cmb_target_mode.currentData())
         
         self.update_table()
         self.update_stats()

@@ -1,4 +1,5 @@
 from collections import Counter
+import re
 from typing import List, Dict
 
 import openpyxl
@@ -11,11 +12,13 @@ class ExcelReader:
     def __init__(self, file_path: str):
         self.file_path = file_path
         self.wb = None
+        self.formula_wb = None
         self.sheet_names = []
 
     def load(self):
         # Dùng workbook thường để đọc được vị trí ô gộp trong phần tiêu đề.
         self.wb = openpyxl.load_workbook(self.file_path, data_only=True, read_only=False)
+        self.formula_wb = openpyxl.load_workbook(self.file_path, data_only=False, read_only=False)
         self.sheet_names = self.wb.sheetnames
 
     def _merged_value(self, sheet, row: int, column: int):
@@ -85,11 +88,32 @@ class ExcelReader:
         person_dict = {} # Keyed by (normalized_name, secondary_key)
         
         row_idx = header_row + self.header_depth(sheet_name, header_row)
+        first_data_row = row_idx
+        idx_hoten = col_indices.get('ho_ten', -1)
+        idx_soto = col_indices.get('so_to', -1)
+        idx_sothua = col_indices.get('so_thua', -1)
+        idx_secondary = col_indices.get('secondary_key', -1)
+        secondary_max_by_row = {first_data_row - 1: 0}
+        formula_sheet = self.formula_wb[sheet_name]
         for row in sheet.iter_rows(min_row=row_idx, values_only=True):
-            idx_hoten = col_indices.get('ho_ten', -1)
-            idx_soto = col_indices.get('so_to', -1)
-            idx_sothua = col_indices.get('so_thua', -1)
-            idx_secondary = col_indices.get('secondary_key', -1)
+            secondary_key = ""
+            prior_max = secondary_max_by_row[row_idx - 1]
+            if idx_secondary != -1:
+                secondary_key = normalize_excel_identifier(row[idx_secondary])
+                formula_cell = formula_sheet.cell(row_idx, idx_secondary + 1)
+                column = re.escape(get_column_letter(idx_secondary + 1))
+                pattern = rf"=MAX\(\$?{column}\$?{first_data_row}:\$?{column}\$?([0-9]+)\)\+1"
+                if not secondary_key and formula_cell.data_type == "f" and isinstance(formula_cell.value, str):
+                    match = re.fullmatch(pattern, re.sub(r"\s+", "", formula_cell.value), re.IGNORECASE)
+                    if match and first_data_row <= int(match[1]) < row_idx:
+                        referenced_max = secondary_max_by_row.get(int(match[1]))
+                        if referenced_max is not None:
+                            secondary_key = str(referenced_max + 1)
+                try:
+                    prior_max = max(prior_max, int(secondary_key))
+                except ValueError:
+                    pass
+            secondary_max_by_row[row_idx] = prior_max
             
             if idx_hoten == -1:
                 row_idx += 1
@@ -106,10 +130,6 @@ class ExcelReader:
             so_to = normalize_excel_identifier(row[idx_soto]) if idx_soto != -1 else ""
             so_thua = normalize_excel_identifier(row[idx_sothua]) if idx_sothua != -1 else ""
             
-            secondary_key = ""
-            if idx_secondary != -1 and row[idx_secondary] is not None:
-                secondary_key = str(row[idx_secondary]).strip()
-                
             dict_key = (normalized, secondary_key)
             
             if dict_key not in person_dict:
@@ -145,5 +165,6 @@ class ExcelReader:
 
         # We close the read_only workbook to release file lock
         self.wb.close()
+        self.formula_wb.close()
         
         return list(person_dict.values())

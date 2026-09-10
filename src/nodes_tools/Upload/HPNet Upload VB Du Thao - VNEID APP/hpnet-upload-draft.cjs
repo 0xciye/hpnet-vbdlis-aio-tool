@@ -48,6 +48,14 @@ function normalizePersonName(value) {
   return normalizeText(value);
 }
 
+function isRetryableNavigationError(error) {
+  return /execution context was destroyed|frame was detached|cannot find context with specified id/i.test(String(error?.message || error));
+}
+
+function shouldSkipExistingFile(uploadedByThisTool, currentOnHpnet, forceUpload) {
+  return !forceUpload && (uploadedByThisTool || currentOnHpnet);
+}
+
 function findUniqueNormalizedPerson(items, targetName) {
   const target = normalizePersonName(targetName);
   if (!target) throw new Error("Tên người duyệt đang trống.");
@@ -192,6 +200,13 @@ function runSelfTest() {
   if (!isHpnetUrl("https://qlvb.hpnet.vn/?action=901") || isHpnetUrl("https://id.vneid.gov.vn/oauth2/authorize")) throw new Error("Self-test: nhận diện HPNet/VNeID không đúng.");
   if (!isHpnetLoginUrl("https://qlvb.hpnet.vn/Login.aspx?ReturnUrl=%2f") || isHpnetLoginUrl("https://id.vneid.gov.vn/Login.aspx")) throw new Error("Self-test: nhận diện trang đăng nhập không đúng.");
   if (!csvCell("=HYPERLINK(1)").startsWith("'=")) throw new Error("Self-test: CSV chưa chặn công thức Excel.");
+  if (!isRetryableNavigationError(new Error("locator.evaluate: Execution context was destroyed, most likely because of a navigation"))) {
+    throw new Error("Self-test: chưa nhận diện lỗi iframe bị tải lại.");
+  }
+  if (isRetryableNavigationError(new Error("Không tìm thấy người duyệt"))) throw new Error("Self-test: nhận nhầm lỗi nghiệp vụ là lỗi cần thử lại.");
+  if (!shouldSkipExistingFile(true, true, false) || shouldSkipExistingFile(true, true, true)) {
+    throw new Error("Self-test: chế độ force upload chưa bỏ qua chống trùng đúng cách.");
+  }
   console.log("NODE_SELF_TEST_OK");
 }
 
@@ -290,6 +305,7 @@ async function submitOne(page, context, file, abstract, reviewerLevel1, reupload
   };
   page.on("dialog", dialogHandler);
   let submitError = null;
+  let updateStarted = false;
   try {
     const createButton = page.locator("a.btn.btn-danger", { hasText: "Dự thảo VB" }).first();
     // Giữ lại trang danh sách sau lần upload trước. Chỉ tải lại khi phiên
@@ -317,6 +333,7 @@ async function submitOne(page, context, file, abstract, reviewerLevel1, reupload
     }
 
     try {
+      updateStarted = true;
       await frame.locator("#btnUpdate").click({ timeout: 180000 });
       try {
         // HPNet gọi CloseDialog() sau khi lưu thành công. Đây là tín hiệu đáng tin cậy
@@ -327,6 +344,9 @@ async function submitOne(page, context, file, abstract, reviewerLevel1, reupload
     } catch (error) {
       submitError = error;
     }
+  } catch (error) {
+    if (!updateStarted && isRetryableNavigationError(error)) error.safeToRetryBeforeSubmit = true;
+    throw error;
   } finally {
     page.off("dialog", dialogHandler);
   }
@@ -451,6 +471,7 @@ async function main() {
       onPage: (done, total) => log(`Đã kiểm tra ${done}/${total} văn bản trên HPNet...`),
     });
     log(`Đã đọc ${records.length} văn bản để chống tải trùng.`);
+    log(`Force upload: ${config.forceUpload ? "CÓ - bỏ qua chống trùng" : "KHÔNG"}`);
 
     let uploaded = 0;
     let skipped = 0;
@@ -471,10 +492,11 @@ async function main() {
         continue;
       }
       const uploadedByThisTool = Boolean(ledger[ledgerKey(file)]);
-      let currentOnHpnet = records.some((record) => recordIsCurrentVersion(record, file, Boolean(config.reuploadModified)));
+      const forceUpload = Boolean(config.forceUpload);
+      let currentOnHpnet = !forceUpload && records.some((record) => recordIsCurrentVersion(record, file, Boolean(config.reuploadModified)));
       // Kiểm tra theo mã tệp thay vì tải lại 100 văn bản mới nhất cho từng
       // tệp. Phản hồi nhỏ hơn đáng kể và vẫn giữ nguyên chặn trùng theo mã.
-      if (!uploadedByThisTool && !currentOnHpnet) {
+      if (!forceUpload && !uploadedByThisTool && !currentOnHpnet) {
         let latestMatches = await queryRecords(context, { key: file.key, allPages: false, pageSize: 100 });
         currentOnHpnet = latestMatches.some((record) => recordIsCurrentVersion(record, file, Boolean(config.reuploadModified)));
         if (!currentOnHpnet && file.name !== file.key) {
@@ -483,7 +505,7 @@ async function main() {
         }
         if (currentOnHpnet) records.unshift(...latestMatches);
       }
-      if (uploadedByThisTool || currentOnHpnet) {
+      if (shouldSkipExistingFile(uploadedByThisTool, currentOnHpnet, forceUpload)) {
         const reason = uploadedByThisTool
           ? "Công cụ đã ghi nhận đúng nội dung file này ở lần chạy trước."
           : (config.reuploadModified ? "HPNet đã có bản cùng tên được up sau khi file được sửa." : "HPNet đã có văn bản cùng khóa tên.");
@@ -500,7 +522,17 @@ async function main() {
       }
 
       const uploadStartedAt = Date.now();
-      const result = await submitOne(page, context, file, file.abstract, reviewerLevel1, Boolean(config.reuploadModified), log);
+      let result;
+      try {
+        result = await submitOne(page, context, file, file.abstract, reviewerLevel1, Boolean(config.reuploadModified), log);
+      } catch (error) {
+        if (!error?.safeToRetryBeforeSubmit) throw error;
+        log(`[TỰ KHÔI PHỤC] Trang/iframe vừa tải lại trước khi bấm Cập nhật; đang mở lại và thử ${file.name} thêm 1 lần.`);
+        if (page.isClosed()) page = await context.newPage();
+        await page.goto(MAIN_URL, { waitUntil: "domcontentloaded", timeout: 60000 });
+        page = await ensureLoggedIn(page, context, log);
+        result = await submitOne(page, context, file, file.abstract, reviewerLevel1, Boolean(config.reuploadModified), log);
+      }
       const uploadSeconds = (Date.now() - uploadStartedAt) / 1000;
       uploadDurations.push(uploadSeconds);
       log(`[TỐC ĐỘ UPLOAD] ${file.name}: ${uploadSeconds.toFixed(1)} giây`);

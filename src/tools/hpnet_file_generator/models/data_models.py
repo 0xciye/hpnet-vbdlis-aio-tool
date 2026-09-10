@@ -42,6 +42,7 @@ class SourceFile:
     stt: Optional[str] = None
     matched_person: Optional[PersonRecord] = None
     is_ambiguous: bool = False
+    match_issue: str = ""
 
 @dataclass
 class GenerationAction:

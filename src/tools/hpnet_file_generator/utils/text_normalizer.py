@@ -1,13 +1,15 @@
 import unicodedata
 import re
+from decimal import Decimal, InvalidOperation
 
 def normalize_person_name(name: str) -> str:
     if not name:
         return ""
-    # Remove extra spaces and trim
-    name = re.sub(r'\s+', ' ', str(name)).strip()
     # Normalize unicode
-    name = unicodedata.normalize('NFC', name)
+    name = unicodedata.normalize('NFC', str(name))
+    name = re.sub(r'\s*\(\s*người\s+đại\s+diện\s*\)\s*$', '', name, flags=re.IGNORECASE)
+    # Remove extra spaces and trim
+    name = re.sub(r'\s+', ' ', name).strip()
     return name.lower()
 
 def extract_stt_and_name(filename_without_ext: str):
@@ -35,11 +37,13 @@ def normalize_excel_identifier(val) -> str:
         return ""
     
     s_val = str(val).strip()
-    # If it ends with .0, it might be a float read from excel
-    if s_val.endswith('.0') and s_val.replace('.0', '').isdigit():
-        return s_val.replace('.0', '')
-    
-    return s_val
+    try:
+        number = Decimal(s_val)
+        if number == number.to_integral_value():
+            return str(number.quantize(Decimal("1")))
+        return format(number.normalize(), "f")
+    except InvalidOperation:
+        return s_val
 
 def sanitize_filename(filename: str) -> str:
     """Removes invalid characters for Windows filenames"""

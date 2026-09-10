@@ -138,6 +138,7 @@ if (-not $savedConfig) {
         reviewerLevel1 = ''
         dryRun = $false
         reuploadModified = $true
+        forceUpload = $false
         listPageSize = 100
     } | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $configPath -Encoding UTF8
     $savedConfig = Read-JsonSafe $configPath
@@ -321,7 +322,7 @@ $group2.Controls.Add($previewLabel)
 $group3 = New-Object System.Windows.Forms.GroupBox
 $group3.Text = ' CẤU HÌNH BỔ SUNG '
 $group3.Font = New-Object System.Drawing.Font('Segoe UI', 9.75, [System.Drawing.FontStyle]::Bold)
-$group3.Size = New-Object System.Drawing.Size(830, 85)
+$group3.Size = New-Object System.Drawing.Size(830, 110)
 $group3.Margin = New-Object System.Windows.Forms.Padding(0, 0, 0, 15)
 $group3.BackColor = [System.Drawing.Color]::White
 $mainPanel.Controls.Add($group3)
@@ -334,9 +335,18 @@ $reuploadModified.Font = $fontNormal
 $reuploadModified.Checked = if ($savedConfig -and $null -ne $savedConfig.reuploadModified) { [bool]$savedConfig.reuploadModified } else { $true }
 $group3.Controls.Add($reuploadModified)
 
+$forceUpload = New-Object System.Windows.Forms.CheckBox
+$forceUpload.Text = 'Force upload: bỏ qua chống trùng và upload lại file đã có (lần chạy này)'
+$forceUpload.Location = New-Object System.Drawing.Point(20, 55)
+$forceUpload.AutoSize = $true
+$forceUpload.Font = $fontNormal
+# Force upload is intentionally one-shot; never restore it from saved settings.
+$forceUpload.Checked = $false
+$group3.Controls.Add($forceUpload)
+
 $dryRun = New-Object System.Windows.Forms.CheckBox
 $dryRun.Text = 'Chế độ kiểm tra (chỉ xác thực, không tải lên)'
-$dryRun.Location = New-Object System.Drawing.Point(20, 55)
+$dryRun.Location = New-Object System.Drawing.Point(20, 80)
 $dryRun.AutoSize = $true
 $dryRun.Font = $fontNormal
 $dryRun.Checked = $false
@@ -563,12 +573,13 @@ $startButton.Add_Click({
 
     $modeText = if ($dryRun.Checked) { 'CHỈ KIỂM TRA, KHÔNG UP' } else { 'UP THẬT LÊN HPNET' }
     $reuploadText = if ($reuploadModified.Checked) { 'Có - bỏ qua bản cũ, up lại bản đã sửa' } else { 'Không - thấy cùng tên là bỏ qua' }
-    $message = "Chế độ: $modeText`r`nProfile: $($profileBox.Text.Trim())`r`nSố thư mục: $($batches.Count)`r`nSố file Word: $($wordFiles.Count)`r`nUp lại file đã sửa: $reuploadText`r`nNgười duyệt cấp 1 / lãnh đạo: $reviewer`r`nVị trí: Văn bản trình duyệt (*)`r`n`r`nCác thư mục và trích yếu:`r`n$(($batches | ForEach-Object { "$($_.folder) | $($_.abstract)" }) -join "`r`n")`r`n`r`nTiếp tục?"
+    $forceText = if ($forceUpload.Checked) { 'CÓ - bỏ qua chống trùng, up lại file đã có' } else { 'Không' }
+    $message = "Chế độ: $modeText`r`nProfile: $($profileBox.Text.Trim())`r`nSố thư mục: $($batches.Count)`r`nSố file Word: $($wordFiles.Count)`r`nUp lại file đã sửa: $reuploadText`r`nForce upload: $forceText`r`nNgười duyệt cấp 1 / lãnh đạo: $reviewer`r`nVị trí: Văn bản trình duyệt (*)`r`n`r`nCác thư mục và trích yếu:`r`n$(($batches | ForEach-Object { "$($_.folder) | $($_.abstract)" }) -join "`r`n")`r`n`r`nTiếp tục?"
     $answer = [System.Windows.Forms.MessageBox]::Show($message, 'Xác nhận chạy công cụ', 'OKCancel', 'Information')
     if ($answer -ne [System.Windows.Forms.DialogResult]::OK) { return }
 
     try {
-        $config = [ordered]@{ profileName=$profileBox.Text.Trim(); abstract=$(if ($commonAbstractMode.Checked) { $commonAbstract } else { '' }); abstractMode=$(if ($commonAbstractMode.Checked) { 'common' } else { 'per-folder' }); batches=$batches; sourceFolder=$folder; reviewerLevel1=$reviewer; dryRun=[bool]$dryRun.Checked; reuploadModified=[bool]$reuploadModified.Checked; listPageSize=100 }
+        $config = [ordered]@{ profileName=$profileBox.Text.Trim(); abstract=$(if ($commonAbstractMode.Checked) { $commonAbstract } else { '' }); abstractMode=$(if ($commonAbstractMode.Checked) { 'common' } else { 'per-folder' }); batches=$batches; sourceFolder=$folder; reviewerLevel1=$reviewer; dryRun=[bool]$dryRun.Checked; reuploadModified=[bool]$reuploadModified.Checked; forceUpload=[bool]$forceUpload.Checked; listPageSize=100 }
         $config | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $configPath -Encoding UTF8
 
         $startButton.Enabled = $false
@@ -577,6 +588,7 @@ $startButton.Add_Click({
         $profileBox.Enabled = $false
         $reviewerBox.Enabled = $false
         $commonAbstractMode.Enabled = $false
+        $forceUpload.Enabled = $false
         $saveProfileButton.Enabled = $false
         $script:stopRequested = $false
         $stopButton.Enabled = $true
@@ -643,6 +655,7 @@ $startButton.Add_Click({
         $profileBox.Enabled = $true
         $reviewerBox.Enabled = $true
         $commonAbstractMode.Enabled = $true
+        $forceUpload.Enabled = $true
         $saveProfileButton.Enabled = $true
     }
 })

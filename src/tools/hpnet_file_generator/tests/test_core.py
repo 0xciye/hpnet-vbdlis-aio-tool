@@ -31,6 +31,7 @@ def test_normalize_person_name():
     assert normalize_person_name(" NGUYỄN   VĂN A ") == "nguyễn văn a"
     assert normalize_person_name("nguyễn văn a") == "nguyễn văn a"
     assert normalize_person_name("ĐỖ ĐỨC ĐẠT") == "đỗ đức đạt"
+    assert normalize_person_name("Nguyễn Văn A (Người đại diện)") == "nguyễn văn a"
 
 def test_extract_stt():
     stt, name = extract_stt_and_name("1. Nguyễn Văn A")
@@ -78,6 +79,38 @@ def test_person_matcher_ambiguous():
     assert sources[0].matched_person is None
     assert sources[0].is_ambiguous == True
 
+
+def test_person_matcher_allows_stt_drift_for_unique_name():
+    record = PersonRecord(ho_ten="A", normalized_name="a", secondary_key="2")
+    source = SourceFile(Path("1. A.pdf"), "1. A.pdf", "a", ".pdf", stt="1")
+
+    PersonMatcher([record], [source]).match()
+
+    assert source.matched_person is record
+
+
+def test_person_matcher_requires_stt_for_repeated_source_name():
+    record = PersonRecord(ho_ten="A", normalized_name="a", secondary_key="2")
+    sources = [
+        SourceFile(Path("1. A.pdf"), "1. A.pdf", "a", ".pdf", stt="1"),
+        SourceFile(Path("2. A.pdf"), "2. A.pdf", "a", ".pdf", stt="2"),
+    ]
+
+    PersonMatcher([record], sources).match()
+
+    assert sources[0].matched_person is None
+    assert sources[0].match_issue == "Tên khớp nhưng STT 1 không khớp Excel"
+    assert sources[1].matched_person is record
+
+
+def test_person_matcher_normalizes_stt_before_matching():
+    record = PersonRecord(ho_ten="A", normalized_name="a", secondary_key="1")
+    source = SourceFile(Path("001. A.pdf"), "001. A.pdf", "a", ".pdf", stt="001")
+
+    PersonMatcher([record], [source]).match()
+
+    assert source.matched_person is record
+
 def test_naming_engine():
     config = ProfileConfig(ma_dvhc="10930", prefix="CHUACOGIAY")
     engine = NamingEngine(config)
@@ -93,7 +126,7 @@ def test_naming_engine():
     name = engine.generate_filename(DummyAction())
     assert name == "CHUACOGIAY_10930_70_300-TBXN.pdf"
 
-def test_action_planner_conflict(tmp_path):
+def test_action_planner_reserves_multiple_conflict_paths(tmp_path):
     config = ProfileConfig(suffixes=["TBXN"])
     
     sf1 = SourceFile(Path("A.pdf"), "A.pdf", "a", ".pdf")
@@ -104,16 +137,22 @@ def test_action_planner_conflict(tmp_path):
     sf2.matched_person = PersonRecord("B", "b")
     # Cùng thửa (giả lập 2 người có thửa trùng nhau, dù đã bị loại ở bước đọc Excel nhưng ở Planner vẫn phải bắt conflict)
     sf2.matched_person.parcels.add(Parcel("70", "300"))
+
+    sf3 = SourceFile(Path("C.pdf"), "C.pdf", "c", ".pdf")
+    sf3.matched_person = PersonRecord("C", "c")
+    sf3.matched_person.parcels.add(Parcel("70", "300"))
     
-    planner = ActionPlanner([sf1, sf2], str(tmp_path), config)
+    planner = ActionPlanner([sf1, sf2, sf3], str(tmp_path), config)
     actions = planner.build_plan()
     
-    # 2 actions
-    assert len(actions) == 2
-    # Một action sẽ READY, một action sẽ CONFLICT
+    assert len(actions) == 3
     statuses = [a.status for a in actions]
     assert ActionStatus.READY in statuses
-    assert ActionStatus.CONFLICT in statuses
+    assert statuses.count(ActionStatus.CONFLICT) == 2
+    assert {a.conflict_path.name for a in actions if a.conflict_path} == {
+        "CHUACOGIAY__70_300-TBXN__CONFLICT_001.pdf",
+        "CHUACOGIAY__70_300-TBXN__CONFLICT_002.pdf",
+    }
 
 
 def test_excel_reader_keeps_single_header_behavior(tmp_path):
@@ -168,3 +207,22 @@ def test_excel_reader_flattens_two_level_merged_headers_and_skips_both_rows(tmp_
     assert records[0].raw_rows == [6]
     assert records[0].secondary_key == "1"
     assert records[0].parcels == {Parcel("12", "55")}
+
+
+def test_excel_reader_resolves_exact_running_max_secondary_formula(tmp_path):
+    path = tmp_path / "formula-stt.xlsx"
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.append(["STT", "Tên hộ", "Số tờ", "Số thửa"])
+    sheet.append([1, "Nguyễn Văn A", 10, 20])
+    sheet.append(["=MAX($A$2:A2)+1", "Nguyễn Văn B", 11, 21])
+    workbook.save(path)
+
+    reader = ExcelReader(str(path))
+    records = reader.read_data(sheet.title, 1, {
+        "ho_ten": "Tên hộ", "so_to": "Số tờ", "so_thua": "Số thửa", "secondary_key": "STT"
+    })
+
+    assert [(record.ho_ten, record.secondary_key) for record in records] == [
+        ("Nguyễn Văn A", "1"), ("Nguyễn Văn B", "2")
+    ]

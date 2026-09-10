@@ -2,7 +2,7 @@ import os
 import pytest
 from pathlib import Path
 from pypdf import PdfWriter
-from tools.signed_pdf_cleaner.core.scanner import FileScanner, parse_suffixes
+from tools.signed_pdf_cleaner.core.scanner import FileScanner, parse_suffixes, TARGET_PAIRS, TARGET_ORPHAN_SIGNED
 from tools.signed_pdf_cleaner.core.processor import FileProcessor
 from tools.signed_pdf_cleaner.core.models import ActionType, FileActionPlan, ProcessStatus
 from tools.signed_pdf_cleaner.utils.logger import AppLogger
@@ -52,6 +52,32 @@ def test_2_only_signed(temp_dir):
     
     assert not (temp_dir / "A.signed.pdf").exists()
     assert (temp_dir / "A.pdf").exists()
+
+
+def test_target_mode_orphan_signed_only(temp_dir):
+    create_file(temp_dir, "A.signed.pdf", "SIGNED")
+    create_file(temp_dir, "B.pdf", "UNSIGNED")
+    create_file(temp_dir, "B.signed.pdf", "SIGNED_PAIR")
+
+    scanner = FileScanner(validate_signatures=False)
+    plans = scanner.scan_directory(str(temp_dir), target_mode=TARGET_ORPHAN_SIGNED)
+
+    assert len(plans) == 1
+    assert plans[0].signed_path.name == "A.signed.pdf"
+    assert plans[0].action == ActionType.RENAME_SIGNED
+
+
+def test_target_mode_pairs_excludes_orphan_signed(temp_dir):
+    create_file(temp_dir, "A.signed.pdf", "SIGNED")
+    create_file(temp_dir, "B.pdf", "UNSIGNED")
+    create_file(temp_dir, "B.signed.pdf", "SIGNED_PAIR")
+
+    scanner = FileScanner(validate_signatures=False)
+    plans = scanner.scan_directory(str(temp_dir), target_mode=TARGET_PAIRS)
+
+    assert len(plans) == 1
+    assert plans[0].action == ActionType.DELETE_AND_RENAME
+    assert plans[0].signed_path.name == "B.signed.pdf"
 
 def test_3_only_unsigned(temp_dir):
     # Test 3: A.pdf -> A.pdf (không xóa)

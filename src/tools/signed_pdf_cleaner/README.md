@@ -12,7 +12,8 @@
    - "Hậu tố file cần xóa": Nhập một hoặc nhiều hậu tố, ngăn cách bằng dấu phẩy. Ví dụ: `.signed, .ldsigned`.
    - "Hậu tố file cần đổi tên": Nhập các hậu tố của bản muốn giữ lại. Ví dụ: `.signed.signed, .ldsigned.signed`.
      Phần mềm tự thêm `.pdf` nếu bạn bỏ qua phần mở rộng này. Các hậu tố ở hai ô được ghép theo tên tương ứng; vì vậy `.signed.signed.pdf` sẽ thay cho `.signed.pdf` rồi được đổi tên thành `TênGốc.pdf`, còn `.ldsigned.signed.pdf` sẽ thay cho `.ldsigned.pdf` rồi được đổi tên thành `TênGốc.pdf`.
-   - "Chế độ xóa": Mặc định là chuyển file chưa ký vào **Recycle Bin (Thùng rác)** để có thể khôi phục lại khi cần. Bạn cũng có thể chọn Xóa vĩnh viễn (sẽ có cảnh báo).
+- "Chế độ xóa": Mặc định là chuyển file chưa ký vào **Recycle Bin (Thùng rác)** để có thể khôi phục lại khi cần. Bạn cũng có thể chọn Xóa vĩnh viễn (sẽ có cảnh báo).
+- "Mục tiêu xử lý": Chọn cả cặp và file ký đơn độc, chỉ xử lý cặp có file gốc, hoặc chỉ xử lý file ký không có file gốc. Ở mục tiêu cuối, `A.signed.pdf` sẽ được đổi thành `A.pdf` để phục vụ quy trình ký tự động.
 4. **Nhấn Quét**: Nhấn nút "Quét / Xem trước" để ứng dụng phân tích dữ liệu. Chưa có file nào bị tác động ở bước này.
 5. **Kiểm tra Preview**: Xem danh sách các file sẽ được xử lý tại bảng hiển thị bên dưới. 
    - Những cặp file hợp lệ sẽ có trạng thái "Sẵn sàng". 

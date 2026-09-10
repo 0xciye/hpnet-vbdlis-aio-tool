@@ -4,6 +4,9 @@ from pypdf import PdfReader
 from tools.signed_pdf_cleaner.core.models import FileActionPlan, ActionType, ProcessStatus
 
 SuffixInput = Union[str, Sequence[str]]
+TARGET_ALL = "all"
+TARGET_PAIRS = "pairs"
+TARGET_ORPHAN_SIGNED = "orphan_signed"
 
 
 def parse_suffixes(value: SuffixInput, default: str) -> List[str]:
@@ -74,7 +77,9 @@ class FileScanner:
         except Exception:
             return False
 
-    def scan_directory(self, folder_path: str, recursive: bool = False) -> List[FileActionPlan]:
+    def scan_directory(self, folder_path: str, recursive: bool = False, target_mode: str = TARGET_ALL) -> List[FileActionPlan]:
+        if target_mode not in {TARGET_ALL, TARGET_PAIRS, TARGET_ORPHAN_SIGNED}:
+            raise ValueError(f"Mục tiêu xử lý không hợp lệ: {target_mode}")
         plans = []
         base_path = Path(folder_path)
         
@@ -88,11 +93,11 @@ class FileScanner:
             
         for current_dir in directories:
             # We process files per directory (no cross-directory matching)
-            plans.extend(self._process_single_directory(current_dir))
+            plans.extend(self._process_single_directory(current_dir, target_mode))
             
         return plans
 
-    def _process_single_directory(self, directory: Path) -> List[FileActionPlan]:
+    def _process_single_directory(self, directory: Path, target_mode: str = TARGET_ALL) -> List[FileActionPlan]:
         plans = []
         # Get all files, ignore dirs
         try:
@@ -168,6 +173,11 @@ class FileScanner:
             # to the clean base name (A.pdf or B.pdf).
             unsigned_f = all_pdfs.get(delete_name.lower())
 
+            if target_mode == TARGET_PAIRS and unsigned_f is None:
+                continue
+            if target_mode == TARGET_ORPHAN_SIGNED and unsigned_f is not None:
+                continue
+
             if unsigned_f:
                 matched_unsigned.add(unsigned_f)
                 plans.append(FileActionPlan(
@@ -188,6 +198,8 @@ class FileScanner:
 
         # Now handle unsigned only
         for f in valid_files:
+            if target_mode == TARGET_ORPHAN_SIGNED:
+                continue
             if f not in matched_unsigned and f not in signed_files:
                 plans.append(FileActionPlan(
                     signed_path=None,

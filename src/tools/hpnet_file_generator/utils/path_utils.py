@@ -1,7 +1,6 @@
-import os
 from pathlib import Path
 
-def get_unique_path(target_path: Path, conflict_dir: Path) -> Path:
+def get_unique_path(target_path: Path, conflict_dir: Path, reserved_paths: set[Path] | None = None) -> Path:
     """
     If target_path exists, generates a unique name in conflict_dir
     """
@@ -14,6 +13,6 @@ def get_unique_path(target_path: Path, conflict_dir: Path) -> Path:
     while True:
         new_name = f"{base_name}__CONFLICT_{counter:03d}{ext}"
         new_path = conflict_dir / new_name
-        if not new_path.exists():
+        if not new_path.exists() and (reserved_paths is None or new_path not in reserved_paths):
             return new_path
         counter += 1

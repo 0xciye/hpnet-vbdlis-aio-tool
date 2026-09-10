@@ -10,6 +10,7 @@ class FileGenerator:
         if action.status not in (ActionStatus.READY, ActionStatus.CONFLICT):
             return action
             
+        temp_target = None
         try:
             source = action.source_file.original_path
             
@@ -36,5 +37,8 @@ class FileGenerator:
         except Exception as e:
             action.status = ActionStatus.ERROR
             action.reason = str(e)
+        finally:
+            if temp_target is not None and temp_target.exists():
+                temp_target.unlink()
             
         return action
