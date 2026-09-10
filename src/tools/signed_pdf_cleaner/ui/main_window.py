@@ -21,7 +21,7 @@ SETTINGS_FILE = "config.json"
 
 class Worker(QThread):
     progress = Signal(int, int)
-    finished = Signal()
+    completed = Signal()
     error = Signal(str)
 
     def __init__(self, plans, processor, logger):
@@ -43,7 +43,7 @@ class Worker(QThread):
                 plan.status = ProcessStatus.ERROR
                 plan.error_message = str(e)
             self.progress.emit(i + 1, total)
-        self.finished.emit()
+        self.completed.emit()
 
     def stop(self):
         self.is_running = False
@@ -410,7 +410,7 @@ class MainWindow(QMainWindow):
         
         self.worker = Worker(ready_plans, processor, self.logger)
         self.worker.progress.connect(self.on_progress)
-        self.worker.finished.connect(self.on_finished)
+        self.worker.completed.connect(self.on_finished)
         self.worker.start()
 
     def on_progress(self, value, total):
