@@ -46,7 +46,9 @@ function isHpnetLoginUrl(value) {
 }
 
 function normalizeTitle(value) {
-  return String(value ?? "")
+  const raw = String(value ?? "");
+  const titleAttribute = raw.match(/\btitle\s*=\s*(['"])([\s\S]*?)\1/i)?.[2];
+  return (titleAttribute ?? raw)
     .normalize("NFC")
     .replace(/<[^>]*>/g, " ")
     .replace(/[–—−]/g, "-")
@@ -645,6 +647,9 @@ async function runSelfTest() {
   if (normalizeTitle(" Thông báo   xác nhận – kết quả ") !== "THÔNG BÁO XÁC NHẬN - KẾT QUẢ") {
     throw new Error("Self-test: chuẩn hóa trích yếu không đúng.");
   }
+  if (normalizeTitle("<span title='Thông báo xác nhận kết quả đầy đủ'>Thông báo xác nhận...</span>") !== "THÔNG BÁO XÁC NHẬN KẾT QUẢ ĐẦY ĐỦ") {
+    throw new Error("Self-test: chưa lấy trích yếu đầy đủ trong thuộc tính title.");
+  }
   if (![true, 1, "true", "1"].every(isUnread) || [false, 0, "false", "0", null].some(isUnread)) {
     throw new Error("Self-test: nhận diện chữ đậm không đúng.");
   }
@@ -669,6 +674,12 @@ async function runSelfTest() {
     VanbanDiId: 1, OrderIndex: 1712, Name: "TB-ĐKĐĐ", TrichYeu: "Thông báo xác nhận kết quả", NgayVanBan: "31/08/2026 08:30", IsNew: true,
     ...overrides,
   }, 1);
+  const longTitle = "THÔNG BÁO XÁC NHẬN KẾT QUẢ ĐĂNG KÝ ĐẤT ĐAI (Phục vụ công tác đo đạc, lập bản đồ địa chính, lập hồ sơ địa chính và hoàn thành cơ sở dữ liệu về đất đai theo Kế hoạch số 150/KH-UBND ngày 24/4/2026 của UBND thành phố Hải Phòng) - Đức Tân";
+  const longHtml = `<span title='${longTitle}'>THÔNG BÁO XÁC NHẬN KẾT QUẢ ĐĂNG KÝ ĐẤT ĐAI (Phục vụ công tác đo đạc, lập bản đồ ...</span>`;
+  if (!recordMatchesFilters(
+    buildDocumentRecord({ TrichYeu: longHtml, NgayVanBan: "08/09/2026", Name: "TB-UBND" }, 1),
+    buildFilters(makeConfig({ titleFilterEnabled: true, allowedTitles: [longTitle], notificationFilterEnabled: false, dateFilterEnabled: false }))
+  )) throw new Error("Self-test: chưa lọc được trích yếu dài bị rút gọn phần hiển thị.");
   const assert = (condition, name) => { if (!condition) throw new Error(`Self-test bộ lọc: ${name}`); };
   assert(recordMatchesFilters(makeEntry(), buildFilters(makeConfig())), "01 lọc đúng một ngày");
   assert(!recordMatchesFilters(makeEntry({ NgayVanBan: "30/08/2026" }), buildFilters(makeConfig())), "02 loại ngày không khớp");
