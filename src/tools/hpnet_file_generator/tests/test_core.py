@@ -331,6 +331,30 @@ def test_excel_reader_skips_summary_rows(tmp_path):
     assert [record.ho_ten for record in records] == ["Nguyễn Văn A"]
 
 
+@pytest.mark.parametrize("label", [
+    "Thiếu HS",
+    "Thiếu hồ sơ",
+    "Sai diện tích",
+    "Không khớp diện tích",
+    "Diện tích đất không khớp với tờ khai",
+])
+def test_excel_reader_skips_non_person_note_rows(tmp_path, label):
+    path = tmp_path / "non-person-label.xlsx"
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.append(["STT", "Tên hộ", "Số tờ", "Số thửa"])
+    sheet.append([1, "Nguyễn Văn A", 1, 2])
+    sheet.append([None, label, 3, 4])
+    workbook.save(path)
+
+    records = ExcelReader(str(path)).read_data(sheet.title, 1, {
+        "ho_ten": "Tên hộ", "so_to": "Số tờ", "so_thua": "Số thửa", "secondary_key": "STT"
+    })
+
+    assert [record.ho_ten for record in records] == ["Nguyễn Văn A"]
+    assert records[0].parcels == {Parcel("1", "2")}
+
+
 def test_one_pdf_creates_one_output_per_parcel(tmp_path):
     source_path = tmp_path / "Nguyễn Văn A.pdf"
     source_path.write_bytes(b"source-pdf")

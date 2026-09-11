@@ -6,11 +6,19 @@ import openpyxl
 from openpyxl.utils import get_column_letter
 
 from tools.hpnet_file_generator.utils.text_normalizer import normalize_person_name, normalize_excel_identifier
+from tools.hpnet_file_generator.models.data_models import PersonRecord, Parcel
 
 
 def _valid_parcel_identifier(value: str) -> bool:
     return bool(re.fullmatch(r"[1-9]\d*", value))
-from tools.hpnet_file_generator.models.data_models import PersonRecord, Parcel
+
+
+def _is_non_person_label(value: str) -> bool:
+    return (
+        value in {"thiếu hs", "thiếu hồ sơ", "sai diện tích", "không khớp diện tích"}
+        or ("diện tích" in value and "không khớp" in value)
+    )
+
 
 class ExcelReader:
     def __init__(self, file_path: str):
@@ -147,7 +155,7 @@ class ExcelReader:
 
             normalized = normalize_person_name(ho_ten)
             # Dòng tổng hợp là nhãn báo cáo, không phải chủ hộ.
-            if normalized == "tổng" or normalized.startswith("tổng ") or normalized == "cộng":
+            if normalized == "tổng" or normalized.startswith("tổng ") or normalized == "cộng" or _is_non_person_label(normalized):
                 current_record = None
                 row_idx += 1
                 continue
