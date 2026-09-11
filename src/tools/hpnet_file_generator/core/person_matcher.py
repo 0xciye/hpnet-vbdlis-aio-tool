@@ -1,4 +1,4 @@
-from collections import Counter
+from difflib import get_close_matches
 from typing import List
 from tools.hpnet_file_generator.models.data_models import SourceFile, PersonRecord
 from tools.hpnet_file_generator.utils.text_normalizer import normalize_excel_identifier
@@ -18,8 +18,18 @@ class PersonMatcher:
         name_map = {}
         for r in self.records:
             name_map.setdefault(r.normalized_name, []).append(r)
-        has_secondary_keys = any(normalize_excel_identifier(record.secondary_key) for record in self.records)
-        source_name_counts = Counter(source.normalized_name for source in self.sources)
+        def suggestion_text(source_name: str) -> str:
+            close_names = get_close_matches(
+                source_name, list(name_map), n=3, cutoff=0.82
+            )
+            if not close_names:
+                return ""
+            details = []
+            for name in close_names:
+                people = name_map[name]
+                stts = ", ".join(normalize_excel_identifier(p.secondary_key) or "không có STT" for p in people)
+                details.append(f"{people[0].ho_ten} (STT: {stts})")
+            return " Gợi ý tên gần giống để kiểm tra: " + "; ".join(details) + "."
             
         for sf in self.sources:
             sf.matched_person = None
@@ -28,14 +38,13 @@ class PersonMatcher:
             matches = name_map.get(sf.normalized_name, [])
             
             if not matches:
-                sf.match_issue = "Không tìm thấy tên trong Excel"
+                sf.match_issue = "Không tìm thấy tên trong Excel." + suggestion_text(sf.normalized_name)
                 continue
 
-            # A name that is unique in both inputs is safe even when manual STT
-            # numbering drifted. Repeated names must also match STT; otherwise
-            # multiple source files can be assigned to one Excel person.
-            repeated_name = len(matches) > 1 or source_name_counts[sf.normalized_name] > 1
-            if repeated_name and sf.stt and has_secondary_keys:
+            # Tên khớp duy nhất là đủ; STT chỉ dùng để phân biệt khi Excel có
+            # nhiều người trùng tên.
+            repeated_name = len(matches) > 1
+            if repeated_name and sf.stt:
                 source_stt = normalize_excel_identifier(sf.stt)
                 stt_matches = [
                     match for match in matches
@@ -45,15 +54,21 @@ class PersonMatcher:
                     sf.matched_person = stt_matches[0]
                 elif len(stt_matches) > 1:
                     sf.is_ambiguous = True
-                    sf.match_issue = f"Tên và STT {source_stt} khớp nhiều dòng Excel"
+                    candidates = ", ".join(normalize_excel_identifier(m.secondary_key) or "không có STT" for m in matches)
+                    sf.match_issue = f"Tên và STT {source_stt} khớp nhiều dòng Excel. Các STT cần kiểm tra: {candidates}."
                 else:
-                    sf.match_issue = f"Tên khớp nhưng STT {source_stt} không khớp Excel"
+                    candidates = ", ".join(normalize_excel_identifier(m.secondary_key) or "không có STT" for m in matches)
+                    sf.match_issue = f"Tên khớp nhưng STT {source_stt} không khớp Excel. STT Excel cùng tên: {candidates}."
                 continue
 
-            if len(matches) == 1 and not repeated_name:
+            if len(matches) == 1:
                 sf.matched_person = matches[0]
             else:
                 sf.is_ambiguous = True
-                sf.match_issue = "Tên bị lặp nhưng không có STT đủ tin cậy để xác định đúng người"
+                candidates = ", ".join(normalize_excel_identifier(m.secondary_key) or "không có STT" for m in matches)
+                sf.match_issue = (
+                    "Tên bị lặp nhưng file PDF không có STT đủ tin cậy để xác định đúng người. "
+                    f"Các STT Excel cùng tên: {candidates}."
+                )
                     
         return self.sources

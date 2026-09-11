@@ -89,7 +89,7 @@ def test_person_matcher_allows_stt_drift_for_unique_name():
     assert source.matched_person is record
 
 
-def test_person_matcher_requires_stt_for_repeated_source_name():
+def test_person_matcher_ignores_stt_when_excel_name_is_unique():
     record = PersonRecord(ho_ten="A", normalized_name="a", secondary_key="2")
     sources = [
         SourceFile(Path("1. A.pdf"), "1. A.pdf", "a", ".pdf", stt="1"),
@@ -98,16 +98,16 @@ def test_person_matcher_requires_stt_for_repeated_source_name():
 
     PersonMatcher([record], sources).match()
 
-    assert sources[0].matched_person is None
-    assert sources[0].match_issue == "Tên khớp nhưng STT 1 không khớp Excel"
+    assert sources[0].matched_person is record
     assert sources[1].matched_person is record
 
 
 def test_person_matcher_normalizes_stt_before_matching():
     record = PersonRecord(ho_ten="A", normalized_name="a", secondary_key="1")
+    other = PersonRecord(ho_ten="A", normalized_name="a", secondary_key="2")
     source = SourceFile(Path("001. A.pdf"), "001. A.pdf", "a", ".pdf", stt="001")
 
-    PersonMatcher([record], [source]).match()
+    PersonMatcher([record, other], [source]).match()
 
     assert source.matched_person is record
 
@@ -118,16 +118,16 @@ def test_naming_engine():
     class DummyAction:
         def __init__(self):
             self.parcel = Parcel("70", "300")
-            self.suffix = "TBXN"
+            self.suffix = "DDK"
             self.source_file = SourceFile(Path("A.pdf"), "A.pdf", "a", ".pdf")
             self.source_file.matched_person = PersonRecord("A", "a")
             self.source_file.stt = "1"
             
     name = engine.generate_filename(DummyAction())
-    assert name == "CHUACOGIAY_10930_70_300-TBXN.pdf"
+    assert name == "CHUACOGIAY_10930_70_300-DDK.pdf"
 
 def test_action_planner_reserves_multiple_conflict_paths(tmp_path):
-    config = ProfileConfig(suffixes=["TBXN"])
+    config = ProfileConfig(suffixes=["DDK"])
     
     sf1 = SourceFile(Path("A.pdf"), "A.pdf", "a", ".pdf")
     sf1.matched_person = PersonRecord("A", "a")
@@ -150,8 +150,8 @@ def test_action_planner_reserves_multiple_conflict_paths(tmp_path):
     assert ActionStatus.READY in statuses
     assert statuses.count(ActionStatus.CONFLICT) == 2
     assert {a.conflict_path.name for a in actions if a.conflict_path} == {
-        "CHUACOGIAY__70_300-TBXN__CONFLICT_001.pdf",
-        "CHUACOGIAY__70_300-TBXN__CONFLICT_002.pdf",
+        "CHUACOGIAY__70_300-DDK__CONFLICT_001.pdf",
+        "CHUACOGIAY__70_300-DDK__CONFLICT_002.pdf",
     }
 
 
@@ -226,3 +226,123 @@ def test_excel_reader_resolves_exact_running_max_secondary_formula(tmp_path):
     assert [(record.ho_ten, record.secondary_key) for record in records] == [
         ("Nguyễn Văn A", "1"), ("Nguyễn Văn B", "2")
     ]
+
+
+def test_one_household_with_three_merged_rows_keeps_all_parcels(tmp_path):
+    path = tmp_path / "merged-household.xlsx"
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.append(["STT", "Tên hộ", "Số tờ", "Số thửa"])
+    sheet.merge_cells("A2:A4")
+    sheet.merge_cells("B2:B4")
+    sheet["A2"] = 1
+    sheet["B2"] = "Nguyễn Văn A"
+    sheet["C2"] = 1
+    sheet["D2"] = 2
+    sheet["C3"] = 3
+    sheet["D3"] = 4
+    sheet["C4"] = 5
+    sheet["D4"] = 6
+    workbook.save(path)
+
+    reader = ExcelReader(str(path))
+    records = reader.read_data(sheet.title, 1, {
+        "ho_ten": "Tên hộ", "so_to": "Số tờ", "so_thua": "Số thửa", "secondary_key": "STT"
+    })
+
+    assert len(records) == 1
+    assert records[0].parcels == {Parcel("1", "2"), Parcel("3", "4"), Parcel("5", "6")}
+
+
+def test_one_household_with_blank_continuation_rows_keeps_all_parcels(tmp_path):
+    path = tmp_path / "blank-continuation-household.xlsx"
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.append(["STT", "Tên hộ", "Số tờ", "Số thửa"])
+    sheet.append([1, "Nguyễn Văn A", 1, 2])
+    sheet.append([None, None, 3, 4])
+    sheet.append([None, None, 5, 6])
+    sheet.append([None, "Tổng DT", None, None])
+    workbook.save(path)
+
+    records = ExcelReader(str(path)).read_data(sheet.title, 1, {
+        "ho_ten": "Tên hộ", "so_to": "Số tờ", "so_thua": "Số thửa", "secondary_key": "STT"
+    })
+
+    assert len(records) == 1
+    assert records[0].parcels == {Parcel("1", "2"), Parcel("3", "4"), Parcel("5", "6")}
+
+
+def test_excel_reader_skips_non_numeric_or_non_positive_parcels(tmp_path):
+    path = tmp_path / "invalid-parcels.xlsx"
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.append(["STT", "Tên hộ", "Số tờ", "Số thửa"])
+    sheet.append([1, "Nguyễn Văn A", 92, 182])
+    sheet.append([None, None, 92, "CN"])
+    sheet.append([None, None, 0, 183])
+    sheet.append([None, None, 92, -1])
+    workbook.save(path)
+
+    records = ExcelReader(str(path)).read_data(sheet.title, 1, {
+        "ho_ten": "Tên hộ", "so_to": "Số tờ", "so_thua": "Số thửa", "secondary_key": "STT"
+    })
+
+    assert records[0].parcels == {Parcel("92", "182")}
+
+
+def test_matcher_suggests_close_excel_name():
+    record = PersonRecord("Nguyễn Bá Tài", "nguyễn bá tài", secondary_key="52")
+    source = SourceFile(Path("52. Nguyễn Bá Tải.pdf"), "52. Nguyễn Bá Tải.pdf", "nguyễn bá tải", ".pdf", stt="52")
+
+    PersonMatcher([record], [source]).match()
+
+    assert source.matched_person is None
+    assert "Nguyễn Bá Tài" in source.match_issue
+    assert "STT: 52" in source.match_issue
+
+
+def test_ambiguous_name_without_stt_lists_excel_candidates():
+    records = [
+        PersonRecord("Lê Thị Lan", "lê thị lan", secondary_key="37"),
+        PersonRecord("Lê Thị Lan", "lê thị lan", secondary_key="93"),
+    ]
+    source = SourceFile(Path("Lê Thị Lan.pdf"), "Lê Thị Lan.pdf", "lê thị lan", ".pdf")
+
+    PersonMatcher(records, [source]).match()
+
+    assert source.is_ambiguous
+    assert "37" in source.match_issue and "93" in source.match_issue
+
+
+def test_excel_reader_skips_summary_rows(tmp_path):
+    path = tmp_path / "summary-row.xlsx"
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.append(["STT", "Tên hộ", "Số tờ", "Số thửa"])
+    sheet.append([1, "Nguyễn Văn A", 1, 2])
+    sheet.append([None, "Tổng DT", None, None])
+    workbook.save(path)
+
+    records = ExcelReader(str(path)).read_data(sheet.title, 1, {
+        "ho_ten": "Tên hộ", "so_to": "Số tờ", "so_thua": "Số thửa"
+    })
+
+    assert [record.ho_ten for record in records] == ["Nguyễn Văn A"]
+
+
+def test_one_pdf_creates_one_output_per_parcel(tmp_path):
+    source_path = tmp_path / "Nguyễn Văn A.pdf"
+    source_path.write_bytes(b"source-pdf")
+    person = PersonRecord("Nguyễn Văn A", "nguyễn văn a")
+    person.parcels.update({Parcel("1", "2"), Parcel("3", "4"), Parcel("5", "6")})
+    source = SourceFile(source_path, source_path.name, "nguyễn văn a", ".pdf", matched_person=person)
+
+    actions = ActionPlanner([source], str(tmp_path / "out"), ProfileConfig(ma_dvhc="mdvhc", suffixes=["DDK"])).build_plan()
+
+    assert len(actions) == 3
+    assert {a.target_filename for a in actions} == {
+        "CHUACOGIAY_mdvhc_1_2-DDK.pdf",
+        "CHUACOGIAY_mdvhc_3_4-DDK.pdf",
+        "CHUACOGIAY_mdvhc_5_6-DDK.pdf",
+    }

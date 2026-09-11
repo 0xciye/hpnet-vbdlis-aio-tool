@@ -60,7 +60,7 @@ class ProfileConfig:
     ma_dvhc: str = ""
     prefix: str = "CHUACOGIAY"
     template: str = "{PREFIX}_{MA_DVHC}_{SO_TO}_{SO_THUA}-{HAU_TO}"
-    suffixes: List[str] = field(default_factory=lambda: ["TBXN"])
+    suffixes: List[str] = field(default_factory=lambda: ["DDK"])
     remove_duplicate_parcels: bool = True
     remove_prefix_numbers: bool = True
     extensions: List[str] = field(default_factory=lambda: [".pdf", ".docx", ".doc"])

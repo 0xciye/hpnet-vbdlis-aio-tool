@@ -6,6 +6,10 @@ import openpyxl
 from openpyxl.utils import get_column_letter
 
 from tools.hpnet_file_generator.utils.text_normalizer import normalize_person_name, normalize_excel_identifier
+
+
+def _valid_parcel_identifier(value: str) -> bool:
+    return bool(re.fullmatch(r"[1-9]\d*", value))
 from tools.hpnet_file_generator.models.data_models import PersonRecord, Parcel
 
 class ExcelReader:
@@ -95,11 +99,13 @@ class ExcelReader:
         idx_secondary = col_indices.get('secondary_key', -1)
         secondary_max_by_row = {first_data_row - 1: 0}
         formula_sheet = self.formula_wb[sheet_name]
+        current_record = None
         for row in sheet.iter_rows(min_row=row_idx, values_only=True):
             secondary_key = ""
             prior_max = secondary_max_by_row[row_idx - 1]
             if idx_secondary != -1:
-                secondary_key = normalize_excel_identifier(row[idx_secondary])
+                raw_secondary = self._merged_value(sheet, row_idx, idx_secondary + 1)
+                secondary_key = normalize_excel_identifier(raw_secondary)
                 formula_cell = formula_sheet.cell(row_idx, idx_secondary + 1)
                 column = re.escape(get_column_letter(idx_secondary + 1))
                 pattern = rf"=MAX\(\$?{column}\$?{first_data_row}:\$?{column}\$?([0-9]+)\)\+1"
@@ -119,16 +125,32 @@ class ExcelReader:
                 row_idx += 1
                 continue
                 
-            raw_hoten = row[idx_hoten]
-            if not raw_hoten:
+            raw_hoten = self._merged_value(sheet, row_idx, idx_hoten + 1)
+            raw_so_to = self._merged_value(sheet, row_idx, idx_soto + 1) if idx_soto != -1 else None
+            raw_so_thua = self._merged_value(sheet, row_idx, idx_sothua + 1) if idx_sothua != -1 else None
+            so_to = normalize_excel_identifier(raw_so_to)
+            so_thua = normalize_excel_identifier(raw_so_thua)
+
+            if raw_hoten:
+                ho_ten = str(raw_hoten).strip()
+            elif current_record is not None and (so_to or so_thua):
+                # Dòng tiếp theo của cùng hộ thường chỉ ghi thửa, còn tên/STT để trống.
+                record = current_record
+                record.raw_rows.append(row_idx)
+                if _valid_parcel_identifier(so_to) and _valid_parcel_identifier(so_thua):
+                    record.parcels.add(Parcel(so_to=so_to, so_thua=so_thua))
                 row_idx += 1
                 continue
-                
-            ho_ten = str(raw_hoten).strip()
+            else:
+                row_idx += 1
+                continue
+
             normalized = normalize_person_name(ho_ten)
-            
-            so_to = normalize_excel_identifier(row[idx_soto]) if idx_soto != -1 else ""
-            so_thua = normalize_excel_identifier(row[idx_sothua]) if idx_sothua != -1 else ""
+            # Dòng tổng hợp là nhãn báo cáo, không phải chủ hộ.
+            if normalized == "tổng" or normalized.startswith("tổng ") or normalized == "cộng":
+                current_record = None
+                row_idx += 1
+                continue
             
             dict_key = (normalized, secondary_key)
             
@@ -142,8 +164,9 @@ class ExcelReader:
             
             record = person_dict[dict_key]
             record.raw_rows.append(row_idx)
+            current_record = record
             
-            if so_to and so_thua:
+            if _valid_parcel_identifier(so_to) and _valid_parcel_identifier(so_thua):
                 parcel = Parcel(so_to=so_to, so_thua=so_thua)
                 record.parcels.add(parcel) # set will handle duplicates
                 

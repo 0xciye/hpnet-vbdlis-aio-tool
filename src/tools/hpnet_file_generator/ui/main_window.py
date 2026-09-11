@@ -1,5 +1,7 @@
 import os
 import json
+import csv
+from datetime import datetime
 from pathlib import Path
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
@@ -60,6 +62,7 @@ class MainWindow(QMainWindow):
         self.source_files = []
         self.action_plan = []
         self.worker = None
+        self.last_report_path = None
         self.settings_file = tool_settings_path("Auto Rename", CONFIG_FILE, Path(__file__).resolve().parents[1], {"excel", "source", "output"})
         
         self.setup_ui()
@@ -159,8 +162,11 @@ class MainWindow(QMainWindow):
         btn_match.clicked.connect(self.run_match)
         layout.addWidget(btn_match)
         
-        self.tbl_match = QTableWidget(0, 4)
-        self.tbl_match.setHorizontalHeaderLabels(["File", "Người trong Excel", "Số thửa", "Ghi chú"])
+        self.tbl_match = QTableWidget(0, 7)
+        self.tbl_match.setHorizontalHeaderLabels([
+            "File nguồn", "Tên nhận diện", "Người trong Excel", "STT Excel",
+            "Số thửa", "Trạng thái", "Chi tiết kiểm tra"
+        ])
         self.tbl_match.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         layout.addWidget(self.tbl_match)
         
@@ -175,18 +181,10 @@ class MainWindow(QMainWindow):
         self.txt_prefix = QLineEdit(self.config.prefix)
         self.txt_template = QLineEdit(self.config.template)
         
-        self.cmb_suffix1 = QCheckBox("TBXN")
-        self.cmb_suffix2 = QCheckBox("DDK")
-        self.cmb_suffix1.setChecked(True)
-        
         form.addRow("Mã ĐVHC:", self.txt_ma_dvhc)
         form.addRow("Prefix:", self.txt_prefix)
         form.addRow("Template Tên:", self.txt_template)
-        
-        suffix_layout = QHBoxLayout()
-        suffix_layout.addWidget(self.cmb_suffix1)
-        suffix_layout.addWidget(self.cmb_suffix2)
-        form.addRow("Hậu tố (Suffix):", suffix_layout)
+        form.addRow("Hậu tố hồ sơ:", QLabel("DDK (cố định)"))
         
         h1 = QHBoxLayout()
         self.txt_out_dir = QLineEdit()
@@ -213,8 +211,10 @@ class MainWindow(QMainWindow):
         btn_plan.clicked.connect(self.build_action_plan)
         layout.addWidget(btn_plan)
         
-        self.tbl_plan = QTableWidget(0, 6)
-        self.tbl_plan.setHorizontalHeaderLabels(["Nguồn", "Người", "Tờ", "Thửa", "Output", "Trạng thái"])
+        self.tbl_plan = QTableWidget(0, 7)
+        self.tbl_plan.setHorizontalHeaderLabels([
+            "Nguồn", "Người", "Tờ", "Thửa", "Output", "Trạng thái", "Chi tiết"
+        ])
         self.tbl_plan.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         layout.addWidget(self.tbl_plan)
         
@@ -224,6 +224,11 @@ class MainWindow(QMainWindow):
         self.progress = QProgressBar()
         self.progress.setVisible(False)
         layout.addWidget(self.progress)
+
+        self.btn_report = QPushButton("Xuất báo cáo kiểm tra CSV")
+        self.btn_report.setEnabled(False)
+        self.btn_report.clicked.connect(self.export_report)
+        layout.addWidget(self.btn_report)
         
         btn_run = QPushButton("2. Tạo File")
         btn_run.clicked.connect(self.run_generation)
@@ -337,18 +342,30 @@ class MainWindow(QMainWindow):
         for i, sf in enumerate(self.source_files):
             self.tbl_match.insertRow(i)
             self.tbl_match.setItem(i, 0, QTableWidgetItem(sf.filename))
+            self.tbl_match.setItem(i, 1, QTableWidgetItem(sf.normalized_name))
             if sf.is_ambiguous:
-                self.tbl_match.setItem(i, 1, QTableWidgetItem("TRÙNG TÊN (Ambiguous)"))
-                self.tbl_match.setItem(i, 2, QTableWidgetItem("-"))
-                self.tbl_match.setItem(i, 3, QTableWidgetItem("Cần khóa phụ để phân biệt"))
+                excel_name = ""
+                excel_stt = ""
+                parcel_count = "0"
+                status = "AMBIGUOUS"
+                detail = sf.match_issue or "Tên trùng, cần khóa phụ để phân biệt"
             elif sf.matched_person:
-                self.tbl_match.setItem(i, 1, QTableWidgetItem(sf.matched_person.ho_ten))
-                self.tbl_match.setItem(i, 2, QTableWidgetItem(str(len(sf.matched_person.parcels))))
-                self.tbl_match.setItem(i, 3, QTableWidgetItem("OK"))
+                excel_name = sf.matched_person.ho_ten
+                excel_stt = sf.matched_person.secondary_key or ""
+                parcel_count = str(len(sf.matched_person.parcels))
+                status = "MATCHED" if sf.matched_person.parcels else "MATCHED_NO_PARCEL"
+                detail = (f"Đã match; có {parcel_count} thửa hợp lệ."
+                          if sf.matched_person.parcels
+                          else "Đã match tên nhưng không có cặp Số tờ/Số thửa hợp lệ.")
             else:
-                self.tbl_match.setItem(i, 1, QTableWidgetItem("Không tìm thấy"))
-                self.tbl_match.setItem(i, 2, QTableWidgetItem("0"))
-                self.tbl_match.setItem(i, 3, QTableWidgetItem("WARNING"))
+                excel_name = ""
+                excel_stt = ""
+                parcel_count = "0"
+                status = "NO_MATCH"
+                detail = sf.match_issue or "Không tìm thấy tên trong Excel."
+            values = [excel_name, excel_stt, parcel_count, status, detail]
+            for column, value in enumerate(values, start=2):
+                self.tbl_match.setItem(i, column, QTableWidgetItem(value))
                 
         self.tabs.setCurrentIndex(3)
         
@@ -367,13 +384,11 @@ class MainWindow(QMainWindow):
         self.config.prefix = self.txt_prefix.text()
         self.config.template = self.txt_template.text()
         
-        suffixes = []
-        if self.cmb_suffix1.isChecked(): suffixes.append("TBXN")
-        if self.cmb_suffix2.isChecked(): suffixes.append("DDK")
-        self.config.suffixes = suffixes if suffixes else [""] # fallback
+        self.config.suffixes = ["DDK"]
         
         planner = ActionPlanner(self.source_files, self.txt_out_dir.text(), self.config)
         self.action_plan = planner.build_plan()
+        self.btn_report.setEnabled(True)
         
         self.tbl_plan.setRowCount(0)
         for i, a in enumerate(self.action_plan):
@@ -391,11 +406,22 @@ class MainWindow(QMainWindow):
             if a.status == ActionStatus.CONFLICT: item.setBackground(QColor(255, 200, 0))
             if a.status == ActionStatus.WARNING: item.setBackground(QColor(255, 150, 150))
             self.tbl_plan.setItem(i, 5, item)
+            self.tbl_plan.setItem(i, 6, QTableWidgetItem(a.reason or "Sẵn sàng xử lý."))
             
         # Stats
         ready = sum(1 for a in self.action_plan if a.status == ActionStatus.READY)
         conflicts = sum(1 for a in self.action_plan if a.status == ActionStatus.CONFLICT)
-        self.lbl_stats.setText(f"File sẽ tạo (READY): {ready} | CONFLICT: {conflicts}")
+        matched = sum(bool(sf.matched_person) for sf in self.source_files)
+        no_match = sum(not sf.matched_person and not sf.is_ambiguous for sf in self.source_files)
+        ambiguous = sum(sf.is_ambiguous for sf in self.source_files)
+        matched_no_parcel = sum(bool(sf.matched_person) and not sf.matched_person.parcels for sf in self.source_files)
+        excel_parcels = sum(len(record.parcels) for record in self.excel_records)
+        self.lbl_stats.setText(
+            f"Excel: {len(self.excel_records)} hộ / {excel_parcels} thửa | "
+            f"Nguồn: {len(self.source_files)} | Match: {matched} | Không match: {no_match} | "
+            f"Mơ hồ: {ambiguous} | Match không có thửa: {matched_no_parcel} | "
+            f"Sẽ tạo: {ready} | Conflict: {conflicts}"
+        )
 
     def run_generation(self):
         valid_actions = [a for a in self.action_plan if a.status in (ActionStatus.READY, ActionStatus.CONFLICT)]
@@ -415,7 +441,76 @@ class MainWindow(QMainWindow):
     def on_generate_finished(self):
         self.progress.setVisible(False)
         success = sum(1 for a in self.action_plan if a.status == ActionStatus.SUCCESS)
-        QMessageBox.information(self, "Hoàn thành", f"Đã xử lý xong {success} file.")
+        errors = sum(1 for a in self.action_plan if a.status == ActionStatus.ERROR)
+        conflicts = sum(1 for a in self.action_plan if a.status == ActionStatus.CONFLICT)
+        warnings = sum(1 for a in self.action_plan if a.status == ActionStatus.WARNING)
+        report_path = self.export_report()
+        report_text = f"\nBáo cáo chi tiết: {report_path}" if report_path else ""
+        QMessageBox.information(
+            self,
+            "Hoàn thành",
+            f"Đã tạo thành công: {success} file\n"
+            f"Lỗi khi tạo: {errors} file\n"
+            f"Conflict: {conflicts} file\n"
+            f"Cảnh báo cần kiểm tra: {warnings} mục"
+            f"{report_text}"
+        )
+
+    def export_report(self):
+        if not self.action_plan:
+            return None
+        if not self.txt_out_dir.text().strip():
+            return None
+        output_dir = Path(self.txt_out_dir.text())
+        output_dir.mkdir(parents=True, exist_ok=True)
+        stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        report_path = output_dir / f"HPNet_File_Generator_Report_{stamp}.csv"
+        fields = [
+            "loai", "file_nguon", "ten_nhan_dien", "nguoi_excel", "stt_nguon",
+            "stt_excel", "so_to", "so_thua", "output", "trang_thai", "chi_tiet"
+        ]
+        with report_path.open("w", newline="", encoding="utf-8-sig") as handle:
+            writer = csv.DictWriter(handle, fieldnames=fields)
+            writer.writeheader()
+            for sf in self.source_files:
+                person = sf.matched_person
+                writer.writerow({
+                    "loai": "MATCH",
+                    "file_nguon": sf.filename,
+                    "ten_nhan_dien": sf.normalized_name,
+                    "nguoi_excel": person.ho_ten if person else "",
+                    "stt_nguon": sf.stt or "",
+                    "stt_excel": person.secondary_key if person else "",
+                    "so_to": "",
+                    "so_thua": "",
+                    "output": "",
+                    "trang_thai": (
+                        "AMBIGUOUS" if sf.is_ambiguous else
+                        "MATCHED" if person and person.parcels else
+                        "MATCHED_NO_PARCEL" if person else "NO_MATCH"
+                    ),
+                    "chi_tiet": sf.match_issue or (
+                        "Đã match và có thửa hợp lệ." if person and person.parcels
+                        else "Đã match nhưng không có cặp Số tờ/Số thửa hợp lệ." if person
+                        else "Không tìm thấy tên trong Excel."
+                    ),
+                })
+            for action in self.action_plan:
+                writer.writerow({
+                    "loai": "OUTPUT",
+                    "file_nguon": action.source_file.filename,
+                    "ten_nhan_dien": action.source_file.normalized_name,
+                    "nguoi_excel": action.source_file.matched_person.ho_ten if action.source_file.matched_person else "",
+                    "stt_nguon": action.source_file.stt or "",
+                    "stt_excel": action.source_file.matched_person.secondary_key if action.source_file.matched_person else "",
+                    "so_to": action.parcel.so_to if action.parcel else "",
+                    "so_thua": action.parcel.so_thua if action.parcel else "",
+                    "output": str(action.target_path) if action.target_filename else "",
+                    "trang_thai": action.status.value,
+                    "chi_tiet": action.reason or "",
+                })
+        self.last_report_path = report_path
+        return report_path
 
     def load_settings(self):
         if self.settings_file.exists():

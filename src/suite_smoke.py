@@ -88,7 +88,7 @@ def run(hub):
         pdf = root / "original.pdf"
         pdf.write_bytes(b"%PDF-offline-synthetic-test")
         action = GenerationAction(SourceFile(pdf, pdf.name, "test", ".pdf"),
-                                  Parcel("10", "300"), "TBXN", "copy.pdf", root / "copy.pdf")
+                                  Parcel("10", "300"), "DDK", "copy.pdf", root / "copy.pdf")
         assert FileGenerator().execute_action(action).status == ActionStatus.SUCCESS
         assert action.target_path.read_bytes() == pdf.read_bytes()
 

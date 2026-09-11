@@ -33,6 +33,7 @@ class FileGenerator:
             os.rename(temp_target, target)
             
             action.status = ActionStatus.SUCCESS
+            action.reason = f"Đã copy thành công tới: {target}"
             
         except Exception as e:
             action.status = ActionStatus.ERROR
