@@ -76,6 +76,7 @@ Xem_truoc/
 
 # Local design/research/audit notes, not runtime source
 /.agents/
+/graphify-out/
 /review/
 /research/*
 !/research/notice_template/

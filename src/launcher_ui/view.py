@@ -11,6 +11,7 @@ from .help_page import HelpPage
 TOOLS = (
     ("notice","prepare","MẪU 22","Tạo thông báo đất đai","Nhập dữ liệu từ Excel để tạo thông báo Word. Kiểm tra nội dung, xem trước và xác nhận khi đã đúng."),
     ("excel","prepare","VBDLIS","Chuẩn bị hồ sơ VBDLIS","Sắp xếp dữ liệu Excel và đưa vào đúng cột để tạo hồ sơ VBDLIS."),
+    ("validation","prepare","ĐỐI SOÁT","Kiểm tra dữ liệu upload VBDLIS","Đối chiếu Excel nguồn, dữ liệu upload, TBXN/DDK và chữ ký số theo từng thửa."),
     ("duplicate_parcel","prepare","EXCEL AN TOÀN","Kiểm tra thửa đất trùng","Tìm và xử lý các thửa đất bị trùng. Xem trước kết quả trước khi xóa dữ liệu."),
     ("data_normalizer","prepare","EXCEL TIỆN ÍCH","Chuẩn hóa họ tên và ngày sinh","Đưa họ tên và ngày sinh về cùng một định dạng, đồng thời giữ nguyên dữ liệu chưa đủ thông tin."),
     ("rename","prepare","TỆP HỒ SƠ","Đặt tên hồ sơ tự động","Sao chép và đặt tên file Word, PDF theo thông tin hộ dân và thửa đất."),
@@ -161,7 +162,7 @@ class LauncherView(QWidget):
         self.scroll=QScrollArea(); self.scroll.setWidgetResizable(True); self.scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         content=QWidget(); content.setObjectName("toolContent"); body=QVBoxLayout(content); body.setContentsMargins(0,4,12,8); body.setSpacing(20)
         body.setSizeConstraint(QLayout.SetMinimumSize)
-        handlers={"notice":hub.launch_notice_builder,"excel":hub.launch_excel_builder,"rename":hub.launch_auto_rename,
+        handlers={"notice":hub.launch_notice_builder,"excel":hub.launch_excel_builder,"validation":hub.launch_vbdlis_validation,"rename":hub.launch_auto_rename,
                   "duplicate_parcel":hub.launch_duplicate_parcel,"data_normalizer":hub.launch_data_normalizer,
                   "cleaner":hub.launch_pdf_cleaner,"downloader":lambda:hub.launch_external("downloader"),
                   "upload":lambda:hub.launch_external("upload"),"approve":lambda:hub.launch_external("approve")}

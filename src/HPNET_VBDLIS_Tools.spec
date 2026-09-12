@@ -27,6 +27,7 @@ datas = [
     ('tools/hpnet_file_generator/assets', 'tools/hpnet_file_generator/assets'),
     ('tools/duplicate_parcel/assets', 'tools/duplicate_parcel/assets'),
     ('tools/data_normalizer/assets', 'tools/data_normalizer/assets'),
+    ('tools/vbdlis_validation/assets', 'tools/vbdlis_validation/assets'),
 ]
 if os.environ.get('SUITE_BUILD_INFO'):
     datas.append((os.environ['SUITE_BUILD_INFO'], '.'))
@@ -41,10 +42,13 @@ hiddenimports = [
     'tools.hpnet_file_generator.main',
     'tools.signed_pdf_cleaner.main',
     'tools.vbdlis_excel_builder.ui.main_window',
+    'tools.vbdlis_validation.ui',
     'tools.hpnet_file_generator.ui.main_window',
     'tools.signed_pdf_cleaner.ui.main_window',
     'openpyxl',
     'pypdf',
+    'pyhanko',
+    'pyhanko_certvalidator',
     'reportlab',
     'send2trash'
 ]

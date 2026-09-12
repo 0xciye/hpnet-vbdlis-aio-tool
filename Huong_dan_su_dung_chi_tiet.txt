@@ -99,7 +99,19 @@ E. Đọc kết quả và nhật ký
   + Tại thẻ "Kiểm tra & Xuất", chọn chức năng "Kiểm tra quy định hệ thống". Báo cáo lỗi sẽ thông báo chính xác số dòng chứa dữ liệu định danh sai lệch yêu cầu để cán bộ kịp thời chỉnh lý tại tệp gốc.
   + Sau khi mọi thông tin xác thực vượt yêu cầu hợp lệ, sử dụng lệnh "Khởi tạo Excel" để kết xuất biểu mẫu hoàn chỉnh phục vụ tác vụ đẩy thông tin lên Cơ sở dữ liệu VBDLIS.
 
-4. HPNet PDF Downloader (Tiện ích Truy xuất và tải hồ sơ tự động)
+4. VBDLIS Upload Data Validation
+- Chức năng: Kiểm tra dữ liệu ở cấp hộ + tờ + thửa giữa Excel chuẩn bị upload và các file TBXN/DDK; có thể đối chiếu thêm Excel nguồn; xác minh chữ ký PDF và giữ đủ mọi dòng thành viên.
+- Thao tác:
+  + Chọn Excel VBDLIS, folder TBXN và folder DDK. Nếu không có Excel nguồn, bật chế độ chỉ kiểm tra VBDLIS; nếu có nguồn, chọn Excel nguồn để chạy đối chiếu đầy đủ.
+  + Chọn đúng sheet và dòng tiêu đề tầng 1. Nếu Excel dùng hai tầng tiêu đề, chọn thêm tầng 2; công cụ ghép tên hai tầng để mapping và tự đọc dữ liệu từ dòng ngay sau tầng 2.
+  + Map các cột Chủ hộ/Tên người/Vai trò/Số tờ/Số thửa/TBXN/DDK hoặc cột tài liệu dùng chung.
+  + Chọn phạm vi cột cần giữ trong Excel kết quả, bấm "KIỂM TRA ĐẦU VÀO", đọc số dòng/hộ/thửa/PDF và mọi cảnh báo.
+  + Bấm "VALIDATE DATA". Có đủ TBXN + DDK nhưng chưa ký được giữ lại với trạng thái NEED_SIGNATURE; không bị coi là thiếu hoặc sẵn sàng upload. Trường hợp không chắc chắn có trạng thái REVIEW_REQUIRED.
+  + Mở thư mục kết quả để kiểm tra các file READY_TO_UPLOAD, NEED_SIGNATURE, MISSING_OR_INVALID, DOCUMENT_COMPLETE, Validation_Summary.xlsx, DOCUMENT_ACTIONS và validation.log.
+- Cách đọc lỗi: ưu tiên hai cột "Lý do dễ hiểu" và "Cách xử lý đề nghị". Cột "Technical_Issue_Codes" chỉ dùng khi cần gửi mã cho người hỗ trợ kỹ thuật.
+- Lưu ý: Công cụ không sửa hoặc di chuyển input. Trạng thái chữ ký mật mã và trạng thái tin cậy chứng thư được báo riêng; nên kiểm tra Trust_Verified theo chính sách CA của đơn vị.
+
+5. HPNet PDF Downloader (Tiện ích Truy xuất và tải hồ sơ tự động)
 - Chức năng: Quét Văn bản đi tài khoản được quyền xem, lọc văn bản và tải các PDF khớp quy tắc tên; xuất nhật ký TXT/CSV và bảng đối soát đầy đủ.
 - Thao tác:
   + Mở mục công cụ "PDF Downloader".
@@ -110,7 +122,7 @@ E. Đọc kết quả và nhật ký
   + Chọn thư mục lưu, bấm "BẮT ĐẦU QUÉT VÀ TẢI", đọc kỹ hộp xác nhận rồi đăng nhập VNeID trong Edge.
   + Khi hoàn tất, kiểm tra cả file PDF, nhật ký tải và CSV đối soát. File không khớp hoặc tên không an toàn được bỏ qua và ghi rõ lý do.
 
-5. HPNet Upload Văn Bản Dự Thảo
+6. HPNet Upload Văn Bản Dự Thảo
 - Chức năng: Tự động hóa tiến trình đẩy (đăng tải) các tập tin văn bản gốc đã soạn thảo (Word/PDF) vào kho dữ liệu thông tin nội bộ HPNet, cho phép tự động cung cấp thông số Trích yếu và khai báo thông tin chỉ định chuyên viên kiểm duyệt.
 - Thao tác:
   + Kiểm tra trạng thái phiên làm việc (session login) của quản trị viên trên trình duyệt cơ sở.
@@ -119,7 +131,7 @@ E. Đọc kết quả và nhật ký
   + Cung cấp nội dung "Trích Yếu" của đợt công tác và cấp phân quyền thuộc danh mục "Cán bộ phê duyệt".
   + Nhấp tiến hành lệnh "Bắt đầu" ở chế độ "Chạy thật". Hệ thống phần mềm tự động thay thế giao diện tương tác thủ công nhằm giảm bớt đáng kể quỹ thời gian.
 
-6. HPNet Duyệt Văn Bản Dự Thảo
+7. HPNet Duyệt Văn Bản Dự Thảo
 - Chức năng: Tìm kiếm và thu thập, nhóm các hồ sơ/giấy tờ chờ phê duyệt theo mã từ khóa, phục vụ tác vụ luân chuyển và phê duyệt dự thảo số lượng lớn qua hệ thống hạ tầng mạng lưu trữ.
 - Thao tác:
   + Kiểm tra trạng thái bảo mật của tài khoản ủy quyền trên trình duyệt web.
@@ -128,6 +140,6 @@ E. Đọc kết quả và nhật ký
   + Đề cử/bầu chọn Cán bộ quản lý sẽ tiếp quản quy trình xử lý kế tiếp.
   + Nhấp thao tác "Xác nhận & Duyệt tự động". Khi toàn bộ tiến trình xử lý thông tin hoàn tất, log nhật ký quá trình sẽ được truy xuất thành tệp tin (.CSV hoặc .TXT) hỗ trợ công tác hậu kiểm.
 
-7. NHẬT KÝ TIẾNG VIỆT CỦA CÁC CÔNG CỤ HPNET
+8. NHẬT KÝ TIẾNG VIỆT CỦA CÁC CÔNG CỤ HPNET
 - Khung “Nhật ký hoạt động” trong PDF Downloader, Upload Dự Thảo và Duyệt Dự Thảo dùng UTF-8 để hiển thị tiếng Việt sau khi tác vụ kết thúc.
 - File nhật ký TXT/CSV cũng được ghi UTF-8 có dấu nhận diện dành cho Windows. Nếu vẫn thấy ký tự lạ, không sửa file; hãy kiểm tra đúng bản release mới và mở lại bằng Notepad/Excel.

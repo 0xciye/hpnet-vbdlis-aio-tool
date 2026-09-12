@@ -156,6 +156,15 @@ class ToolLauncher(QMainWindow):
                 raise
             QMessageBox.critical(self, "Không thể mở Excel Builder", str(error))
 
+    def launch_vbdlis_validation(self):
+        try:
+            from tools.vbdlis_validation.ui import MainWindow
+            self._open_python("validation", MainWindow)
+        except Exception as error:
+            if "--smoke-test" in sys.argv:
+                raise
+            QMessageBox.critical(self, "Không thể mở VBDLIS Upload Data Validation", str(error))
+
     def launch_auto_rename(self):
         try:
             from tools.hpnet_file_generator.ui.main_window import MainWindow

@@ -4,7 +4,7 @@ HPNET & VBDLIS AIO TOOL — QUY TRÌNH VẬN HÀNH
 Giải nén toàn bộ gói ZIP vào thư mục có quyền ghi, sau đó chạy HPNET & VBDLIS Tools.exe.
 LƯU Ý: Luôn giữ thư mục _internal nằm cạnh file EXE. Không chạy phần mềm trực tiếp trong ZIP và không di chuyển riêng file EXE ra Desktop.
 Nếu cần mở nhanh từ Desktop, hãy tạo shortcut đến file EXE trong thư mục đã giải nén.
-Launcher hiện có 9 công cụ đang hoạt động. Chọn thẻ công cụ phù hợp với công việc cần thực hiện.
+Launcher hiện có 10 công cụ đang hoạt động. Chọn thẻ công cụ phù hợp với công việc cần thực hiện.
 Mỗi công cụ mở trong cửa sổ nghiệp vụ riêng. Mở lại một công cụ Python đang chạy sẽ đưa cửa sổ đó lên trước và giữ nguyên nội dung đang nhập.
 
 2. TẠO THÔNG BÁO ĐẤT ĐAI
@@ -44,20 +44,27 @@ Khi bật tự động bỏ qua, hộ thiếu dữ liệu bắt buộc hoặc ng
 Muốn đổi Mục 29 thành “Không xác định”: vào tab 4, tìm “29” hoặc “thoi han su dung”, chọn “Giá trị cố định”, nhập “Không xác định” vào cột Mặc định, lưu cấu hình rồi quay lại tab 5 để kiểm tra và xuất.
 Các trường khác có thể cấu hình tương tự nếu chế độ của trường cho phép. Quy tắc của các dòng đang ẩn do tìm kiếm vẫn được giữ nguyên.
 
-4. AUTO RENAME
+4. VBDLIS UPLOAD DATA VALIDATION
+MỤC ĐÍCH: Kiểm tra Excel chuẩn bị upload và các PDF TBXN/DDK theo từng hộ + tờ + thửa; có thể đối chiếu thêm Excel nguồn; xác minh cấu trúc chữ ký số thật và tách rõ đủ tài liệu, cần ký, thiếu/lỗi và sẵn sàng upload.
+QUY TRÌNH: Chọn Excel VBDLIS → nếu không có Excel nguồn, bật “Không có Excel nguồn — chỉ kiểm tra dữ liệu VBDLIS và tài liệu PDF”; nếu có nguồn thì giữ chế độ đầy đủ và chọn Excel nguồn → chọn folder TBXN/DDK → chọn sheet, dòng tiêu đề tầng 1 và tầng 2 nếu có → map cột → chọn phạm vi xuất → Kiểm tra đầu vào → VALIDATE DATA.
+LƯU Ý: Cột Vai trò phải nhận diện được Chủ hộ, hoặc cần map Mã hộ. Matching không chắc chắn luôn được đưa vào REVIEW_REQUIRED. Có đủ TBXN + DDK nhưng một hoặc cả hai file chưa ký là COMPLETE + NEED_SIGNATURE, không phải thiếu file và cũng chưa sẵn sàng upload. Tùy chọn tách hồ sơ chưa ký chỉ đổi file kết quả chính; không sửa input.
+KẾT QUẢ: Mỗi lần chạy tạo thư mục VBDLIS_VALIDATION_<thời gian> gồm VBDLIS_READY_TO_UPLOAD.xlsx, VBDLIS_NEED_SIGNATURE.xlsx, VBDLIS_MISSING_OR_INVALID.xlsx, VBDLIS_DOCUMENT_COMPLETE.xlsx, Validation_Summary.xlsx, DOCUMENT_ACTIONS và validation.log.
+Chữ ký hợp lệ về mật mã được ghi riêng với trạng thái tin cậy chuỗi chứng thư. Thiếu root CA trên máy không làm chữ ký nguyên vẹn bị đánh là hỏng, nhưng cột Trust_Verified vẫn cho biết chuỗi chứng thư đã xác minh đầy đủ hay chưa.
+
+5. AUTO RENAME
 MỤC ĐÍCH: Đọc danh sách Excel, tìm file nguồn phù hợp, tạo bản sao và đặt tên theo mã xã, số tờ, số thửa.
 QUY TRÌNH: Chọn Excel → chọn dòng tiêu đề và đọc dữ liệu → chọn thư mục file nguồn → ánh xạ các cột → phân tích khớp → nhập mã đơn vị hành chính → chọn thư mục đích → xem kết quả dự kiến → tạo file.
 LƯU Ý: Kiểm tra các dòng không khớp, tên trùng và xung đột thư mục trước khi tạo. Công cụ tạo bản sao, không chỉnh sửa nội dung file nguồn.
 KẾT QUẢ: Sau khi chạy, kiểm tra danh sách kết quả và nhật ký trong thư mục đầu ra.
 
-5. PDF CLEANER
+6. PDF CLEANER
 MỤC ĐÍCH: Quét thư mục PDF, nhận diện các cặp file cần làm sạch và chuẩn hóa tên file sau ký số.
 QUY TRÌNH: Chọn thư mục → chọn quy tắc xử lý → Quét/Xem trước → kiểm tra danh sách hành động → xác nhận xử lý → xem nhật ký.
 Có thể nhập nhiều hậu tố ở mỗi ô, ngăn cách bằng dấu phẩy. Ví dụ xóa `.signed, .ldsigned` và đổi tên `.signed.signed, .ldsigned.signed`; phần mềm ghép theo cặp, xóa file cũ rồi bỏ toàn bộ hậu tố để `.signed.signed.pdf` và `.ldsigned.signed.pdf` trở thành tên gốc chỉ còn `.pdf`.
 LƯU Ý: Luôn kiểm tra kỹ danh sách xem trước và lựa chọn chuyển vào Thùng rác hay xóa vĩnh viễn trước khi xác nhận.
 Nên sao lưu thư mục hồ sơ khi thực hiện đợt xử lý lớn. Nhật ký của PDF Cleaner nằm trong thư mục logs cạnh file cấu hình.
 
-6. HPNET PDF DOWNLOADER
+7. HPNET PDF DOWNLOADER
 MỤC ĐÍCH: Quét Văn bản đi mà tài khoản được quyền xem, lọc văn bản và tải các PDF khớp quy tắc tên.
 QUY TRÌNH: Chọn phạm vi quét → đặt bộ lọc → chọn quy tắc tên PDF → chọn thư mục lưu → đọc tóm tắt xác nhận → bắt đầu quét và tải → đăng nhập VNeID trong Edge khi được yêu cầu → kiểm tra PDF, TXT và CSV.
 “Theo bộ lọc” sử dụng các điều kiện trích yếu, số thông báo, ký hiệu, ngày và trạng thái xem. Các nhóm bộ lọc đang bật kết hợp theo AND; nhiều giá trị trong cùng nhóm kết hợp theo OR.
@@ -66,21 +73,22 @@ Quy tắc tên “Mẫu hồ sơ CHUACOGIAY/CHUACAPGIAY” dùng mã xã và ngo
 LƯU Ý: Có thể chọn .signed, .ldsigned, .lsigned và nhập hậu tố khác. Đây là lọc theo tên file, không phải kiểm tra chữ ký số.
 KẾT QUẢ: Sau khi chạy, kiểm tra file đã tải, nhật ký TXT và CSV đối soát. Văn bản hoặc file bị loại đều có lý do trong nhật ký.
 
-7. HPNET UPLOAD VĂN BẢN DỰ THẢO
+8. HPNET UPLOAD VĂN BẢN DỰ THẢO
 MỤC ĐÍCH: Tải hàng loạt văn bản dự thảo lên HPNet theo thông tin và người duyệt đã chọn.
 QUY TRÌNH: Chọn thư mục/file cần tải → nhập trích yếu và thông tin bắt buộc → chọn cán bộ phê duyệt → kiểm tra danh sách và cảnh báo trùng → bắt đầu chạy → đăng nhập VNeID khi được yêu cầu → theo dõi nhật ký → kiểm tra kết quả trên HPNet.
 LƯU Ý: Đọc kỹ nội dung xác nhận trước khi chạy thật. Không đóng cửa sổ trình duyệt do công cụ mở trong lúc tác vụ đang thực hiện.
 KẾT QUẢ: Khi hoàn tất, đối chiếu số file thành công, file bị bỏ qua và nguyên nhân trong Nhật ký hoạt động.
 
-8. HPNET DUYỆT VĂN BẢN DỰ THẢO
+9. HPNET DUYỆT VĂN BẢN DỰ THẢO
 MỤC ĐÍCH: Tìm các dự thảo phù hợp, kiểm tra người nhận và thực hiện luồng chuyển duyệt hàng loạt trên HPNet.
 QUY TRÌNH: Nhập điều kiện tìm kiếm → quét danh sách chờ xử lý → xem trước kết quả → chọn người nhận/người xử lý → đọc nội dung xác nhận → bắt đầu duyệt → đăng nhập VNeID khi được yêu cầu → kiểm tra nhật ký và trạng thái trên HPNet.
 LƯU Ý: Luôn xem trước đúng tập văn bản và đúng người nhận trước khi xác nhận. Các văn bản không phù hợp điều kiện được bỏ qua và ghi trong nhật ký.
 
-9. CẤU HÌNH, NHẬT KÝ VÀ DỮ LIỆU CÁ NHÂN
+10. CẤU HÌNH, NHẬT KÝ VÀ DỮ LIỆU CÁ NHÂN
 Excel Builder lưu cấu hình tại %APPDATA%\VBDLIS Excel Builder.
 Auto Rename lưu cấu hình tại %APPDATA%\HPNET & VBDLIS Tools\Auto Rename\settings.json.
 PDF Cleaner lưu cấu hình tại %APPDATA%\HPNET & VBDLIS Tools\PDF Cleaner\config.json; nhật ký nằm trong thư mục logs cạnh cấu hình.
+VBDLIS Upload Data Validation lưu mapping tại %APPDATA%\HPNET & VBDLIS Tools\VBDLIS Upload Data Validation\settings.json.
 Ba công cụ HPNet lưu cấu hình và phiên làm việc trong thư mục riêng dưới _internal\nodes_tools.
 Khung Nhật ký hoạt động và các file TXT/CSV sử dụng UTF-8 để hiển thị tiếng Việt. Nếu thấy ký tự lạ, hãy mở đúng bản release và mở lại file bằng Notepad hoặc Excel.
 LƯU Ý: Gói phát hành không chứa phiên đăng nhập cá nhân. Không gửi thư mục đã sử dụng, file cấu hình hoặc nhật ký cho người không có quyền vì có thể chứa thông tin tài khoản, tên hộ và dữ liệu thửa đất.

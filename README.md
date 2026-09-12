@@ -22,6 +22,7 @@
 | --- | --- |
 | 📝 **Tạo thông báo đất đai** | Nhập dữ liệu từ Excel, kiểm tra nội dung và tạo thông báo Word theo Mẫu 22. |
 | 📊 **Chuẩn bị hồ sơ VBDLIS** | Sắp xếp dữ liệu Excel vào đúng cột để tạo hồ sơ VBDLIS. |
+| ✅ **Kiểm tra dữ liệu upload VBDLIS** | Chạy được với hoặc không có Excel nguồn, hỗ trợ tiêu đề 1–2 tầng, quét TBXN/DDK đệ quy và tách rõ đủ tài liệu, cần ký, thiếu/lỗi, sẵn sàng upload. |
 | 🔍 **Kiểm tra thửa đất trùng** | Tìm các thửa đất bị trùng và xem trước dữ liệu trước khi xử lý. |
 | 👤 **Chuẩn hóa họ tên và ngày sinh** | Đưa họ tên, ngày sinh về cùng một cách ghi để dữ liệu dễ sử dụng hơn. |
 | 🗂️ **Đặt tên hồ sơ tự động** | Đặt tên file Word và PDF theo thông tin hộ dân, tờ bản đồ và thửa đất. |

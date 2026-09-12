@@ -1,9 +1,9 @@
 import json
 import logging
 import os
-from pathlib import Path
 import threading
 import time
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -52,10 +52,19 @@ def hub(app, monkeypatch, tmp_path):
     app.processEvents()
 
 
-def test_nine_cards_and_resource_paths_independent_of_cwd(hub):
-    assert set(hub.tool_buttons) == {"excel", "rename", "cleaner", "downloader", "upload", "approve", "notice", "duplicate_parcel", "data_normalizer"}
+def test_ten_cards_and_resource_paths_independent_of_cwd(hub):
+    assert set(hub.tool_buttons) == {"excel", "validation", "rename", "cleaner", "downloader", "upload", "approve", "notice", "duplicate_parcel", "data_normalizer"}
     assert Path(resource_path("tools/vbdlis_excel_builder/config/template_schema.json")).is_file()
     assert not hub.windowIcon().isNull()
+
+
+def test_validation_tool_opens_as_independent_window(hub):
+    hub.launch_excel_builder()
+    hub.launch_vbdlis_validation()
+    window = hub.tool_windows["validation"]
+    assert window.windowTitle() == "VBDLIS Upload Data Validation"
+    assert not window.windowIcon().isNull()
+    assert window.windowIcon().cacheKey() != hub.tool_windows["excel"].windowIcon().cacheKey()
 
 
 def test_new_excel_utilities_open_as_independent_windows(hub):
@@ -69,7 +78,10 @@ def test_excel_utilities_show_real_worker_completion_and_error_states(hub, app):
     for launch, key in ((hub.launch_duplicate_parcel, "duplicate_parcel"), (hub.launch_data_normalizer, "data_normalizer")):
         launch(); window = hub.tool_windows[key]
         gate = threading.Event()
-        window._run(lambda: gate.wait(2) or "done", lambda _: window.statusBar().showMessage("Hoàn tất kiểm thử."))
+        window._run(
+            lambda current_gate=gate: current_gate.wait(2) or "done",
+            lambda _, current_window=window: current_window.statusBar().showMessage("Hoàn tất kiểm thử."),
+        )
         app.processEvents()
         assert window.progress.isVisible() and not window.isEnabled()
         gate.set()

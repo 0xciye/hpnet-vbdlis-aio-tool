@@ -19,7 +19,8 @@ class PrivateReference:
 
 if __name__=='__main__':
     paths=['tests','src/tools/hpnet_file_generator/tests','src/tools/signed_pdf_cleaner/tests',
-           'src/tools/vbdlis_excel_builder/tests','src/tools/notice_builder/tests']
+           'src/tools/vbdlis_excel_builder/tests','src/tools/vbdlis_validation/tests',
+           'src/tools/notice_builder/tests']
     try:
         code = pytest.main(['--import-mode=importlib',*[str(ROOT/p) for p in paths],'-q',*sys.argv[1:]],plugins=[PrivateReference()])
     except PermissionError:
