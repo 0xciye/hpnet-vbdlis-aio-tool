@@ -42,8 +42,19 @@ class ActionPlanner:
                     reason=sf.match_issue or "Không tìm thấy tên trong Excel"
                 ))
                 continue
+
+            for issue in sf.matched_person.data_issues:
+                actions.append(GenerationAction(
+                    source_file=sf,
+                    parcel=None, # type: ignore
+                    suffix="",
+                    target_filename="",
+                    target_path=Path(""),
+                    status=ActionStatus.WARNING,
+                    reason=issue,
+                ))
                 
-            if not sf.matched_person.parcels:
+            if not sf.matched_person.parcels and not sf.matched_person.data_issues:
                 actions.append(GenerationAction(
                     source_file=sf,
                     parcel=None, # type: ignore
@@ -79,11 +90,15 @@ class ActionPlanner:
                         action.reason = "Trùng tên file được tạo ra bởi người khác"
                         action.conflict_path = get_unique_path(target_path, self.conflict_folder, reserved_conflict_paths)
                         reserved_conflict_paths.add(action.conflict_path)
-                        
-                        # Also mark the original action as conflict if it's the first time we see the clash
-                        # Actually, no, the first action will successfully copy to normal output
-                        # Wait! Requirement says: "Hai source khác nhau tạo cùng target filename -> conflict"
-                        # It's better to just move the SECOND one to conflict.
+
+                        # Không để bản đầu tiên lọt vào thư mục kết quả chính khi chính
+                        # tên đích đó có nhiều nguồn cạnh tranh.
+                        original = target_map[target_path]
+                        if original.status == ActionStatus.READY:
+                            original.status = ActionStatus.CONFLICT
+                            original.reason = "Trùng tên file được tạo ra bởi người khác"
+                            original.conflict_path = get_unique_path(target_path, self.conflict_folder, reserved_conflict_paths)
+                            reserved_conflict_paths.add(original.conflict_path)
                     elif target_path.exists():
                         # File already exists on disk
                         action.status = ActionStatus.CONFLICT

@@ -32,6 +32,7 @@ class PersonRecord:
     stt: Optional[str] = None
     secondary_key: Optional[str] = None
     raw_rows: list[int] = field(default_factory=list)
+    data_issues: list[str] = field(default_factory=list)
 
 @dataclass
 class SourceFile:

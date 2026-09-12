@@ -83,6 +83,16 @@ def test_notice_workflow_gates_and_values_not_changed_by_navigation(window,app):
     assert window.job is None and window.inspection is None and window.preview_result is None
 
 
+def test_notice_number_list_continues_automatically(window, app):
+    window.number_mode.setCurrentIndex(window.number_mode.findData('list'))
+    window.number_list.setText('300-400')
+    app.processEvents()
+
+    assert window.continue_check.isChecked()
+    assert window.continue_number.value() == 401
+    assert window.continue_number.isEnabled()
+
+
 def test_notice_color_pairs_have_readable_contrast():
     def luminance(value):
         rgb=[int(value[i:i+2],16)/255 for i in (1,3,5)]

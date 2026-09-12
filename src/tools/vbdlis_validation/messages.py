@@ -34,6 +34,8 @@ ISSUE_MESSAGES = {
     "MISSING_ROLE": "Dòng dữ liệu chưa có vai trò Chủ hộ/Thành viên.",
     "MISSING_SHEET": "Dòng dữ liệu chưa có số tờ bản đồ.",
     "MISSING_PARCEL": "Dòng dữ liệu chưa có số thửa đất.",
+    "INVALID_SHEET_IDENTIFIER": "Số tờ không hợp lệ. Số tờ bắt buộc phải là số nguyên dương và không được có chữ cái.",
+    "INVALID_PARCEL_IDENTIFIER": "Số thửa không hợp lệ. Số thửa bắt buộc phải là số nguyên dương và không được có chữ cái.",
     "AX_EMPTY": "Cột Thông tin hồ sơ quét đang để trống.",
     "AX_PARSE_ERROR": "Không đọc được tên TBXN/DDK trong cột Thông tin hồ sơ quét.",
     "AX_DATA_MISMATCH": "Tên tài liệu trong Excel chưa khớp với file PDF thực tế.",
@@ -75,6 +77,8 @@ ISSUE_ACTIONS = {
     "MISSING_ROLE": "Bổ sung vai trò Chủ hộ hoặc Thành viên hộ gia đình tại dòng Excel.",
     "MISSING_SHEET": "Bổ sung đúng số tờ bản đồ.",
     "MISSING_PARCEL": "Bổ sung đúng số thửa đất.",
+    "INVALID_SHEET_IDENTIFIER": "Mở dòng Excel được ghi trong báo cáo và sửa Số tờ thành một số nguyên lớn hơn 0.",
+    "INVALID_PARCEL_IDENTIFIER": "Mở dòng Excel được ghi trong báo cáo và sửa Số thửa thành một số nguyên lớn hơn 0.",
     "AX_EMPTY": "Bổ sung tên TBXN và DDK vào cột Thông tin hồ sơ quét nếu nghiệp vụ yêu cầu.",
     "AX_PARSE_ERROR": "Ghi rõ tên file TBXN và DDK, phân cách bằng dấu phẩy hoặc dấu chấm phẩy.",
     "AX_DATA_MISMATCH": "Đối chiếu và cập nhật tên file trong Excel cho đúng với PDF thực tế.",
@@ -96,6 +100,13 @@ def _unique_messages(codes: Iterable[str], lookup: dict[str, str]) -> list[str]:
 
 def _display_codes(codes: Iterable[str]) -> list[str]:
     result = list(codes)
+    invalid_identifiers = {
+        "INVALID_SHEET_IDENTIFIER", "INVALID_PARCEL_IDENTIFIER"
+    }.intersection(result)
+    if invalid_identifiers:
+        # The bad identifier is the actionable root cause. Hide downstream
+        # matching/document symptoms so a non-technical user gets one clear job.
+        return [code for code in result if code in invalid_identifiers]
     if "BOTH_UNSIGNED" in result:
         result = [code for code in result if code not in {"TBXN_UNSIGNED", "DDK_UNSIGNED"}]
     if "BOTH_SIGNATURE_INVALID" in result:

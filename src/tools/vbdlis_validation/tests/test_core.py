@@ -204,6 +204,20 @@ def test_case_11_parcel_stats_once_but_all_five_rows_exportable():
 def test_case_12_normalization_variants():
     assert normalize_name("  NGUYỄN__Văn-A. ") == normalize_name("nguyen van a")
     assert normalize_identifier("Tờ số 12", "sheet") == normalize_identifier(12.0, "sheet") == "12"
+    assert normalize_identifier("CN", "parcel") == ""
+
+
+def test_invalid_letter_parcel_is_reported_as_source_data_error():
+    record = ParcelRecord("Hộ A", "ho a", "92", "92", "CN", "")
+    record.source_rows.append(288)
+
+    evaluate_record(record)
+
+    assert record.workflow_status == WorkflowStatus.DATA_ERROR
+    assert "INVALID_PARCEL_IDENTIFIER" in record.issues
+    assert "MISSING_BOTH" not in record.issues
+    assert "số nguyên dương" in describe_issues(record.issues).casefold()
+    assert "vbdlis" not in describe_issues(record.issues).casefold()
 
 
 def test_case_13_ambiguous_household_is_not_auto_matched(tmp_path):

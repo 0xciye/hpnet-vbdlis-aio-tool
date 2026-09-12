@@ -208,6 +208,7 @@ class ValidationResult:
             "DUPLICATE_TBXN", "DUPLICATE_DDK", "SOURCE_PARCEL_NOT_FOUND", "VBDLIS_PARCEL_NOT_FOUND",
             "SOURCE_ONLY", "VBDLIS_ONLY", "PARCEL_MISMATCH", "HOUSEHOLD_NOT_FOUND",
             "REVIEW_REQUIRED", "INVALID_PDF", "FILE_ACCESS_ERROR", "MISSING_ROLE",
+            "INVALID_SHEET_IDENTIFIER", "INVALID_PARCEL_IDENTIFIER",
         )
         counts.update({issue.lower(): sum(issue in record.issues for record in self.records) for issue in tracked})
         counts["orphan_tbxn"] = sum(d.document_type == DocumentType.TBXN and d.match_status == "ORPHAN" for d in self.documents)

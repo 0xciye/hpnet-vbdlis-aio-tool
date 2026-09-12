@@ -7,10 +7,11 @@ from openpyxl.utils import get_column_letter
 
 from tools.hpnet_file_generator.utils.text_normalizer import normalize_person_name, normalize_excel_identifier
 from tools.hpnet_file_generator.models.data_models import PersonRecord, Parcel
+from tools.land_identifier import normalize_land_identifier
 
 
 def _valid_parcel_identifier(value: str) -> bool:
-    return bool(re.fullmatch(r"[1-9]\d*", value))
+    return bool(normalize_land_identifier(value))
 
 
 def _is_non_person_label(value: str) -> bool:
@@ -146,7 +147,14 @@ class ExcelReader:
                 record = current_record
                 record.raw_rows.append(row_idx)
                 if _valid_parcel_identifier(so_to) and _valid_parcel_identifier(so_thua):
-                    record.parcels.add(Parcel(so_to=so_to, so_thua=so_thua))
+                    record.parcels.add(Parcel(
+                        so_to=normalize_land_identifier(so_to),
+                        so_thua=normalize_land_identifier(so_thua),
+                    ))
+                else:
+                    record.data_issues.append(
+                        f"Dòng Excel {row_idx}: Số tờ «{so_to or 'trống'}» hoặc Số thửa «{so_thua or 'trống'}» không hợp lệ; hãy sửa dữ liệu nguồn."
+                    )
                 row_idx += 1
                 continue
             else:
@@ -175,8 +183,15 @@ class ExcelReader:
             current_record = record
             
             if _valid_parcel_identifier(so_to) and _valid_parcel_identifier(so_thua):
-                parcel = Parcel(so_to=so_to, so_thua=so_thua)
+                parcel = Parcel(
+                    so_to=normalize_land_identifier(so_to),
+                    so_thua=normalize_land_identifier(so_thua),
+                )
                 record.parcels.add(parcel) # set will handle duplicates
+            elif so_to or so_thua:
+                record.data_issues.append(
+                    f"Dòng Excel {row_idx}: Số tờ «{so_to or 'trống'}» hoặc Số thửa «{so_thua or 'trống'}» không hợp lệ; hãy sửa dữ liệu nguồn."
+                )
                 
             row_idx += 1
 
@@ -190,8 +205,12 @@ class ExcelReader:
         shared_parcels = {parcel for parcel, names in parcel_to_persons.items() if len(set(names)) > 1}
         
         # Remove shared parcels from all persons
-        if shared_parcels:
+        if shared_parcels and remove_duplicates:
             for person in person_dict.values():
+                for parcel in sorted(person.parcels & shared_parcels, key=lambda item: (item.so_to, item.so_thua)):
+                    person.data_issues.append(
+                        f"Tờ {parcel.so_to}, thửa {parcel.so_thua} đang thuộc nhiều tên hộ trong Excel nên chưa tạo file; hãy kiểm tra đúng hộ."
+                    )
                 person.parcels = person.parcels - shared_parcels
 
         # We close the read_only workbook to release file lock

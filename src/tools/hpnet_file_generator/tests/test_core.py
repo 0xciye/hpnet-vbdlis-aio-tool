@@ -147,11 +147,11 @@ def test_action_planner_reserves_multiple_conflict_paths(tmp_path):
     
     assert len(actions) == 3
     statuses = [a.status for a in actions]
-    assert ActionStatus.READY in statuses
-    assert statuses.count(ActionStatus.CONFLICT) == 2
+    assert statuses.count(ActionStatus.CONFLICT) == 3
     assert {a.conflict_path.name for a in actions if a.conflict_path} == {
         "CHUACOGIAY__70_300-DDK__CONFLICT_001.pdf",
         "CHUACOGIAY__70_300-DDK__CONFLICT_002.pdf",
+        "CHUACOGIAY__70_300-DDK__CONFLICT_003.pdf",
     }
 
 
@@ -273,7 +273,7 @@ def test_one_household_with_blank_continuation_rows_keeps_all_parcels(tmp_path):
     assert records[0].parcels == {Parcel("1", "2"), Parcel("3", "4"), Parcel("5", "6")}
 
 
-def test_excel_reader_skips_non_numeric_or_non_positive_parcels(tmp_path):
+def test_excel_reader_rejects_letters_and_non_positive_parcels_with_reasons(tmp_path):
     path = tmp_path / "invalid-parcels.xlsx"
     workbook = Workbook()
     sheet = workbook.active
@@ -289,6 +289,38 @@ def test_excel_reader_skips_non_numeric_or_non_positive_parcels(tmp_path):
     })
 
     assert records[0].parcels == {Parcel("92", "182")}
+    assert len(records[0].data_issues) == 3
+    assert all("hãy sửa dữ liệu nguồn" in issue for issue in records[0].data_issues)
+
+
+def test_source_scanner_reads_nested_folders(tmp_path):
+    nested = tmp_path / "hộ 01" / "giấy tờ"
+    nested.mkdir(parents=True)
+    (nested / "Nguyễn Văn A.pdf").write_bytes(b"pdf")
+
+    sources = SourceScanner(str(tmp_path), [".pdf"]).scan()
+
+    assert [source.filename for source in sources] == ["Nguyễn Văn A.pdf"]
+
+
+def test_shared_parcel_is_an_explicit_warning_not_a_silent_drop(tmp_path):
+    path = tmp_path / "shared.xlsx"
+    workbook = Workbook(); sheet = workbook.active
+    sheet.append(["STT", "Tên hộ", "Số tờ", "Số thửa"])
+    sheet.append([1, "Nguyễn Văn A", 92, 330])
+    sheet.append([2, "Nguyễn Văn B", 92, 330])
+    workbook.save(path)
+    records = ExcelReader(str(path)).read_data(sheet.title, 1, {
+        "ho_ten": "Tên hộ", "so_to": "Số tờ", "so_thua": "Số thửa", "secondary_key": "STT"
+    })
+    source_path = tmp_path / "Nguyễn Văn A.pdf"; source_path.write_bytes(b"pdf")
+    source = SourceFile(source_path, source_path.name, "nguyễn văn a", ".pdf", matched_person=records[0])
+
+    actions = ActionPlanner([source], str(tmp_path / "out"), ProfileConfig()).build_plan()
+
+    assert records[0].parcels == set()
+    assert len(actions) == 1 and actions[0].status == ActionStatus.WARNING
+    assert "thuộc nhiều tên hộ" in actions[0].reason
 
 
 def test_matcher_suggests_close_excel_name():

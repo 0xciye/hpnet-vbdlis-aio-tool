@@ -211,6 +211,13 @@ def evaluate_record(
     mode: ValidationMode = ValidationMode.FULL_SOURCE_COMPARE,
 ) -> ParcelRecord:
     record.issues = [issue for issue in record.issues if issue != "VALID"]
+    if record.sheet_raw and not record.sheet_normalized:
+        _append_issue(record, "INVALID_SHEET_IDENTIFIER")
+    if record.parcel_raw and not record.parcel_normalized:
+        _append_issue(record, "INVALID_PARCEL_IDENTIFIER")
+    invalid_identifier = bool(
+        {"INVALID_SHEET_IDENTIFIER", "INVALID_PARCEL_IDENTIFIER"}.intersection(record.issues)
+    )
     if mode == ValidationMode.FULL_SOURCE_COMPARE and not record.source_rows:
         _append_issue(record, "SOURCE_PARCEL_NOT_FOUND")
         _append_issue(record, "VBDLIS_ONLY")
@@ -219,7 +226,10 @@ def evaluate_record(
         _append_issue(record, "SOURCE_ONLY")
     if record.upload_rows and not record.owner_normalized and not record.household_id:
         _append_issue(record, "HOUSEHOLD_NOT_FOUND")
-    if not record.tbxn_documents and not record.ddk_documents:
+    if invalid_identifier:
+        # An unusable key is a source-data error, not a missing-document case.
+        record.document_completeness = DocumentCompleteness.MISSING_BOTH
+    elif not record.tbxn_documents and not record.ddk_documents:
         _append_issue(record, "MISSING_BOTH")
         record.document_completeness = DocumentCompleteness.MISSING_BOTH
     elif not record.tbxn_documents:
@@ -284,8 +294,11 @@ def evaluate_record(
     data_issues = {
         "DATA_MISMATCH", "PARCEL_MISMATCH", "AX_DATA_MISMATCH", "AX_PARSE_ERROR",
         "SOURCE_PARCEL_NOT_FOUND", "VBDLIS_PARCEL_NOT_FOUND",
+        "INVALID_SHEET_IDENTIFIER", "INVALID_PARCEL_IDENTIFIER",
     }
-    if review_issues.intersection(record.issues):
+    if invalid_identifier:
+        record.workflow_status = WorkflowStatus.DATA_ERROR
+    elif review_issues.intersection(record.issues):
         record.workflow_status = WorkflowStatus.REVIEW_REQUIRED
     elif record.document_completeness in {
         DocumentCompleteness.MISSING_TBXN,
@@ -439,9 +452,9 @@ class ValidationService:
                 _append_issue(record, "MISSING_ROLE")
                 _append_issue(record, "REVIEW_REQUIRED")
             if not sheet:
-                _append_issue(record, "MISSING_SHEET")
+                _append_issue(record, "INVALID_SHEET_IDENTIFIER" if sheet_raw else "MISSING_SHEET")
             if not parcel:
-                _append_issue(record, "MISSING_PARCEL")
+                _append_issue(record, "INVALID_PARCEL_IDENTIFIER" if parcel_raw else "MISSING_PARCEL")
             if role == "UNKNOWN":
                 _append_issue(record, "UNKNOWN_ROLE")
                 _append_issue(record, "REVIEW_REQUIRED")
@@ -623,10 +636,10 @@ class ValidationService:
                 _append_issue(record, "UNKNOWN_ROLE")
                 _append_issue(record, "REVIEW_REQUIRED")
             if not sheet:
-                _append_issue(record, "MISSING_SHEET")
+                _append_issue(record, "INVALID_SHEET_IDENTIFIER" if sheet_raw else "MISSING_SHEET")
                 _append_issue(record, "REVIEW_REQUIRED")
             if not parcel:
-                _append_issue(record, "MISSING_PARCEL")
+                _append_issue(record, "INVALID_PARCEL_IDENTIFIER" if parcel_raw else "MISSING_PARCEL")
                 _append_issue(record, "REVIEW_REQUIRED")
             record.upload_rows.append(upload)
             record.matching_rule = record.matching_rule or rule

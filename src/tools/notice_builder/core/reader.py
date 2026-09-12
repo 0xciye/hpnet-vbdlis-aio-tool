@@ -11,6 +11,7 @@ from .models import ColumnMapping, Inspection, NoticeRecord, UserError, file_has
 from .fields import has_content
 from tools.vbdlis_excel_builder.models import Person
 from tools.vbdlis_excel_builder.utils.dates import normalize_birth_date
+from tools.land_identifier import normalize_land_identifier
 
 
 def clean(value):
@@ -39,15 +40,10 @@ def cell_problem(source, cached, address, label):
 
 
 def identifier(value):
-    text = clean(value)
-    if not text:
-        return ""
-    if not re.fullmatch(r"[0-9]+(?:\.0+)?", text):
-        raise ValueError("Số tờ/thửa phải là số nguyên dương.")
-    number = Decimal(text)
-    if number <= 0 or number > 2147483647:
-        raise ValueError("Số tờ/thửa phải là số nguyên dương.")
-    return str(int(number))
+    normalized = normalize_land_identifier(value)
+    if clean(value) and not normalized:
+        raise ValueError("Số tờ/thửa phải là số nguyên dương; không được chứa chữ cái.")
+    return normalized
 
 
 def area_text(value):
@@ -268,13 +264,15 @@ def inspect_workbook(path, sheet_name, header_row, depth, mapping, *, require_id
                         fmt = source_cells[indices["identity"]].number_format
                         if re.fullmatch(r"0+", fmt):
                             member_identity = member_identity.zfill(len(fmt))
-                current_people.append(Person(
-                    name=owner,
-                    cccd=member_identity,
-                    birth_date=normalize_birth_date(value("birth_date")),
-                    is_head=len(current_people) == 0,
-                    source_row=number,
-                ))
+                person_key=(folded(owner),member_identity.replace(" ",""))
+                if not any((folded(person.name),person.cccd.replace(" ",""))==person_key for person in current_people):
+                    current_people.append(Person(
+                        name=owner,
+                        cccd=member_identity,
+                        birth_date=normalize_birth_date(value("birth_date")),
+                        is_head=len(current_people) == 0,
+                        source_row=number,
+                    ))
             if not selected:
                 continue
             if not any(clean(source_cells[indices[k]].value) for k in ("sheet", "parcel", "area")):
@@ -323,6 +321,23 @@ def inspect_workbook(path, sheet_name, header_row, depth, mapping, *, require_id
             records.append(record)
             if record.sheet and record.parcel:
                 groups[(record.sheet, record.parcel)].append(record)
+        # Một hộ có nhiều thành viên có thể lặp lại cùng tờ/thửa trên từng dòng
+        # người. Chỉ tạo một thông báo cho thửa đó khi dữ liệu thửa giống nhau;
+        # cùng tờ/thửa xuất hiện ở các hộ khác nhau vẫn là xung đột phải chặn.
+        repeated_member_rows = set()
+        by_household = defaultdict(list)
+        for record in records:
+            if record.sheet and record.parcel:
+                by_household[(record.household_number, record.sheet, record.parcel)].append(record)
+        for same_household in by_household.values():
+            if len(same_household) > 1 and len({(r.area, r.location) for r in same_household}) == 1:
+                repeated_member_rows.update(r.source_row for r in same_household[1:])
+        if repeated_member_rows:
+            records = [record for record in records if record.source_row not in repeated_member_rows]
+            groups = defaultdict(list)
+            for record in records:
+                if record.sheet and record.parcel:
+                    groups[(record.sheet, record.parcel)].append(record)
         for group in groups.values():
             if len(group) > 1:
                 for record in group:

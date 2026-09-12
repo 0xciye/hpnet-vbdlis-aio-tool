@@ -15,7 +15,7 @@ class SourceScanner:
             return []
             
         source_files = []
-        for file_path in self.folder_path.iterdir():
+        for file_path in self.folder_path.rglob("*"):
             if not file_path.is_file():
                 continue
                 

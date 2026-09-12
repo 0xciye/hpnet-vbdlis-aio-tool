@@ -14,8 +14,7 @@ class FileProcessor:
 
         try:
             if plan.action == ActionType.DELETE_AND_RENAME:
-                self._delete_file(plan.unsigned_path)
-                self._rename_file(plan.signed_path, plan.target_path)
+                self._replace_unsigned_with_signed(plan)
                 plan.status = ProcessStatus.COMPLETED
             elif plan.action == ActionType.RENAME_SIGNED:
                 self._rename_file(plan.signed_path, plan.target_path)
@@ -27,6 +26,25 @@ class FileProcessor:
             plan.error_message = str(e)
 
         return plan
+
+    def _replace_unsigned_with_signed(self, plan: FileActionPlan):
+        """Giữ được bản đã ký nếu thao tác xóa hoặc đổi tên cuối cùng thất bại."""
+        staging = plan.target_path.with_name(plan.target_path.name + ".signed_replacement")
+        if staging.exists():
+            raise Exception(f"File tạm đã tồn tại, chưa thay thế để tránh ghi đè: {staging.name}")
+        self._rename_file(plan.signed_path, staging)
+        try:
+            self._delete_file(plan.unsigned_path)
+            self._rename_file(staging, plan.target_path)
+        except Exception:
+            # Nếu bản chưa ký vẫn còn, trả bản đã ký về tên cũ. Nếu nó đã bị xóa,
+            # giữ bản đã ký ở file tạm thay vì xóa hoặc ghi đè dữ liệu.
+            if plan.unsigned_path and plan.unsigned_path.exists() and staging.exists():
+                try:
+                    self._rename_file(staging, plan.signed_path)
+                except Exception:
+                    pass
+            raise
 
     def _delete_file(self, file_path: Path):
         if not file_path or not file_path.exists():

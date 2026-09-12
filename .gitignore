@@ -67,6 +67,9 @@ tmp/
 temp/
 output/
 outputs/
+qa_runtime/
+!qa/reports/DATA_LINEAGE_REPORT.xlsx
+qa/reports/*.inspect.ndjson
 Xem_truoc/
 ~$*
 *.tmp

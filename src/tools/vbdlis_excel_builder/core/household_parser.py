@@ -15,6 +15,7 @@ from tools.vbdlis_excel_builder.utils.text import (
     normalize_name,
     normalize_whitespace,
 )
+from tools.land_identifier import normalize_land_identifier
 
 
 def _mapped(row: dict[str, Any], mapping: dict[str, str], key: str) -> Any:
@@ -205,7 +206,19 @@ class HouseholdParser:
                     source_row=source_row,
                     raw=dict(row),
                 )
-                current.people.append(person)
+                person_key = (normalize_name(person.name), person.cccd.replace(" ", ""))
+                if any((normalize_name(existing.name), existing.cccd.replace(" ", "")) == person_key
+                       for existing in current.people):
+                    issues.append(ValidationIssue(
+                        Severity.INFO,
+                        "DUPLICATE_PERSON_ROW_MERGED",
+                        "Người này lặp lại ở dòng thửa khác trong cùng hộ; chỉ giữ một người và vẫn giữ các thửa.",
+                        source_row,
+                        current.household_id,
+                        person.name,
+                    ))
+                else:
+                    current.people.append(person)
             elif starts_household or any(not is_blank(_mapped(row, mapping, key)) for key in ("cccd", "birth_date")):
                 issues.append(ValidationIssue(
                     Severity.ERROR, "MISSING_PERSON_NAME", "Dòng có CCCD/ngày sinh nhưng chưa có họ tên.",
@@ -244,6 +257,17 @@ class HouseholdParser:
                             current.household_id,
                         )
                     )
+                elif not normalize_land_identifier(sheet_number) or not normalize_land_identifier(parcel_number):
+                    issues.append(
+                        ValidationIssue(
+                            Severity.WARNING,
+                            "INVALID_PARCEL_IDENTIFIER",
+                            "Không tạo thửa vì Số tờ/Số thửa phải là số nguyên dương và không được chứa chữ cái.",
+                            source_row,
+                            current.household_id,
+                            value=f"{excel_identifier(sheet_number)}/{excel_identifier(parcel_number)}",
+                        )
+                    )
                 else:
                     if profile.gcn_mode == "all_without":
                         gcn_values = {}
@@ -260,8 +284,8 @@ class HouseholdParser:
                         )
                     current.parcels.append(
                         Parcel(
-                            excel_identifier(sheet_number),
-                            excel_identifier(parcel_number),
+                            normalize_land_identifier(sheet_number),
+                            normalize_land_identifier(parcel_number),
                             normalize_area(area),
                             normalize_whitespace(location),
                             certificate,

@@ -5,6 +5,7 @@ import unicodedata
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
+from tools.land_identifier import normalize_land_identifier
 
 
 def raw_text(value: Any) -> str:
@@ -43,6 +44,8 @@ def normalize_identifier(value: Any, kind: str = "") -> str:
     if kind:
         text = re.sub(prefixes, "", text, flags=re.IGNORECASE)
     text = text.strip().strip('"\'')
+    if kind in {"sheet", "parcel"}:
+        return normalize_land_identifier(text)
     try:
         number = Decimal(text.replace(",", "."))
         if number == number.to_integral():

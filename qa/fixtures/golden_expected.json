@@ -1,0 +1,15 @@
+{
+  "households": 5,
+  "source_parcels": 10,
+  "word_records": 10,
+  "word_files": 10,
+  "tbxn_pdfs": 10,
+  "ddk_pdfs": 10,
+  "vbdlis_parcels": 10,
+  "vbdlis_rows": 10,
+  "ax_tbxn_references": 10,
+  "ax_ddk_references": 10,
+  "missing_tbxn": 0,
+  "missing_ddk": 0,
+  "silently_missing": 0
+}

@@ -183,7 +183,8 @@ class MainWindow(QMainWindow):
         self.start_number=QSpinBox(); self.start_number.setRange(1,2147483647)
         self.number_list=QLineEdit(); self.number_list.setPlaceholderText("Có thể để trống nếu nhập các nhóm số và ngày bên dưới")
         self.continue_check=QCheckBox("Tiếp tục sau khi hết danh sách")
-        self.continue_number=QSpinBox(); self.continue_number.setRange(1,2147483647); self.continue_number.setValue(15)
+        self.continue_check.setChecked(True)
+        self.continue_number=QSpinBox(); self.continue_number.setRange(1,2147483647); self.continue_number.setValue(1)
         form.addRow("Cách cấp số",self.number_mode); form.addRow("Số bắt đầu",self.start_number); form.addRow("Danh sách số (tùy chọn)",self.number_list)
         form.addRow(self.continue_check); form.addRow("Số tiếp nối",self.continue_number)
         self.number_date_rows=[]
@@ -193,14 +194,14 @@ class MainWindow(QMainWindow):
             "• Số liên tục: chọn “Số bắt đầu”.\n"
             "• Số thiếu cùng ngày: nhập “Danh sách số”, dùng ngày mặc định.\n"
             "• Số thiếu khác ngày: để trống “Danh sách số”, thêm từng nhóm số và ngày bên dưới.\n"
-            "• Hết số: ứng dụng dừng cấp số; chỉ bật “Tiếp tục” khi muốn cấp tiếp từ một số lớn hơn số đã nhập."
+            "• Hết số trong danh sách: ứng dụng mặc định tự cấp tiếp từ số lớn hơn liền kề; có thể sửa ô Số tiếp nối nếu cần chừa khoảng."
         )
         self.numbering_cases_note.setObjectName("muted"); self.numbering_cases_note.setWordWrap(True); date_box.addWidget(self.numbering_cases_note)
         self.number_date_rows_layout=QVBoxLayout(); self.number_date_rows_layout.setContentsMargins(0,0,0,0); self.number_date_rows_layout.setSpacing(6); date_box.addLayout(self.number_date_rows_layout)
         self.add_number_date_button=self.button("+ Thêm số hoặc khoảng số",lambda:self.add_number_date_rule()); date_box.addWidget(self.add_number_date_button)
         form.addRow("Các số cần tạo và ngày",self.number_date_box)
         self.number_mode.currentIndexChanged.connect(self.numbering_changed); self.continue_check.toggled.connect(self.numbering_changed)
-        self.start_number.valueChanged.connect(self.invalidate); self.number_list.textChanged.connect(self.invalidate); self.continue_number.valueChanged.connect(self.invalidate)
+        self.start_number.valueChanged.connect(self.invalidate); self.number_list.textChanged.connect(self.numbering_input_changed); self.continue_number.valueChanged.connect(self.invalidate)
         self.output=QLineEdit(); self.output.setPlaceholderText("Ví dụ: D:/Ho so/TB 2026 hoặc bấm Chọn thư mục…"); self.output.setToolTip("Thư mục chứa các file Word được tạo và báo cáo kết quả."); self.output.textChanged.connect(self.invalidate)
         output_row=QWidget(); line=QHBoxLayout(output_row); line.setContentsMargins(0,0,0,0); line.addWidget(self.output); line.addWidget(self.button("Chọn thư mục…",self.browse_output)); form.addRow("Lưu thông báo tại *",output_row)
         defaults=json.loads(resource("config/legal_defaults.json").read_text(encoding="utf-8"))
@@ -269,6 +270,23 @@ class MainWindow(QMainWindow):
         self.start_number.setEnabled(not listing); self.number_list.setEnabled(listing); self.continue_check.setEnabled(listing)
         self.continue_number.setEnabled(listing and self.continue_check.isChecked()); self.number_date_box.setEnabled(listing); self.invalidate()
 
+    def numbering_input_changed(self, *_):
+        """Giữ số tiếp nối ở ngay sau số lớn nhất người dùng vừa nhập."""
+        if self.number_mode.currentData()=="list" and self.continue_check.isChecked():
+            from .core.numbering import parse_numbers
+            specifications=[]
+            if self.number_list.text().strip():
+                specifications.append(self.number_list.text())
+            else:
+                specifications.extend(field.text() for _,field,_ in self.number_date_rows if field.text().strip())
+            try:
+                numbers=[number for specification in specifications for number in parse_numbers(specification)]
+            except UserError:
+                numbers=[]
+            if numbers and max(numbers)<2147483647:
+                self.continue_number.setValue(max(numbers)+1)
+        self.invalidate()
+
     def add_number_date_rule(self, numbers="", iso_date=""):
         row=QWidget(); layout=QHBoxLayout(row); layout.setContentsMargins(0,0,0,0); layout.setSpacing(8)
         specification=QLineEdit(str(numbers)); specification.setPlaceholderText("Ví dụ: 300-350 hoặc 300,305-310")
@@ -278,13 +296,13 @@ class MainWindow(QMainWindow):
         rule_date.setDate(parsed if parsed.isValid() else QDate.currentDate()); rule_date.setAccessibleName("Ngày áp dụng cho nhóm số thông báo")
         remove=self.button("Xóa",lambda checked=False,w=row:self.remove_number_date_rule(w))
         layout.addWidget(specification,1); layout.addWidget(rule_date); layout.addWidget(remove)
-        specification.textChanged.connect(self.invalidate); rule_date.dateChanged.connect(self.invalidate)
+        specification.textChanged.connect(self.numbering_input_changed); rule_date.dateChanged.connect(self.invalidate)
         self.number_date_rows_layout.addWidget(row); self.number_date_rows.append((row,specification,rule_date)); self.invalidate()
 
     def remove_number_date_rule(self, row):
         for item in list(self.number_date_rows):
             if item[0] is row:
-                self.number_date_rows.remove(item); self.number_date_rows_layout.removeWidget(row); row.deleteLater(); self.invalidate(); break
+                self.number_date_rows.remove(item); self.number_date_rows_layout.removeWidget(row); row.deleteLater(); self.numbering_input_changed(); break
 
     def number_date_rules(self):
         return [{"numbers":field.text().strip(),"date":date_field.date().toString(Qt.ISODate)}
@@ -546,9 +564,14 @@ class MainWindow(QMainWindow):
             self.template.setText(str(saved_template_path(data)))
             self.number_mode.setCurrentIndex(max(0,self.number_mode.findData(config.get("number_mode","start"))))
             self.start_number.setValue(int(config.get("start_number",1))); self.number_list.setText(config.get("number_list",""))
-            self.continue_check.setChecked(config.get("continue_number") is not None); self.continue_number.setValue(config.get("continue_number") or 15)
+            saved_continuation=config.get("continue_number")
+            # Cấu hình cũ không có số tiếp nối là nguyên nhân khiến đợt tạo dừng.
+            # Khi mở lại, chuyển an toàn sang mặc định tự tiếp tục; không sửa file cấu hình trên đĩa.
+            self.continue_check.setChecked(self.number_mode.currentData()=="list" or saved_continuation is not None)
+            if saved_continuation is not None: self.continue_number.setValue(int(saved_continuation))
             for rule in config.get("number_date_rules",[]) or []:
                 if isinstance(rule,dict): self.add_number_date_rule(rule.get("numbers",""),rule.get("date",""))
+            if saved_continuation is None: self.numbering_input_changed()
             for key,value in config.get("template_fields",{}).items():
                 if key in self.template_inputs: self.template_inputs[key].setText(str(value))
             self.optional_empty.setCurrentIndex(max(0,self.optional_empty.findData(config.get("optional_empty","blank"))))

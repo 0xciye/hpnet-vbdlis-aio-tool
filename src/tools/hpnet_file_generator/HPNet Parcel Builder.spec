@@ -21,7 +21,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='HPNet Parcel Builder',
+    name='VBDLIS - Đặt tên hồ sơ',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -41,5 +41,5 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name='HPNet Parcel Builder',
+    name='VBDLIS - Đặt tên hồ sơ',
 )

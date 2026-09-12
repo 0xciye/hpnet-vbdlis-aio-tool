@@ -49,7 +49,7 @@ class Worker(QThread):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("HPNet Excel File Generator")
+        self.setWindowTitle("VBDLIS - Đặt tên hồ sơ tự động")
         self.setWindowIcon(QIcon(str(Path(__file__).resolve().parents[1] / "assets" / "app_icon.ico")))
         self.resize(1000, 700)
         app = QApplication.instance(); mode = app.property("darkMode") if app else None
@@ -277,7 +277,7 @@ class MainWindow(QMainWindow):
             )
             self.tabs.setCurrentIndex(1)
         except Exception as e:
-            QMessageBox.warning(self, "Lỗi", str(e))
+            QMessageBox.warning(self, "Không đọc được cấu trúc Excel", self.friendly_error(e, "đọc cấu trúc Excel"))
 
     @staticmethod
     def _select_header(combo, headers, preferred_names, excluded_names=()):
@@ -296,7 +296,8 @@ class MainWindow(QMainWindow):
             
     def scan_source(self):
         folder = self.txt_source_dir.text()
-        if not folder:
+        if not folder or not Path(folder).is_dir():
+            QMessageBox.warning(self, "Chưa chọn đúng thư mục", "Hãy chọn thư mục đang chứa các file PDF/Word nguồn rồi thử lại.")
             return
             
         scanner = SourceScanner(folder, self.config.extensions)
@@ -331,7 +332,7 @@ class MainWindow(QMainWindow):
         try:
             self.excel_records = reader.read_data(sheet, int(self.spin_header.text()), mapping)
         except Exception as e:
-            QMessageBox.warning(self, "Lỗi đọc Excel", str(e))
+            QMessageBox.warning(self, "Không đọc được dữ liệu Excel", self.friendly_error(e, "đọc dữ liệu Excel"))
             return
             
         # 2. Match
@@ -532,3 +533,14 @@ class MainWindow(QMainWindow):
         with self.settings_file.open('w', encoding='utf-8') as f:
             json.dump(data, f)
         event.accept()
+    @staticmethod
+    def friendly_error(error, action="xử lý dữ liệu"):
+        if isinstance(error, FileNotFoundError):
+            return "Không tìm thấy file hoặc thư mục đã chọn. Hãy chọn lại đúng vị trí rồi thử lại."
+        if isinstance(error, PermissionError):
+            return "Không thể đọc hoặc ghi file. Hãy đóng file đang mở trong Excel/PDF, chọn thư mục bạn có quyền sử dụng rồi thử lại."
+        if type(error).__name__ in {"BadZipFile", "InvalidFileException"}:
+            return "File Excel không đọc được hoặc không đúng định dạng .xlsx. Hãy mở file bằng Excel, chọn Lưu thành .xlsx rồi thử lại."
+        if isinstance(error, ValueError) and str(error).strip():
+            return f"{error}\n\nHãy sửa mục được nêu rồi bấm thử lại."
+        return f"Không thể {action}. Dữ liệu gốc chưa bị thay đổi. Hãy kiểm tra file đã chọn, đóng file đang mở và thử lại."

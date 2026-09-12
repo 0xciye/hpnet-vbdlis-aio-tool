@@ -43,11 +43,13 @@ GUIDANCE = {
     "CCCD_BLOCKING": ("Cấu hình yêu cầu dừng vì CCCD chưa chuẩn", "Chưa thể xuất file.", "Kiểm tra và sửa CCCD theo giấy tờ tại ô được chỉ ra."),
     "MISSING_REQUIRED_CCCD_OUTPUT": ("CCCD chưa được điền vào kết quả", "Chưa thể xuất file.", "Kiểm tra CCCD nguồn ở Tab 2 và quy tắc CCCD tại Tab 4; không để chế độ Để trống."),
     "INVALID_PARCEL": ("Không tạo được thửa vì thiếu dữ liệu", "Dòng này không tạo thửa; các thửa khác của hộ vẫn được xử lý.", "Bổ sung đủ Số tờ, Số thửa và Diện tích trên cùng dòng. Nếu Excel đã có số, kiểm tra lại cột đã chọn tại Tab 2."),
+    "INVALID_PARCEL_IDENTIFIER": ("Số tờ hoặc Số thửa không phải số nguyên dương", "Dòng này không tạo thửa; dữ liệu có chữ cái, số 0, số âm hoặc số lẻ bị từ chối.", "Đối chiếu hồ sơ địa chính và sửa Số tờ/Số thửa thành số nguyên dương đúng; không tự đổi mã chữ nếu chưa xác minh."),
     "HOUSEHOLD_WITHOUT_PARCEL": ("Hộ chưa có thửa để tạo kết quả", "Không sinh dòng kết quả cho những người trong hộ này.", "Kiểm tra các ô tờ/thửa/diện tích của hộ bên dưới. Nếu hộ có đất, bổ sung dữ liệu vào đúng dòng; nếu không có đất, xác nhận việc không xuất hộ này là phù hợp."),
     "HOUSEHOLD_WITHOUT_PERSON": ("Hộ chưa có tên người", "Chưa thể xuất file; không có người để ghép với thửa.", "Bổ sung tên chủ hộ/thành viên và CCCD; kiểm tra cột Họ và tên tại Tab 2."),
     "ROW_WITHOUT_HOUSEHOLD": ("Dòng chưa thuộc hộ nào", "Dòng này chưa được đưa vào hộ nên không tạo người/thửa.", "Kiểm tra Dòng tiêu đề tại Tab 1. Nếu là dữ liệu thật, điền STT ở dòng bắt đầu hộ; nếu là tiêu đề phụ, chọn hàng tiêu đề cuối cùng."),
     "SUMMARY_ROW_SKIPPED": ("Đã bỏ qua dòng tổng hợp", "Không tạo người hoặc thửa từ dòng tổng; đây không phải lỗi.", "Không cần sửa nếu đây là Tổng DT/Tổng cộng. Không dùng số tổng thay cho diện tích từng thửa."),
     "DUPLICATE_PARCEL_REMOVED": ("Đã bỏ một dòng thửa trùng hoàn toàn", "Giữ một thửa trong cùng hộ, không nhân đôi kết quả.", "Đối chiếu tờ/thửa, diện tích, vị trí và giấy chứng nhận; không cần sửa nếu dòng thực sự trùng."),
+    "DUPLICATE_PERSON_ROW_MERGED": ("Một người lặp lại ở nhiều dòng thửa", "Chỉ giữ một người trong hộ nhưng vẫn giữ đủ các thửa; đây không phải lỗi.", "Không cần sửa nếu nguồn cố ý lặp tên người cho từng thửa; hãy kiểm tra CCCD nếu đây là hai người khác nhau trùng tên."),
     "GCN_CONFLICT": ("Cùng tờ/thửa có thông tin giấy chứng nhận khác nhau", "Chưa thể xuất; ứng dụng không tự chọn bộ thông tin nào.", "So sánh các dòng thửa được liệt kê và xác minh giấy chứng nhận đúng trước khi sửa nguồn."),
     "EXPECTED_GCN_MISSING": ("Thửa chưa có thông tin giấy chứng nhận", "Vẫn tạo thửa nhưng cần kiểm tra chế độ giấy chứng nhận.", "Nếu thửa đã có giấy, bổ sung thông tin và ánh xạ cột ở Tab 2; nếu chưa có, chọn chế độ phù hợp tại Tab 3."),
     "MISSING_LOCATION": ("Xứ đồng đang trống", "Thửa vẫn được tạo, nhưng vị trí trong kết quả đang thiếu.", "Điền Xứ đồng tại ô nguồn hoặc cấu hình giá trị thay thế tại Tab 3; chỉ dùng địa chỉ đã xác minh phù hợp với thửa đất."),
@@ -166,8 +168,10 @@ class DiagnosticLogger:
                 effect = "Dòng này chưa thuộc hộ nào nên đã bỏ qua; kiểm tra dòng tiêu đề hoặc STT hộ để tránh bỏ sót dữ liệu thật."
             if issue.code in {"MISSING_CCCD", "INVALID_CCCD", "CCCD_BLOCKING"}:
                 fields = ["cccd"]
-            elif issue.code in {"INVALID_PARCEL", "HOUSEHOLD_WITHOUT_PARCEL", "DUPLICATE_PARCEL_REMOVED"}:
+            elif issue.code in {"INVALID_PARCEL", "INVALID_PARCEL_IDENTIFIER", "HOUSEHOLD_WITHOUT_PARCEL", "DUPLICATE_PARCEL_REMOVED"}:
                 fields = list(PARCEL_FIELDS)
+            elif issue.code == "DUPLICATE_PERSON_ROW_MERGED":
+                fields = ["person_name", "cccd", "sheet_number", "parcel_number"]
             elif issue.code in {"MISSING_LOCATION", "LOCATION_FALLBACK"}:
                 fields = ["land_location", "sheet_number", "parcel_number"]
             elif issue.code == "HOUSEHOLD_WITHOUT_PERSON":

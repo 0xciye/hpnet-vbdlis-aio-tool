@@ -154,7 +154,7 @@ def test_render_uses_date_for_each_notice_number(tmp_path,service,config):
 def test_identifier(value,expected): assert identifier(value)==expected
 
 
-@pytest.mark.parametrize("value",[0,-1,"12a","#REF!","72.5",True])
+@pytest.mark.parametrize("value",[0,-1,"12a","CN","#REF!","72.5",True,"../CN"])
 def test_bad_identifier(value):
     with pytest.raises(ValueError): identifier(value)
 
@@ -239,6 +239,37 @@ def test_all_duplicate_members_blocked(tmp_path,same_owner,count):
     assert len(data.valid_records)==1
     blocked=[r for r in data.records if r.duplicate_rows]
     assert len(blocked)==count and all(len(r.duplicate_rows)==count for r in blocked)
+
+
+def test_repeated_parcel_on_member_rows_creates_one_notice(tmp_path):
+    path=tmp_path/"members-repeat.xlsx"; wb=Workbook(); ws=wb.active; ws.title="Nguồn"
+    ws.append(["STT hộ","Tên hộ","Tờ","Thửa","Diện tích","Giấy tờ"])
+    ws.append([1,"NGUYỄN VĂN CHỦ",92,330,100,"030064013684"])
+    ws.append([None,"NGUYỄN THỊ THÀNH VIÊN",92,330,100,"030200012345"])
+    ws.append([None,"NGUYỄN VĂN THÀNH VIÊN",92,330,100,"030202067890"])
+    wb.save(path); wb.close()
+
+    data=inspect_workbook(path,"Nguồn",1,1,ColumnMapping(owner="B",sheet="C",parcel="D",area="E",location="",identity="F",household_index="A"),require_identity=True)
+
+    assert len(data.records)==1 and len(data.valid_records)==1
+    assert [person.name for person in data.records[0].household_people]==[
+        "NGUYỄN VĂN CHỦ","NGUYỄN THỊ THÀNH VIÊN","NGUYỄN VĂN THÀNH VIÊN"
+    ]
+
+
+def test_three_members_repeated_for_two_parcels_create_two_notices(tmp_path):
+    path=tmp_path/"members-two-parcels.xlsx"; wb=Workbook(); ws=wb.active; ws.title="Nguồn"
+    ws.append(["STT hộ","Tên hộ","Tờ","Thửa","Diện tích","Giấy tờ"])
+    people=[("NGUYỄN VĂN CHỦ","030064013684"),("NGUYỄN THỊ B","030200012345"),("NGUYỄN VĂN C","030202067890")]
+    for parcel in (100,101):
+        for index,(name,cccd) in enumerate(people):
+            ws.append([1 if parcel==100 and index==0 else None,name,10,parcel,100,cccd])
+    wb.save(path); wb.close()
+
+    data=inspect_workbook(path,"Nguồn",1,1,ColumnMapping(owner="B",sheet="C",parcel="D",area="E",location="",identity="F",household_index="A"),require_identity=True)
+
+    assert [(record.sheet,record.parcel) for record in data.valid_records]==[("10","100"),("10","101")]
+    assert all(len(record.household_people)==3 for record in data.valid_records)
 
 
 def test_bad_mapping(tmp_path):
