@@ -129,8 +129,13 @@ try {
     }
     Move-Item -LiteralPath $zipPath -Destination $publicZip
     $publicHash = Get-FileHash -LiteralPath $publicZip -Algorithm SHA256
+    $checksumLine = "$($publicHash.Hash.ToLowerInvariant())  $([IO.Path]::GetFileName($publicZip))"
+    $publicChecksum = "$publicZip.sha256"
+    [IO.File]::WriteAllText($publicChecksum, $checksumLine + [Environment]::NewLine,
+        [Text.Encoding]::ASCII)
 
     $desktopZip = $null
+    $desktopChecksum = $null
     if (-not $SkipDesktopCopy) {
         $desktopBase = [Environment]::GetFolderPath('Desktop')
         if (-not (Test-Path -LiteralPath $desktopBase -PathType Container)) { throw 'Không tìm thấy thư mục Desktop.' }
@@ -144,6 +149,9 @@ try {
             Send-SafeItemToRecycleBin (Get-Item -LiteralPath $desktopZip) $desktopBase
         }
         Move-Item -LiteralPath $desktopTemp -Destination $desktopZip
+        $desktopChecksum = "$desktopZip.sha256"
+        [IO.File]::WriteAllText($desktopChecksum, $checksumLine + [Environment]::NewLine,
+            [Text.Encoding]::ASCII)
         $desktopTemp = $null
     }
 
@@ -160,12 +168,19 @@ try {
         throw 'Vẫn còn thư mục build cũ sau cleanup.'
     }
     if (-not (Test-Path -LiteralPath $publicZip -PathType Leaf) -or
-        (-not $SkipDesktopCopy -and -not (Test-Path -LiteralPath $desktopZip -PathType Leaf))) {
-        throw 'Thiếu ZIP mới trong release hoặc Desktop sau publish.'
+        -not (Test-Path -LiteralPath $publicChecksum -PathType Leaf) -or
+        (-not $SkipDesktopCopy -and
+            (-not (Test-Path -LiteralPath $desktopZip -PathType Leaf) -or
+             -not (Test-Path -LiteralPath $desktopChecksum -PathType Leaf)))) {
+        throw 'Thiếu ZIP hoặc checksum mới trong release/Desktop sau publish.'
     }
     $publicHash
     Write-Host "RELEASE_PASS: $publicZip"
-    if ($desktopZip) { Write-Host "DESKTOP_COPY_PASS: $desktopZip" }
+    Write-Host "CHECKSUM_PASS: $publicChecksum"
+    if ($desktopZip) {
+        Write-Host "DESKTOP_COPY_PASS: $desktopZip"
+        Write-Host "DESKTOP_CHECKSUM_PASS: $desktopChecksum"
+    }
 } finally {
     if ($desktopTemp -and (Test-Path -LiteralPath $desktopTemp -PathType Leaf)) { [IO.File]::Delete($desktopTemp) }
     $env:PYTHONPATH = $oldPythonPath

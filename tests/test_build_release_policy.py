@@ -9,6 +9,9 @@ def test_successful_build_replaces_old_staging_and_copies_default_zip_to_desktop
     assert script.index("sync_notice_template.py") < script.index("run_tests.py")
     assert "[Environment]::GetFolderPath('Desktop')" in script
     assert "DESKTOP_COPY_PASS" in script
+    assert "CHECKSUM_PASS" in script and "DESKTOP_CHECKSUM_PASS" in script
+    assert '[IO.File]::WriteAllText($publicChecksum' in script
+    assert '[Text.Encoding]::ASCII' in script
     assert "Get-ChildItem -LiteralPath $buildBase -Directory" in script
     assert "Get-ChildItem -LiteralPath $releaseBase -Directory" in script
     assert script.index("ZIP verification failed") < script.index("A successful release supersedes")

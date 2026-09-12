@@ -30,7 +30,7 @@ Phạm vi dữ liệu thật: chỉ đọc, không sửa file nguồn hoặc th�
 | HPNet Upload Dự Thảo | `src/nodes_tools/Upload/...exe` | Upload dự thảo lên HPNet | Word/HPNet | Trạng thái trên HPNet | Runtime ngoài | **EXCLUDED** |
 | HPNet Duyệt Dự Thảo | `src/nodes_tools/Duyet/...exe` | Chuyển duyệt trên HPNet | HPNet | Trạng thái trên HPNet | Runtime ngoài | **EXCLUDED** |
 
-**EXCLUDED: All HPNet-related applications/modules.** `hpnet_file_generator` vẫn được kiểm tra vì mã nguồn/UI chứng minh đây là công cụ VBDLIS đặt tên hồ sơ, không phải tác vụ web HPNet.
+**Phạm vi audit:** các thao tác web HPNet được loại khỏi audit dữ liệu để không tác động hệ thống thật. **Phạm vi đóng gói:** cả ba công cụ HPNet vẫn nằm trong launcher và trong cùng một gói phát hành. `hpnet_file_generator` được audit vì mã nguồn/UI chứng minh đây là công cụ VBDLIS đặt tên hồ sơ, không phải tác vụ web HPNet.
 
 ## 3. Critical VBDLIS pipeline
 
@@ -169,9 +169,9 @@ Bốn test skipped là fixture/reference riêng không có trong môi trường 
 | VBDLIS Validation | Không có spec độc lập | Source/service/UI smoke PASS |
 | Duplicate Parcel | Nằm trong suite; không build riêng | Source/UI smoke PASS |
 | Data Normalizer | Nằm trong suite; không build riêng | Source/UI smoke PASS |
-| Unified suite | Không build trong audit vì spec đóng gói cả ba HPNet apps đã bị loại trừ | NOT RUN |
+| Unified suite | Một `HPNET & VBDLIS Tools.exe`, đủ 10 thẻ công cụ; ba HPNet launcher và Node/Playwright nằm trong `_internal` | PASS |
 
-Tất cả 7 cửa sổ included được tạo và hiển thị icon. Ba HPNet executable không được chạy.
+Tất cả 7 cửa sổ Python được tạo và hiển thị icon. Bản release hợp nhất đã kiểm tra đủ 9 icon tài nguyên, 4 icon nhúng trong EXE, 1.057 file ZIP và 198 file HPNet nguyên vẹn. Ba công cụ HPNet chỉ chạy self-test offline, không đăng nhập hoặc thao tác trên hệ thống thật.
 
 ## 9. QA artifacts
 
