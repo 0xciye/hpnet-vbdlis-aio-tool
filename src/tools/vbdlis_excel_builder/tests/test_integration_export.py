@@ -75,7 +75,7 @@ class IntegrationExportTests(unittest.TestCase):
             self.assertTrue(output.exists())
             self.assertIsNotNone(report)
             self.assertTrue(report.exists())
-            self.assertEqual(process_progress[-1][0], 65)
+            self.assertEqual(process_progress[-1][0], 100)
             self.assertEqual(export_progress[-1][0], 100)
             self.assertEqual(
                 [value for value, _ in export_progress],

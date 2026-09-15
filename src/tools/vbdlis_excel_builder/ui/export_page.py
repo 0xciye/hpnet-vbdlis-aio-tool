@@ -72,21 +72,23 @@ class ExportPage(QWidget):
         form.addWidget(self.report, 2, 1)
 
         # Các nút thao tác
-        btn_validate = QPushButton("🔍  Kiểm tra")
-        btn_preview  = QPushButton("👁  Xem trước")
-        btn_export   = QPushButton("✅  Tạo file VBDLIS")
-        btn_export.setProperty("accent", True)
-        btn_export.setMinimumHeight(34)
+        self.validate_button = QPushButton("🔍  Kiểm tra")
+        self.preview_button  = QPushButton("👁  Xem trước")
+        self.export_button   = QPushButton("✅  Tạo file VBDLIS")
+        self.export_button.setProperty("accent", True)
+        self.export_button.setMinimumHeight(34)
+        self.export_button.setEnabled(False)
+        self._last_can_export = False
 
-        for btn, action in ((btn_validate, "validate"), (btn_preview, "preview"), (btn_export, "export")):
+        for btn, action in ((self.validate_button, "validate"), (self.preview_button, "preview"), (self.export_button, "export")):
             btn.clicked.connect(lambda _=False, v=action: self.action_requested.emit(v))
 
         buttons = QHBoxLayout()
         buttons.setSpacing(8)
-        buttons.addWidget(btn_validate)
-        buttons.addWidget(btn_preview)
+        buttons.addWidget(self.validate_button)
+        buttons.addWidget(self.preview_button)
         buttons.addStretch(1)
-        buttons.addWidget(btn_export)
+        buttons.addWidget(self.export_button)
 
         self.log_paths = []
         self.log_status = QLabel("Báo cáo lỗi tự động được lưu sau mỗi lần kiểm tra, kể cả khi chưa xuất được.")
@@ -178,16 +180,20 @@ class ExportPage(QWidget):
             self.folder.setText(path)
 
     def set_busy(self, busy: bool, text: str = "") -> None:
+        for button in (self.validate_button, self.preview_button, self.export_button):
+            button.setEnabled(not busy)
         self.open_log.setEnabled(not busy and bool(self.log_paths))
         self.open_log_folder.setEnabled(not busy and bool(self.log_paths))
         self.progress.setVisible(busy)
         if busy:
+            self._last_can_export = False
             self.progress.setRange(0, 100)
             self.progress.setValue(0)
             if text:
                 self.stats.setText(f"⏳  {text} (0%)")
         else:
             self.progress.setRange(0, 100)
+            self.export_button.setEnabled(self._last_can_export)
 
     def set_progress(self, value: int, text: str = "") -> None:
         value = max(0, min(100, int(value)))
@@ -211,6 +217,8 @@ class ExportPage(QWidget):
         self.log_status.setToolTip("\n".join(str(p) for p in self.log_paths))
 
     def show_result(self, result, preview_limit: int = 100) -> None:
+        self._last_can_export = bool(result.can_export)
+        self.export_button.setEnabled(self._last_can_export)
         self.set_diagnostic_files(result.diagnostic_files)
         stats = result.stats
         error_count   = stats.get("errors", 0)

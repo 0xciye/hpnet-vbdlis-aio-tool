@@ -118,7 +118,7 @@ class BuilderService:
         stats["errors"] = sum(issue.severity == Severity.ERROR for issue in issues)
         stats["warnings"] = sum(issue.severity == Severity.WARNING for issue in issues)
         stats["info"] = sum(issue.severity == Severity.INFO for issue in issues)
-        notify(65, "Đã xử lý và kiểm tra dữ liệu")
+        notify(100, "Đã xử lý và kiểm tra dữ liệu")
         logging.info(
             "Processed source=%s sheet=%s profile=%s stats=%s",
             source_path,

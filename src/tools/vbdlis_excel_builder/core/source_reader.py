@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from openpyxl import load_workbook
-from openpyxl.utils import get_column_letter
+from openpyxl.utils import column_index_from_string, get_column_letter
 
 
 @dataclass(slots=True)
@@ -133,6 +133,7 @@ class SourceReader:
         try:
             ws = workbook[sheet_name]
             formula_columns = {column.upper() for column in (formula_presence_columns or set()) if column}
+            formula_indexes = sorted(column_index_from_string(column) for column in formula_columns)
             formula_rows = None
             if formula_columns:
                 formula_workbook = load_workbook(path, read_only=True, data_only=False)
@@ -140,7 +141,15 @@ class SourceReader:
             header_values = self._header_values(ws, header_row, header_row_2)
             data_start = max(header_row, header_row_2 or header_row) + 1
             if formula_columns:
-                formula_rows = formula_ws.iter_rows(min_row=data_start, values_only=True)
+                # Only read the columns whose formulas affect household boundaries.
+                # ponytail: avoid scanning every cell in wide workbooks; extend the range
+                # if another formula-dependent column is introduced.
+                formula_rows = formula_ws.iter_rows(
+                    min_row=data_start,
+                    min_col=formula_indexes[0],
+                    max_col=formula_indexes[-1],
+                    values_only=True,
+                )
             result: list[dict[str, Any]] = []
             for offset, values in enumerate(
                 ws.iter_rows(min_row=data_start, values_only=True), start=data_start
@@ -149,9 +158,9 @@ class SourceReader:
                     break
                 formula_values = next(formula_rows) if formula_rows is not None else ()
                 formula_cells = tuple(
-                    get_column_letter(index)
-                    for index, value in enumerate(formula_values, 1)
-                    if get_column_letter(index) in formula_columns
+                    get_column_letter(formula_indexes[0] + index)
+                    for index, value in enumerate(formula_values)
+                    if get_column_letter(formula_indexes[0] + index) in formula_columns
                     and isinstance(value, str)
                     and value.startswith("=")
                 )

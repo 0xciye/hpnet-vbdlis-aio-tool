@@ -62,11 +62,15 @@ class MainWindow(QMainWindow):
         self.resize(1450, 900)
         self.setMinimumSize(1100, 700)
         self.thread_pool = QThreadPool.globalInstance()
+        # Keep QRunnable/signal owners alive until the queued callback reaches the UI.
+        self._active_workers: set[TaskWorker] = set()
         self.profile_store = ProfileStore()
         self.profiles = self._load_profiles()
         self._profile_guard = False
         self.source_columns = []
         self.current_result = None
+        self._last_process_key = None
+        self._pending_process_key = None
         self.service = BuilderService(
             resource_path("resources/BieuMauThuThapThongTinGiayChungNhan.xlsx"),
             resource_path("config/template_schema.json"),
@@ -252,6 +256,17 @@ class MainWindow(QMainWindow):
             profile,
         )
 
+    @staticmethod
+    def _process_key(parameters) -> tuple:
+        path, sheet, header_row, header_row_2, profile = parameters
+        source = Path(path)
+        try:
+            stamp = (source.stat().st_size, source.stat().st_mtime_ns)
+        except OSError:
+            stamp = None
+        profile_json = json.dumps(profile.to_dict(), sort_keys=True, ensure_ascii=False, default=str)
+        return stamp, sheet, header_row, header_row_2, profile_json
+
     def _process_sync(self, parameters, progress=None):
         path, sheet, header_row, header_row_2, profile = parameters
         return self.service.process(
@@ -269,16 +284,21 @@ class MainWindow(QMainWindow):
         self.export_page.set_diagnostic_files(DiagnosticFiles())
         self.export_page.set_busy(True, message)
         worker = TaskWorker(function)
-        worker.signals.finished.connect(lambda value: self._worker_finished(value, finished))
-        worker.signals.failed.connect(self._worker_failed)
+        self._active_workers.add(worker)
+        worker.signals.finished.connect(lambda value, task=worker: self._worker_finished(value, finished, task))
+        worker.signals.failed.connect(lambda error, task=worker: self._worker_failed(error, task))
         worker.signals.progress.connect(self.export_page.set_progress)
         self.thread_pool.start(worker)
 
-    def _worker_finished(self, value: Any, callback: Callable[[Any], None]) -> None:
+    def _worker_finished(self, value: Any, callback: Callable[[Any], None], worker: TaskWorker | None = None) -> None:
+        if worker is not None:
+            self._active_workers.discard(worker)
         self.export_page.set_busy(False)
         callback(value)
 
-    def _worker_failed(self, error: Exception) -> None:
+    def _worker_failed(self, error: Exception, worker: TaskWorker | None = None) -> None:
+        if worker is not None:
+            self._active_workers.discard(worker)
         self.export_page.set_busy(False)
         self.current_result = None
         if not isinstance(error, DiagnosticFailure):
@@ -303,7 +323,12 @@ class MainWindow(QMainWindow):
         except Exception as exc:
             QMessageBox.warning(self, "Thiếu dữ liệu", str(exc))
             return
+        process_key = self._process_key(parameters)
         if action in {"validate", "preview"}:
+            if action == "preview" and self.current_result is not None and self._last_process_key == process_key:
+                self._show_process_result(self.current_result)
+                return
+            self._pending_process_key = process_key
             self._run_worker(
                 lambda progress: self._process_sync(parameters, progress),
                 self._show_process_result,
@@ -311,8 +336,10 @@ class MainWindow(QMainWindow):
             )
             return
 
+        reusable_result = self.current_result if self._last_process_key == process_key else None
+
         def export_task(progress):
-            result = self._process_sync(parameters, progress)
+            result = reusable_result or self._process_sync(parameters, progress)
             if not result.can_export:
                 return (result, None)
             profile = parameters[4]
@@ -327,10 +354,12 @@ class MainWindow(QMainWindow):
             )
             return (result, exported)
 
+        self._pending_process_key = process_key
         self._run_worker(export_task, self._show_export_result, "Đang tạo và kiểm tra file VBDLIS…")
 
     def _show_process_result(self, result) -> None:
         self.current_result = result
+        self._last_process_key = self._pending_process_key
         self.export_page.show_result(result)
         if result.can_export:
             self.statusBar().showMessage("Kiểm tra đạt — có thể xuất file.", 6000)
