@@ -208,6 +208,10 @@ class MainWindow(QMainWindow):
                     QMessageBox.critical(self, "Không thể nhập", str(exc))
 
     def _source_file_selected(self, path: str) -> None:
+        self.current_result = None
+        self._last_process_key = None
+        self._pending_process_key = None
+        self.export_page.invalidate_result()
         try:
             profile = self._current_profile()
             sheets, selected, header, columns, preview = self.service.source_setup(path, profile.last_sheet)
@@ -234,6 +238,9 @@ class MainWindow(QMainWindow):
             self.data_page.show_preview(columns, preview)
             self.mapping_page.set_columns(columns)
             self.current_result = None
+            self._last_process_key = None
+            self._pending_process_key = None
+            self.export_page.invalidate_result()
         except Exception as exc:
             failure = self.service.failure(exc, DiagnosticContext(path, sheet, header_row), "Đọc xem trước dữ liệu")
             self._worker_failed(failure)
@@ -265,7 +272,7 @@ class MainWindow(QMainWindow):
         except OSError:
             stamp = None
         profile_json = json.dumps(profile.to_dict(), sort_keys=True, ensure_ascii=False, default=str)
-        return stamp, sheet, header_row, header_row_2, profile_json
+        return str(source.resolve()), stamp, sheet, header_row, header_row_2, profile_json
 
     def _process_sync(self, parameters, progress=None):
         path, sheet, header_row, header_row_2, profile = parameters

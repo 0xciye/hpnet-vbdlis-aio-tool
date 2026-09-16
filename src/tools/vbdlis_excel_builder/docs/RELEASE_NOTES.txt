@@ -3,6 +3,8 @@ Bản cập nhật báo cáo lỗi đầy đủ và tự động bỏ qua dữ l
 ============================================
 
 BỔ SUNG LOGS
+- Giữ số 0 đầu của CCCD khi Excel lưu dạng số nhưng hiển thị bằng định dạng
+  `000000000000`; có thể chọn và xử lý liên tiếp nhiều file trong cùng phiên.
 - Tự lưu HTML/TXT sau mỗi lần kiểm tra, kể cả chưa xuất được; có nút mở tại Tab 5.
 - Báo cáo tiếng Việt: chỉ rõ file, trang tính, dòng/ô, giá trị, ảnh hưởng, cách sửa.
 - Không cắt bớt lỗi lặp; phân biệt dòng người, dòng thửa và STT kết quả.

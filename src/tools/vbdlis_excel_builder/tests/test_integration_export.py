@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
@@ -117,6 +118,46 @@ class IntegrationExportTests(unittest.TestCase):
         self.assertEqual(page.progress.format(), "%p%")
         self.assertIn("42%", page.stats.text())
         page.close()
+
+    def test_main_window_can_run_two_background_jobs_sequentially(self):
+        from PySide6.QtWidgets import QApplication
+
+        from tools.vbdlis_excel_builder.ui.main_window import MainWindow
+
+        app = QApplication.instance() or QApplication(["vbdlis-sequential-test", "-platform", "offscreen"])
+        window = MainWindow()
+        completed = []
+
+        for label in ("file-1", "file-2"):
+            window._run_worker(
+                lambda progress, value=label: (progress(100, value), value)[1],
+                completed.append,
+                label,
+            )
+            deadline = time.monotonic() + 5
+            while window._active_workers and time.monotonic() < deadline:
+                app.processEvents()
+            app.processEvents()
+            self.assertFalse(window._active_workers)
+
+        self.assertEqual(completed, ["file-1", "file-2"])
+        window.close()
+
+    def test_process_key_distinguishes_different_source_files(self):
+        from tools.vbdlis_excel_builder.ui.main_window import MainWindow
+
+        with tempfile.TemporaryDirectory() as directory:
+            temp = Path(directory)
+            first = temp / "file-1.xlsx"
+            second = temp / "file-2.xlsx"
+            first.write_bytes(b"same")
+            second.write_bytes(b"same")
+            profile = MappingProfile()
+
+            first_key = MainWindow._process_key((first, "Sheet1", 1, None, profile))
+            second_key = MainWindow._process_key((second, "Sheet1", 1, None, profile))
+
+            self.assertNotEqual(first_key, second_key)
 
 
 if __name__ == "__main__":

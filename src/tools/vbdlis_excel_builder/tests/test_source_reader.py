@@ -80,3 +80,19 @@ def test_formula_stt_without_cached_value_starts_a_new_household(tmp_path):
         [True],
         [True, False],
     ]
+
+
+def test_read_rows_preserves_leading_zeroes_from_excel_number_format(tmp_path):
+    source = tmp_path / "formatted-identity.xlsx"
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.append(["STT", "Họ tên", "Ngày sinh", "CCCD"])
+    sheet.append([1, "Nguyễn Văn A", "1980", 30077027023])
+    sheet["D2"].number_format = "000000000000"
+    workbook.save(source)
+    workbook.close()
+
+    rows = SourceReader().read_rows(source, sheet.title, 1)
+
+    assert rows[0]["D"] == "030077027023"
+    assert rows[0]["CCCD"] == "030077027023"

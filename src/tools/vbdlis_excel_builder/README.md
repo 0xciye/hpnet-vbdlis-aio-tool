@@ -50,7 +50,8 @@ ERROR chặn export. WARNING vẫn cho phép export. Trạng thái chưa có GCN
 - Mục 49: `{PREFIX}_{MA_XA}_{SO_TO}_{SO_THUA}-TBXN.pdf, {PREFIX}_{MA_XA}_{SO_TO}_{SO_THUA}-DDK.pdf`.
 - Mặc định tự động bỏ cả hộ thiếu họ tên/CCCD hoặc dữ liệu thửa bắt buộc; CCCD/CMND
   có giá trị nhưng không đúng 9 hoặc 12 chữ số thì bỏ riêng người. Không đổi dữ liệu nguồn.
-- Chấp nhận CMND 9 chữ số và CCCD 12 chữ số; luôn giữ số 0 đầu nếu ô nguồn là văn bản.
+- Chấp nhận CMND 9 chữ số và CCCD 12 chữ số; giữ số 0 đầu nếu ô nguồn là văn bản
+  hoặc được Excel hiển thị bằng định dạng số gồm các số 0 cố định.
   Có thể tắt tùy chọn này ở Tab 3 để quay về chế độ kiểm tra dừng khi thiếu.
 - Giới tính chỉ áp dụng cho CCCD 12 số: số thứ 4 là `0`/`2` thì Nam,
   `1`/`3` thì Nữ; CMND 9 số và các mã khác để trống.

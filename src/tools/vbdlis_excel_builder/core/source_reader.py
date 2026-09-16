@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -20,6 +21,20 @@ class SourceColumn:
 
 
 class SourceReader:
+    @staticmethod
+    def _cell_value(cell) -> Any:
+        """Preserve leading zeroes that Excel displays with a zero-only format."""
+        value = cell.value
+        number_format = str(cell.number_format or "").strip()
+        if (
+            isinstance(value, (int, float))
+            and not isinstance(value, bool)
+            and (not isinstance(value, float) or value.is_integer())
+            and re.fullmatch(r"0+", number_format)
+        ):
+            return str(int(value)).zfill(len(number_format))
+        return value
+
     def sheet_names(self, path: str | Path) -> list[str]:
         workbook = load_workbook(path, read_only=True, data_only=False)
         try:
@@ -151,11 +166,12 @@ class SourceReader:
                     values_only=True,
                 )
             result: list[dict[str, Any]] = []
-            for offset, values in enumerate(
-                ws.iter_rows(min_row=data_start, values_only=True), start=data_start
+            for offset, cells in enumerate(
+                ws.iter_rows(min_row=data_start), start=data_start
             ):
                 if max_rows is not None and len(result) >= max_rows:
                     break
+                values = tuple(self._cell_value(cell) for cell in cells)
                 formula_values = next(formula_rows) if formula_rows is not None else ()
                 formula_cells = tuple(
                     get_column_letter(formula_indexes[0] + index)

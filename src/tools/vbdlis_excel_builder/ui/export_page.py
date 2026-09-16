@@ -201,6 +201,10 @@ class ExportPage(QWidget):
         if text:
             self.stats.setText(f"⏳  {text} ({value}%)")
 
+    def invalidate_result(self) -> None:
+        self._last_can_export = False
+        self.export_button.setEnabled(False)
+
     def set_diagnostic_files(self, files) -> None:
         self.log_paths = list(files.paths)
         self.open_log.setEnabled(bool(self.log_paths))
