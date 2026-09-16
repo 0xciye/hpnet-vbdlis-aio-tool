@@ -36,10 +36,10 @@ CONFIG_LABELS = {
 GUIDANCE = {
     "MISSING_PERSON_NAME": ("Có thông tin cá nhân nhưng thiếu họ tên", "Chưa xác định được người tại dòng này.", "Đối chiếu giấy tờ và bổ sung họ tên ở ô được chỉ ra; kiểm tra cột Họ và tên tại Tab 2."),
     "HOUSEHOLD_SKIPPED": ("ĐÃ BỎ QUA TOÀN BỘ HỘ", "Không xuất bất kỳ người/thửa nào của hộ này.", "Đối chiếu các dòng và ô bên dưới, bổ sung dữ liệu còn thiếu. Sau khi sửa, chạy lại để đưa hộ vào kết quả."),
-    "PERSON_SKIPPED": ("ĐÃ BỎ QUA NGƯỜI CÓ CCCD SAI", "Không xuất người này; những người hợp lệ khác của hộ vẫn được giữ.", "Sửa CCCD theo giấy tờ, bảo đảm đúng 12 chữ số, sau đó chạy lại để đưa người này vào kết quả."),
+    "PERSON_SKIPPED": ("ĐÃ BỎ QUA NGƯỜI CÓ CCCD/CMND SAI", "Không xuất người này; những người hợp lệ khác của hộ vẫn được giữ.", "Sửa theo giấy tờ, bảo đảm đúng 9 hoặc 12 chữ số, sau đó chạy lại để đưa người này vào kết quả."),
     "HOUSEHOLD_HEAD_SKIPPED": ("Cần kiểm tra vai trò sau khi bỏ chủ hộ", "Những người còn lại vẫn giữ vai trò ban đầu; ứng dụng không tự chỉ định chủ hộ mới.", "Đối chiếu chủ hộ thực tế và CCCD, sửa nguồn rồi chạy lại trước khi sử dụng kết quả."),
     "MISSING_CCCD": ("Chưa điền CCCD", "Chưa thể xuất file; người này vẫn được giữ lại.", "Mở ô CCCD được chỉ ra, đối chiếu giấy tờ và bổ sung số đúng. Không điền số giả hoặc xóa người để hết lỗi."),
-    "INVALID_CCCD": ("CCCD chưa đúng 12 chữ số", "Giữ giá trị hiện có và cảnh báo; giới tính có thể để trống.", "Đối chiếu giấy tờ. Định dạng ô là Văn bản để giữ số 0 đầu; không tự thêm số nếu chưa xác minh."),
+    "INVALID_CCCD": ("CCCD/CMND chưa đúng 9 hoặc 12 chữ số", "Giữ giá trị hiện có và cảnh báo; giới tính có thể để trống.", "Đối chiếu giấy tờ. Định dạng ô là Văn bản để giữ số 0 đầu; không tự thêm số nếu chưa xác minh."),
     "CCCD_BLOCKING": ("Cấu hình yêu cầu dừng vì CCCD chưa chuẩn", "Chưa thể xuất file.", "Kiểm tra và sửa CCCD theo giấy tờ tại ô được chỉ ra."),
     "MISSING_REQUIRED_CCCD_OUTPUT": ("CCCD chưa được điền vào kết quả", "Chưa thể xuất file.", "Kiểm tra CCCD nguồn ở Tab 2 và quy tắc CCCD tại Tab 4; không để chế độ Để trống."),
     "INVALID_PARCEL": ("Không tạo được thửa vì thiếu dữ liệu", "Dòng này không tạo thửa; các thửa khác của hộ vẫn được xử lý.", "Bổ sung đủ Số tờ, Số thửa và Diện tích trên cùng dòng. Nếu Excel đã có số, kiểm tra lại cột đã chọn tại Tab 2."),

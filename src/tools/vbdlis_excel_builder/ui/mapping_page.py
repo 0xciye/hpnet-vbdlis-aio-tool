@@ -53,7 +53,7 @@ class MappingPage(QWidget):
         info = QLabel(
             "Chỉ định cột nào trong file nguồn tương ứng với từng loại dữ liệu. "
             "Gợi ý tự động chỉ chọn khi tên cột đủ rõ ràng để tránh chọn nhầm. "
-            "Giới tính tự tính từ số thứ 4 của CCCD: 0 → Nam, 1 → Nữ, khác → để trống."
+            "Giới tính tự tính từ số thứ 4 của CCCD 12 số: 0/2 → Nam, 1/3 → Nữ, khác → để trống."
         )
         info.setProperty("info", True)
         info.setWordWrap(True)

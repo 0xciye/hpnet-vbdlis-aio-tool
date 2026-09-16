@@ -19,7 +19,7 @@ HƯỚNG DẪN ĐỌC BÁO CÁO VÀ DỮ LIỆU BỊ BỎ QUA
 4. Mặc định tại Tab 3 bật Tự động bỏ qua:
    - Thiếu họ tên/CCCD của người: bỏ cả hộ.
    - Thửa thiếu Số tờ/Số thửa/Diện tích hoặc hộ không có thửa: bỏ cả hộ.
-   - CCCD đã có nhưng không đúng 12 chữ số: bỏ riêng người đó; nếu không còn
+   - CCCD/CMND đã có nhưng không đúng 9 hoặc 12 chữ số: bỏ riêng người đó; nếu không còn
      người nào hợp lệ thì bỏ cả hộ. Không tự chỉ định chủ hộ mới nếu chủ hộ bị bỏ.
    - Ô trống bình thường trên dòng nối tiếp không bị coi là người/thửa thiếu.
    - Tổng DT/Tổng cộng được bỏ qua riêng, không phải người hoặc thửa.

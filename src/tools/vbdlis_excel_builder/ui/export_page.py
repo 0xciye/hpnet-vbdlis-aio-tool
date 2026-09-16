@@ -236,7 +236,7 @@ class ExportPage(QWidget):
             f"Người: {stats.get('people', 0)}",
             f"Thửa: {stats.get('parcels', 0)}",
             f"Dòng kết quả: {stats.get('output_rows', 0)}",
-            f"CCCD hợp lệ: {stats.get('valid_cccd', 0)}",
+            f"CCCD/CMND hợp lệ: {stats.get('valid_cccd', 0)}",
             f"Có GCN: {stats.get('with_gcn', 0)}",
             f"Chưa có GCN: {stats.get('without_gcn', 0)}",
             f"Dùng địa chỉ thay xứ đồng: {stats.get('location_fallbacks', 0)}",

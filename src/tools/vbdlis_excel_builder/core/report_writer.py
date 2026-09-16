@@ -31,7 +31,7 @@ STAT_LABELS = {
     "output_rows": "Số dòng kết quả",
     "with_gcn": "Số thửa có GCN",
     "without_gcn": "Số thửa chưa có GCN",
-    "valid_cccd": "Số dòng CCCD hợp lệ",
+    "valid_cccd": "Số dòng CCCD/CMND hợp lệ",
     "missing_cccd": "Số dòng CCCD thiếu/không hợp lệ",
     "location_fallbacks": "Số thửa dùng địa chỉ thay Xứ đồng",
     "errors": "Số lỗi cần sửa",

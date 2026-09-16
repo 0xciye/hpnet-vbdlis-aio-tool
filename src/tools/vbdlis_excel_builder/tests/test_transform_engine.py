@@ -41,10 +41,23 @@ def schemas():
 
 
 class TransformTests(unittest.TestCase):
+    def test_accepts_nine_and_twelve_digit_identity_numbers(self):
+        p = profile()
+        rows = [
+            {"_row": 2, "A": 1, "B": "A", "C": "012345678", "F": 1, "G": 2, "H": 3},
+            {"_row": 3, "B": "B", "C": "031004001234"},
+        ]
+        households, issues, _ = HouseholdParser().parse(rows, p)
+        output, _, stats = TransformEngine().transform(households, schemas(), p)
+        self.assertFalse([issue for issue in issues if issue.code == "INVALID_CCCD"])
+        self.assertEqual([row["I"] for row in output], ["012345678", "031004001234"])
+        self.assertEqual([row["K"] for row in output], ["", "Nam"])
+        self.assertEqual(stats["valid_cccd"], 2)
+
     def test_gender_uses_only_cccd_marker_even_with_source_gender(self):
         p = profile()
         fields = schemas()
-        cases = [(f"001{marker}90000001", {"0": "Nam", "1": "Nữ"}.get(marker, ""))
+        cases = [(f"001{marker}90000001", {"0": "Nam", "1": "Nữ", "2": "Nam", "3": "Nữ"}.get(marker, ""))
                  for marker in "0123456789"]
         cases += [("", ""), ("001", ""), ("00109000001", ""),
                   ("0010900000012", ""), ("0010A0000001", ""),
@@ -62,7 +75,7 @@ class TransformTests(unittest.TestCase):
         fields = schemas()
         gender_field = next(s for s in fields if s.transformer == "gender")
         for legacy_mode in ("source", "source_then_cccd", "fixed"):
-            for marker, expected in (("0", "Nam"), ("1", "Nữ"), ("2", "")):
+            for marker, expected in (("0", "Nam"), ("1", "Nữ"), ("2", "Nam"), ("3", "Nữ"), ("4", "")):
                 for field_mode in ("fixed", "source_column", "conditional", "blank"):
                     with self.subTest(legacy_mode=legacy_mode, marker=marker, field_mode=field_mode):
                         p = profile()

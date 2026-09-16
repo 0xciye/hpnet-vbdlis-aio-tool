@@ -61,7 +61,7 @@ def apply_input_policy(households: list[Household], issues: list[ValidationIssue
                     skipped_people.add(person.source_row)
                     reason = "CCCD thiếu" if any(
                         i.source_row == person.source_row and i.code == "MISSING_CCCD" for i in related
-                    ) else "CCCD sai định dạng 12 chữ số"
+                    ) else "CCCD/CMND sai định dạng 9 hoặc 12 chữ số"
                     extra.append(ValidationIssue(
                         Severity.WARNING, "PERSON_SKIPPED", f"Đã bỏ người vì {reason}.",
                         person.source_row, household.household_id, person.name, person.cccd,

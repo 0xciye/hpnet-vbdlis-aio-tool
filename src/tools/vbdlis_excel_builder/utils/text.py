@@ -67,7 +67,7 @@ def normalize_cccd(value: Any) -> tuple[str, bool]:
     text = excel_identifier(value).replace(" ", "")
     if not text:
         return "", False
-    if re.fullmatch(r"[0-9]{12}", text):
+    if re.fullmatch(r"[0-9]{9}(?:[0-9]{3})?", text):
         return text, True
     return text, False
 
@@ -102,12 +102,12 @@ def safe_template_replace(template: str, values: dict[str, Any]) -> str:
 
 
 def infer_gender_from_cccd(cccd: str) -> str:
-    """Project rule: only markers 0 and 1 in a valid 12-digit CCCD are used."""
+    """Infer gender from the century/gender marker of a 12-digit CCCD."""
     if not isinstance(cccd, str) or not re.fullmatch(r"[0-9]{12}", cccd):
         return ""
     marker = cccd[3]
-    if marker == "0":
+    if marker in {"0", "2"}:
         return "Nam"
-    if marker == "1":
+    if marker in {"1", "3"}:
         return "Nữ"
     return ""

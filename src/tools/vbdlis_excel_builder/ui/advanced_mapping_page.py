@@ -209,7 +209,7 @@ class AdvancedMappingPage(QWidget):
                     editor.setEnabled(False)
                 dflt.clear()
                 fallback.clear()
-                note = "Mục 10 tự tính từ CCCD: số thứ 4 là 0 → Nam; 1 → Nữ; còn lại để trống."
+                note = "Mục 10 tự tính từ CCCD 12 số: số thứ 4 là 0/2 → Nam; 1/3 → Nữ; còn lại để trống."
                 for control in (mode, src, dflt, fallback):
                     control.setToolTip(note)
                 name_item.setToolTip(schema.name + "\n" + note)

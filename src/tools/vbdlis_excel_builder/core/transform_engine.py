@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from tools.vbdlis_excel_builder.models import FieldSchema, Household, MappingProfile, Severity, ValidationIssue
-from tools.vbdlis_excel_builder.utils.text import is_blank
+from tools.vbdlis_excel_builder.utils.text import is_blank, normalize_cccd
 
 from .field_rule_engine import FieldRuleEngine, RowContext
 
@@ -78,7 +78,7 @@ class TransformEngine:
                     )
                 )
 
-        valid_cccd = sum(1 for row in output if str(row.get("I", "")).isdigit() and len(str(row.get("I", ""))) == 12)
+        valid_cccd = sum(1 for row in output if normalize_cccd(row.get("I", ""))[1])
         stats = {
             "output_rows": len(output),
             "with_gcn": with_gcn,

@@ -15,6 +15,9 @@ class UtilityTests(unittest.TestCase):
     def test_text_and_date_normalization(self):
         self.assertEqual(normalize_name(" Nguyễn   văn an "), "NGUYỄN VĂN AN")
         self.assertEqual(normalize_cccd("031204001234"), ("031204001234", True))
+        self.assertEqual(normalize_cccd("012345678"), ("012345678", True))
+        self.assertEqual(normalize_cccd(123456789), ("123456789", True))
+        self.assertEqual(normalize_cccd("0123456789"), ("0123456789", False))
         self.assertEqual(normalize_birth_date(1985), "1985")
         self.assertEqual(normalize_birth_date("1985"), "1985")
 

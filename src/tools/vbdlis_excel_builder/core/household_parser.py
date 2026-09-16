@@ -178,7 +178,7 @@ class HouseholdParser:
                         ValidationIssue(
                             Severity.WARNING,
                             "INVALID_CCCD",
-                            "CCCD đã có nhưng không ở dạng chuẩn 12 chữ số; cần kiểm tra lại.",
+                            "CCCD/CMND đã có nhưng không ở dạng chuẩn 9 hoặc 12 chữ số; cần kiểm tra lại.",
                             source_row,
                             current.household_id,
                             name,
@@ -190,7 +190,7 @@ class HouseholdParser:
                             ValidationIssue(
                                 Severity.ERROR,
                                 "CCCD_BLOCKING",
-                                "Cấu hình yêu cầu dừng khi CCCD không ở dạng chuẩn 12 chữ số.",
+                                "Cấu hình yêu cầu dừng khi CCCD/CMND không ở dạng chuẩn 9 hoặc 12 chữ số.",
                                 source_row,
                                 current.household_id,
                                 name,

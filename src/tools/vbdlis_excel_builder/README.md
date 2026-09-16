@@ -48,10 +48,12 @@ ERROR chặn export. WARNING vẫn cho phép export. Trạng thái chưa có GCN
   hàng tiếp theo; ánh xạ theo chữ cột khi ô tiêu đề bị trống do gộp ô.
 - Mục 2: `{PREFIX}_{MA_XA}_{SO_TO}_{SO_THUA}`.
 - Mục 49: `{PREFIX}_{MA_XA}_{SO_TO}_{SO_THUA}-TBXN.pdf, {PREFIX}_{MA_XA}_{SO_TO}_{SO_THUA}-DDK.pdf`.
-- Mặc định tự động bỏ cả hộ thiếu họ tên/CCCD hoặc dữ liệu thửa bắt buộc; CCCD
-  có giá trị nhưng sai 12 chữ số thì bỏ riêng người. Không đổi dữ liệu nguồn.
+- Mặc định tự động bỏ cả hộ thiếu họ tên/CCCD hoặc dữ liệu thửa bắt buộc; CCCD/CMND
+  có giá trị nhưng không đúng 9 hoặc 12 chữ số thì bỏ riêng người. Không đổi dữ liệu nguồn.
+- Chấp nhận CMND 9 chữ số và CCCD 12 chữ số; luôn giữ số 0 đầu nếu ô nguồn là văn bản.
   Có thể tắt tùy chọn này ở Tab 3 để quay về chế độ kiểm tra dừng khi thiếu.
-- Giới tính: CCCD đủ 12 số có số thứ 4 là `0` thì Nam, `1` thì Nữ; còn lại trống.
+- Giới tính chỉ áp dụng cho CCCD 12 số: số thứ 4 là `0`/`2` thì Nam,
+  `1`/`3` thì Nữ; CMND 9 số và các mã khác để trống.
 - Thiếu Xứ đồng mặc định dùng địa chỉ profile; dữ liệu Xứ đồng hợp lệ luôn được ưu tiên.
 - GCN nằm trên từng thửa; không tạo số/ngày/loại GCN giả.
 

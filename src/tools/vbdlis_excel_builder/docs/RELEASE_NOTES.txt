@@ -6,7 +6,7 @@ BỔ SUNG LOGS
 - Tự lưu HTML/TXT sau mỗi lần kiểm tra, kể cả chưa xuất được; có nút mở tại Tab 5.
 - Báo cáo tiếng Việt: chỉ rõ file, trang tính, dòng/ô, giá trị, ảnh hưởng, cách sửa.
 - Không cắt bớt lỗi lặp; phân biệt dòng người, dòng thửa và STT kết quả.
-- Mặc định bỏ cả hộ thiếu dữ liệu bắt buộc, bỏ riêng người có CCCD sai 12 số;
+- Mặc định bỏ cả hộ thiếu dữ liệu bắt buộc, bỏ riêng người có CCCD/CMND không đúng 9 hoặc 12 số;
   ghi rõ đối tượng bị bỏ. Không sửa nguồn hoặc tự thay người mang vai trò Chủ hộ.
 - Báo cáo khi không đọc/ghi được file; hiển thị rõ nếu không lưu được chính log.
 - Báo cáo Excel có thêm ảnh hưởng, cách xử lý, vị trí ô; xuống dòng để đọc đầy đủ.
@@ -33,7 +33,8 @@ THAY ĐỔI
   dropdown và dấu tích; không còn ô nhập chồng lên hàng kế tiếp.
 - Mở rộng cột Nguồn, thêm chú thích tên trường và phần trợ giúp thu gọn.
 - Mục 10 tự nhận giới tính theo số thứ 4 của CCCD đủ 12 chữ số:
-  0 = Nam, 1 = Nữ, còn lại để trống. Cấu hình cũ không ghi đè quy tắc này.
+  0/2 = Nam, 1/3 = Nữ, còn lại để trống. CMND 9 số không suy ra giới tính.
+  Cấu hình cũ không ghi đè quy tắc này.
 - Icon bảng tính/dấu tích mới: nhúng 9 kích thước vào EXE, sử dụng cùng icon
   cho cửa sổ và taskbar; đặt mã nhận diện ứng dụng riêng trên Windows.
 - Hướng dẫn PDF 15 trang: ảnh giao diện mới, quy tắc CCCD và bảng Tab 4 đã sửa.
