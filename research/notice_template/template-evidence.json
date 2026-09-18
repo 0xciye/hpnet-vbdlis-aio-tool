@@ -1,7 +1,7 @@
 {
   "source": "research/notice_template/MAU_22_THONG_BAO_XAC_NHAN_KET_QUA_DANG_KY_DAT_DAI.docx",
-  "source_original_sha256": "fe1c0d45a671d2ee0cedff73b5a319dff50c3d1e15f8bae7d11a312709bae5c0",
-  "canonical_sha256": "fe1c0d45a671d2ee0cedff73b5a319dff50c3d1e15f8bae7d11a312709bae5c0",
+  "source_original_sha256": "9424f744239b397032f18710d26fc0da29a8563a89bf8cf1e2551c3e47c1297a",
+  "canonical_sha256": "a0d1a6e3f757dd93d1019465bc2b947d1bb33e2c525e33e740a5251f9d54a334",
   "inventory": [
     {
       "part": "[Content_Types].xml",
@@ -17,8 +17,8 @@
     },
     {
       "part": "word/document.xml",
-      "size": 35963,
-      "sha256": "876dda5aa58b3d62e66bb7f6a3cc0f334138d5cfa3a8bf0022203f0b1be7545e",
+      "size": 36164,
+      "sha256": "a2dce534af84eb14a7531c12c7e51933983bd8a8eee69493b5c7a708cad9aa4d",
       "mode": "bounded text/alignment patch"
     },
     {
@@ -30,13 +30,13 @@
     {
       "part": "word/footnotes.xml",
       "size": 3018,
-      "sha256": "c81aca541ef5bc2de435391df5ae01484e2248b673e8f9497809c7f473fbd3e9",
+      "sha256": "1d993059c7ef5826ffedd8a006bc8cbb43406de4687ca243111330fb71328b25",
       "mode": "preserve-only"
     },
     {
       "part": "word/endnotes.xml",
       "size": 3012,
-      "sha256": "5c6697fe8df3da561f2a85a3b922d93846b21f06d30c6114dfeb88e95b30fd5a",
+      "sha256": "66970e9092a6989f730b5b1fe8078fbd571fa8c5bc2b1b501fd258c4f0dde153",
       "mode": "preserve-only"
     },
     {
@@ -53,8 +53,8 @@
     },
     {
       "part": "word/settings.xml",
-      "size": 5632,
-      "sha256": "a4fbc40ffeb73fb30dae1055977807dbf5faf0f89370543fd492f34c0a78c4b6",
+      "size": 5710,
+      "sha256": "b5a7d1353a952c023041825e2fb0f8d1063b657a60fd8490b468d1a9e4c8698f",
       "mode": "preserve-only"
     },
     {
@@ -77,14 +77,14 @@
     },
     {
       "part": "docProps/core.xml",
-      "size": 734,
-      "sha256": "b60a396ad035fe4afbdc2f0bb89f2e19ef9e5556e4ea639b79f75f901d6b59d7",
+      "size": 756,
+      "sha256": "8fcd5dbef76b1a464ee55e617e474978058eda4efef34cdac216dc9d8308d939",
       "mode": "preserve-only"
     },
     {
       "part": "docProps/app.xml",
       "size": 719,
-      "sha256": "45987555a7b3f830e57a899c79b942b76278bc4d8405a72c6f256931e2f6e0d3",
+      "sha256": "81c7af0bd5b27959ed60dd41bb608198512fbcca1015e241cbc192ab685f6a01",
       "mode": "preserve-only"
     }
   ],

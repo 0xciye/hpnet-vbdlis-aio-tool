@@ -195,7 +195,7 @@ def apply_presentation(window):
     for field, title in (
         (window.inputs['commune_code'], 'ĐỊA PHƯƠNG & NGƯỜI SỬ DỤNG ĐẤT'),
         (window.inputs['day'].parentWidget(), 'NGÀY THÔNG BÁO'),
-        (window.number_mode, 'CẤP SỐ THÔNG BÁO'),
+        (window.include_notice_number, 'CẤP SỐ THÔNG BÁO'),
         (window.output.parentWidget(), 'THƯ MỤC ĐẦU RA'),
     ):
         index, _ = form.getWidgetPosition(field)

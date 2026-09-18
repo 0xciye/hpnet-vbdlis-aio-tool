@@ -328,6 +328,20 @@ def test_preview_requires_confirmation_and_does_not_consume(tmp_path,service,con
     with pytest.raises(UserError): service.generate(data,config,output,token)
 
 
+def test_notice_number_can_be_left_blank(tmp_path,service,config):
+    configured=replace(config,include_notice_number=False,number_mode="list",number_list="",number_date_rules=[])
+    data=workbook(tmp_path/"src.xlsx",[("HỘ A",1,1,20,None)])
+    output=tmp_path/"out"
+    preview=service.preview(data,configured,output,0,tmp_path/"preview")
+    preview_text=all_text(preview.path.read_bytes())
+    assert "Số: /TB-ĐKĐĐ" in preview_text and "None" not in preview_text
+    result=service.generate(data,configured,output,service.approve(preview))
+    assert result["success"]==1 and result["entries"][0].number is None
+    assert "để trống số thông báo theo cấu hình" in result["entries"][0].detail
+    generated=next(output.glob("*.docx"))
+    assert "Số: /TB-ĐKĐĐ" in all_text(generated.read_bytes())
+
+
 @pytest.mark.parametrize("failure",["write","render","exists","race"])
 def test_failed_number_reused(tmp_path,service,config,monkeypatch,failure):
     data,output,token=ready(tmp_path,service,config)
@@ -491,6 +505,7 @@ def test_ui_standalone_and_config_restore(app,tmp_path,monkeypatch,config):
     window.mapping["area"].setCurrentIndex(window.mapping["area"].findData("M"))
     window.row_start.setText("7"); window.row_end.setText("7")
     window.number_mode.setCurrentIndex(window.number_mode.findData("list")); window.number_list.setText("300-400")
+    window.include_notice_number.setChecked(False)
     window.add_number_date_rule("300-350","2026-08-25"); window.add_number_date_rule("351-400","2026-08-28")
     assert "SU_DUNG_CHUNG" not in window.template_inputs
     window.template_inputs["NGUOI_KY"].setText("NGƯỜI KÝ THỬ")
@@ -503,6 +518,7 @@ def test_ui_standalone_and_config_restore(app,tmp_path,monkeypatch,config):
     assert restored.header.value()==6 and restored.mapping["area"].currentData()=="M"
     assert restored.row_start.text()=="7" and restored.row_end.text()=="7"
     assert restored.number_mode.currentData()=="list" and restored.number_list.text()=="300-400"
+    assert not restored.include_notice_number.isChecked() and not restored.number_mode.isEnabled()
     assert restored.number_date_rules()==[{"numbers":"300-350","date":"2026-08-25"},{"numbers":"351-400","date":"2026-08-28"}]
     restored.navigate(1)
     loop=QEventLoop(); restored.job.finished.connect(loop.quit); QTimer.singleShot(15000,loop.quit); loop.exec(); app.processEvents()
@@ -798,6 +814,21 @@ def test_canonical_template_preserves_geometry_and_only_authorized_spacing():
             assert hashlib.sha256(source.read(item["part"])).hexdigest()==item["sha256"],item["part"]
 
 
+def test_mau_22_adjacent_parcel_placeholders_use_14_point_font():
+    with ZipFile(default_template_path()) as archive:
+        document=minidom.parseString(archive.read("word/document.xml"))
+    expected={"{{THUA_LIEN_KE}}","{{TO_LIEN_KE}}","{{CHU_SU_HUU_LIEN_KE}}"}
+    actual={}
+    for run in document.getElementsByTagNameNS(WORD_NS,"r"):
+        text="".join(node_text(node) for node in run.getElementsByTagNameNS(WORD_NS,"t"))
+        for token in expected:
+            if token in text:
+                sizes=run.getElementsByTagNameNS(WORD_NS,"sz")
+                actual[token]=sizes[0].getAttribute("w:val") if sizes else ""
+    document.unlink()
+    assert actual==dict.fromkeys(expected,"28")
+
+
 def test_template_configuration_keeps_mau_22_default_and_values_in_one_source():
     configs={item.id:item for item in template_configs()}
     default=default_template_config()
@@ -867,6 +898,7 @@ def test_required_fields_are_isolated_per_template(config):
     mao=default_template_config()
     cam=next(item for item in template_configs() if item.id=="CAM_GIANG")
     assert "NGAY_SINH" not in mao.required_fields and "NGAY_SINH" in cam.required_fields
+    assert "SO_TB" not in mao.required_fields and "SO_TB" not in cam.required_fields
     no_tax={**config.template_fields,"CO_QUAN_THUE":""}
     replace(config,template_fields=no_tax).validate(
         key for key in mao.user_fields if key in mao.required_fields)

@@ -25,7 +25,7 @@ OPTIONAL_COMMON = {
     "NOI_DUNG_QUYEN_LIEN_KE": "Nội dung quyền đối với thửa liền kề",
 }
 REQUIRED_TOKENS = {key: FIELD_LABELS[key] for key in (
-    "TEN_XA", "SO_TB", "DIA_DIEM", "NGAY", "THANG", "NAM", "HO_TEN",
+    "TEN_XA", "DIA_DIEM", "NGAY", "THANG", "NAM", "HO_TEN",
     "GIAY_TO_NHAN_THAN", "DIA_CHI_NGUOI_SU_DUNG_DAT", "SO_TO", "SO_THUA",
     "TEN_THON", "DIEN_TICH", "SU_DUNG_CHUNG", *REQUIRED_COMMON,
 )}

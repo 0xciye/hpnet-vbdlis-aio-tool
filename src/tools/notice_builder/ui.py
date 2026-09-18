@@ -179,6 +179,10 @@ class MainWindow(QMainWindow):
             spin=QSpinBox(); spin.setRange(minimum,maximum); spin.setValue(default); spin.valueChanged.connect(self.invalidate); self.inputs[key]=spin
             dates.addWidget(QLabel(label)); dates.addWidget(spin)
         form.addRow("Ngày thông báo mặc định",date_line)
+        self.include_notice_number=QCheckBox("Điền số thông báo vào văn bản")
+        self.include_notice_number.setChecked(True)
+        self.include_notice_number.setToolTip("Bỏ chọn để tạo Word với mục số thông báo để trống.")
+        form.addRow(self.include_notice_number)
         self.number_mode=QComboBox(); self.number_mode.addItem("Số bắt đầu","start"); self.number_mode.addItem("Danh sách số","list")
         self.start_number=QSpinBox(); self.start_number.setRange(1,2147483647)
         self.number_list=QLineEdit(); self.number_list.setPlaceholderText("Có thể để trống nếu nhập các nhóm số và ngày bên dưới")
@@ -200,6 +204,7 @@ class MainWindow(QMainWindow):
         self.number_date_rows_layout=QVBoxLayout(); self.number_date_rows_layout.setContentsMargins(0,0,0,0); self.number_date_rows_layout.setSpacing(6); date_box.addLayout(self.number_date_rows_layout)
         self.add_number_date_button=self.button("+ Thêm số hoặc khoảng số",lambda:self.add_number_date_rule()); date_box.addWidget(self.add_number_date_button)
         form.addRow("Các số cần tạo và ngày",self.number_date_box)
+        self.include_notice_number.toggled.connect(self.numbering_changed)
         self.number_mode.currentIndexChanged.connect(self.numbering_changed); self.continue_check.toggled.connect(self.numbering_changed)
         self.start_number.valueChanged.connect(self.invalidate); self.number_list.textChanged.connect(self.numbering_input_changed); self.continue_number.valueChanged.connect(self.invalidate)
         self.output=QLineEdit(); self.output.setPlaceholderText("Ví dụ: D:/Ho so/TB 2026 hoặc bấm Chọn thư mục…"); self.output.setToolTip("Thư mục chứa các file Word được tạo và báo cáo kết quả."); self.output.textChanged.connect(self.invalidate)
@@ -266,9 +271,12 @@ class MainWindow(QMainWindow):
             self.summary.setText("Cần kiểm tra lại dữ liệu.")
 
     def numbering_changed(self, *_):
+        enabled=self.include_notice_number.isChecked()
         listing=self.number_mode.currentData()=="list"
-        self.start_number.setEnabled(not listing); self.number_list.setEnabled(listing); self.continue_check.setEnabled(listing)
-        self.continue_number.setEnabled(listing and self.continue_check.isChecked()); self.number_date_box.setEnabled(listing); self.invalidate()
+        self.number_mode.setEnabled(enabled); self.start_number.setEnabled(enabled and not listing)
+        self.number_list.setEnabled(enabled and listing); self.continue_check.setEnabled(enabled and listing)
+        self.continue_number.setEnabled(enabled and listing and self.continue_check.isChecked())
+        self.number_date_box.setEnabled(enabled and listing); self.invalidate()
 
     def numbering_input_changed(self, *_):
         """Giữ số tiếp nối ở ngay sau số lớn nhất người dùng vừa nhập."""
@@ -365,14 +373,15 @@ class MainWindow(QMainWindow):
         template_config=template_config_for_path(self.template.text())
         template_fields={key:self.template_inputs[key].text().strip()
                          for key in (*template_config.user_fields, *template_config.optional_fields)}
-        config=BatchConfig(**fields,number_mode=self.number_mode.currentData(),start_number=self.start_number.value(),number_list=self.number_list.text(),
+        config=BatchConfig(**fields,include_notice_number=self.include_notice_number.isChecked(),
+                           number_mode=self.number_mode.currentData(),start_number=self.start_number.value(),number_list=self.number_list.text(),
                            number_date_rules=self.number_date_rules(),
                            template_fields=template_fields,optional_empty=self.optional_empty.currentData(),
                            empty_location=self.empty_location.currentData(),
                            continue_number=self.continue_number.value() if self.continue_check.isChecked() and self.number_mode.currentData()=="list" else None)
         config.validate(key for key in template_config.user_fields if key in template_config.required_fields)
         from .core.numbering import NumberPool
-        NumberPool.from_config(config)
+        if config.include_notice_number: NumberPool.from_config(config)
         if not self.output.text().strip(): raise UserError("Hãy chọn thư mục đầu ra ở bước 4.")
         return config
 
@@ -505,9 +514,12 @@ class MainWindow(QMainWindow):
         if job: job.deleteLater()
 
     def numbering_changed_without_invalidation(self):
+        enabled=self.include_notice_number.isChecked()
         listing=self.number_mode.currentData()=="list"
-        self.start_number.setEnabled(not listing); self.number_list.setEnabled(listing); self.continue_check.setEnabled(listing)
-        self.continue_number.setEnabled(listing and self.continue_check.isChecked())
+        self.number_mode.setEnabled(enabled); self.start_number.setEnabled(enabled and not listing)
+        self.number_list.setEnabled(enabled and listing); self.continue_check.setEnabled(enabled and listing)
+        self.continue_number.setEnabled(enabled and listing and self.continue_check.isChecked())
+        self.number_date_box.setEnabled(enabled and listing)
 
     def cancel_job(self):
         if self.job: self.job.cancel_event.set(); self.cancel.setEnabled(False); self.statusBar().showMessage("Đã yêu cầu dừng. Chờ thao tác hiện tại kết thúc an toàn.")
@@ -562,6 +574,7 @@ class MainWindow(QMainWindow):
             self.source.setText(data.get("source","")); self.output.setText(data.get("output",""))
             self.row_start.setText(str(data.get("row_start","") or "")); self.row_end.setText(str(data.get("row_end","") or ""))
             self.template.setText(str(saved_template_path(data)))
+            self.include_notice_number.setChecked(bool(config.get("include_notice_number",True)))
             self.number_mode.setCurrentIndex(max(0,self.number_mode.findData(config.get("number_mode","start"))))
             self.start_number.setValue(int(config.get("start_number",1))); self.number_list.setText(config.get("number_list",""))
             saved_continuation=config.get("continue_number")

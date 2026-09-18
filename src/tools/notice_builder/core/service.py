@@ -72,7 +72,7 @@ class NoticeService:
         # New required fields are explicit inputs, never silently restored from old legal defaults.
         for key in (*self.template_config.user_fields, *self.template_config.optional_fields):
             values[key] = str(config.template_fields.get(key, "")).strip()
-        values.update({"SO_TB":str(number),
+        values.update({"SO_TB":"" if number is None else str(number),
                        "NGAY":f"{notice_date.day:02d}","THANG":f"{notice_date.month:02d}","NAM":str(notice_date.year),
                        "HO_TEN":record.owner,
                        "GIAY_TO_NHAN_THAN":record.identity, "DIA_CHI_NGUOI_SU_DUNG_DAT":config.owner_address.strip(),
@@ -120,14 +120,15 @@ class NoticeService:
         records = inspection.valid_records
         if not 0 <= record_index < len(records):
             raise UserError("Hãy chọn một thửa hợp lệ để xem trước.")
-        pool = NumberPool.from_config(config)
-        number = pool.preview_number(record_index)
-        if number is None:
+        pool = NumberPool.from_config(config) if config.include_notice_number else None
+        number = pool.preview_number(record_index) if pool else None
+        if pool and number is None:
             raise UserError("Danh sách số chưa đủ cho thửa xem trước. Bổ sung số hoặc đặt số tiếp nối.")
+        notice_date = (pool.date_for(number, date(config.year, config.month, config.day))
+                       if pool else date(config.year, config.month, config.day))
         target = Path(preview_dir) / ("XEM_TRUOC_" + uuid.uuid4().hex[:10] + ".docx")
         target.parent.mkdir(parents=True, exist_ok=True)
-        publish(self.template.render(self.values(records[record_index], config, number,
-                                                 pool.date_for(number, date(config.year, config.month, config.day)))), target)
+        publish(self.template.render(self.values(records[record_index], config, number, notice_date)), target)
         return Preview(target, self.signature(inspection, config, output), uuid.uuid4().hex, file_hash(target))
 
     def approve(self, preview):
@@ -141,7 +142,7 @@ class NoticeService:
         if self.approvals.pop(approval, None) != self.signature(inspection, config, output):
             raise UserError("Chưa xác nhận bản xem trước cho cấu hình hiện tại. Hãy xem trước và xác nhận lại.")
         directory = Path(output).resolve(); directory.mkdir(parents=True, exist_ok=True)
-        pool = NumberPool.from_config(config)
+        pool = NumberPool.from_config(config) if config.include_notice_number else None
         success = 0; aborted = False; log_error = ""
         filenames = {}
         for record in inspection.valid_records:
@@ -158,11 +159,11 @@ class NoticeService:
                     if record.duplicate_rows:
                         detail += " Trùng tờ/thửa tại các dòng " + ", ".join(map(str,record.duplicate_rows)) + "; bỏ toàn bộ nhóm, chưa cấp số."
                     error_type = status
-                elif missing := missing_required(self.values(record, config, 1), self.template_config.required_fields):
+                elif missing := missing_required(self.values(record, config, 1 if pool else None), self.template_config.required_fields):
                     status = error_type = "THIẾU DỮ LIỆU"
                     detail = "Thiếu mục bắt buộc: " + ", ".join(missing) + f". Kiểm tra dòng {record.source_row}, tên hộ từ dòng {record.owner_row} và thông tin bước 4. Không tạo file, không dùng số."
                 else:
-                    number = pool.peek()
+                    number = pool.peek() if pool else None
                     filename, cleaned = safe_filename(config, record)
                     target = directory / filename
                     if len(filenames[filename.casefold()]) > 1:
@@ -172,32 +173,38 @@ class NoticeService:
                     elif target.exists():
                         status = error_type = "FILE ĐÃ TỒN TẠI"
                         detail = "Không ghi đè file đã có. Số chưa được sử dụng; hãy kiểm tra file cũ hoặc chọn thư mục khác."
-                    elif number is None:
+                    elif pool and number is None:
                         status = error_type = "HẾT SỐ THÔNG BÁO"
                         detail = "Chưa có số để tạo file. Bổ sung danh sách hoặc số tiếp nối và chạy lại sau khi kiểm tra."
                     else:
                         try:
-                            notice_date = pool.date_for(number, date(config.year, config.month, config.day))
+                            notice_date = (pool.date_for(number, date(config.year, config.month, config.day))
+                                           if pool else date(config.year, config.month, config.day))
                             payload = self.template.render(self.values(record, config, number, notice_date))
                         except Exception as exc:
                             status = error_type = "LỖI TEMPLATE"
-                            detail = f"Không điền được mẫu Word: {exc}. Số {number} chưa dùng, giữ cho thửa tiếp theo."
+                            number_note = (f"Số {number} chưa dùng, giữ cho thửa tiếp theo."
+                                           if pool else "Số thông báo đang được để trống theo cấu hình.")
+                            detail = f"Không điền được mẫu Word: {exc}. {number_note}"
                         else:
                             try:
                                 publish(payload, target)
                             except FileExistsError:
                                 status = error_type = "FILE ĐÃ TỒN TẠI"
-                                detail = f"File vừa xuất hiện trong thư mục. Không ghi đè; số {number} chưa dùng."
+                                detail = (f"File vừa xuất hiện trong thư mục. Không ghi đè; số {number} chưa dùng."
+                                          if pool else "File vừa xuất hiện trong thư mục. Không ghi đè.")
                             except Exception as exc:
                                 status = error_type = "LỖI GHI FILE"
                                 reason = "Không đủ quyền ghi hoặc file đang bị khóa." if isinstance(exc,PermissionError) else "Kiểm tra quyền ghi, dung lượng, đường dẫn và file đang mở."
                                 code = getattr(exc,"winerror",None) or getattr(exc,"errno",None)
                                 detail = f"Không lưu được file tại {target}. {reason}"
                                 if code: detail += f" Mã lỗi hệ thống: {code}."
-                                detail += f" Số {number} chưa dùng, giữ cho thửa tiếp theo."
+                                if pool: detail += f" Số {number} chưa dùng, giữ cho thửa tiếp theo."
                             else:
-                                pool.commit(number); success += 1; status = "THÀNH CÔNG"
-                                detail = f"Đã kiểm tra DOCX và sử dụng số {number}, ngày {notice_date:%d/%m/%Y}. Dữ liệu từ dòng {record.source_row}, tên hộ từ dòng {record.owner_row}."
+                                if pool: pool.commit(number)
+                                success += 1; status = "THÀNH CÔNG"
+                                number_note = (f"sử dụng số {number}" if pool else "để trống số thông báo theo cấu hình")
+                                detail = f"Đã kiểm tra DOCX và {number_note}, ngày {notice_date:%d/%m/%Y}. Dữ liệu từ dòng {record.source_row}, tên hộ từ dòng {record.owner_row}."
                                 if cleaned: detail += " Đã làm sạch ký tự không hợp lệ trong tên file; nguồn không thay đổi."
                 entry = LogEntry(record.source_row, record.owner, record.sheet, record.parcel, number, status, error_type, detail, filename)
                 try:

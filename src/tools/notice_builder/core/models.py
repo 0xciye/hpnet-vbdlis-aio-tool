@@ -62,6 +62,7 @@ class BatchConfig:
     optional_empty: str = "blank"
     empty_location: str = "blank"
     prefix: str = "CHUACOGIAY"
+    include_notice_number: bool = True
 
     def validate(self, required_template_fields=None):
         required = {"Mã đơn vị hành chính": self.commune_code, "Địa chỉ người sử dụng đất": self.owner_address,

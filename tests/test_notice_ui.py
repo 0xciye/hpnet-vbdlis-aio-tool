@@ -93,6 +93,23 @@ def test_notice_number_list_continues_automatically(window, app):
     assert window.continue_number.isEnabled()
 
 
+def test_notice_number_can_be_disabled(window, app):
+    window.number_mode.setCurrentIndex(window.number_mode.findData('list'))
+    window.include_notice_number.setChecked(False)
+    app.processEvents()
+
+    assert not window.number_mode.isEnabled()
+    assert not window.start_number.isEnabled()
+    assert not window.number_list.isEnabled()
+    assert not window.continue_check.isEnabled()
+    assert not window.continue_number.isEnabled()
+    assert not window.number_date_box.isEnabled()
+
+    window.include_notice_number.setChecked(True)
+    app.processEvents()
+    assert window.number_mode.isEnabled() and window.number_list.isEnabled()
+
+
 def test_notice_color_pairs_have_readable_contrast():
     def luminance(value):
         rgb=[int(value[i:i+2],16)/255 for i in (1,3,5)]
