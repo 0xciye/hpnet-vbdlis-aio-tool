@@ -176,12 +176,11 @@ def test_headers_grouping_summary_and_other_sheet(tmp_path):
     info=workbook_info(path,"Dữ liệu")
     assert info["header_row"]==6 and len(info["sheets"])==2
     assert info["suggestions"]=={"household_index":"A","owner":"B","sheet":"G","parcel":"H","area":"K","location":"L","identity":"","birth_date":""}
-    assert len(data.records)==6 and data.records[0].status=="THIẾU DỮ LIỆU"
+    assert len(data.records)==4 and data.records[0].status=="THIẾU DỮ LIỆU"
     assert data.records[1].owner==data.records[2].owner=="HỘ A"
     assert data.records[1].owner_row==8 and len(data.summary_rows)==3
-    assert any("G14" in e for e in data.records[3].errors)
-    assert any("H15" in e for e in data.records[4].errors)
-    assert any("K16" in e for e in data.records[5].errors)
+    assert 14 in data.name_only_rows and 15 in data.name_only_rows
+    assert any("K16" in e for e in data.records[3].errors)
 
 
 def test_changed_mapping_and_two_tier(tmp_path):
@@ -196,6 +195,59 @@ def test_changed_mapping_and_two_tier(tmp_path):
     data=inspect_workbook(path,"Nguồn",2,2,ColumnMapping("A","B","C","D","",household_index="E"))
     assert len(data.valid_records)==2 and data.blank_rows==[5]
     assert data.records[1].owner=="HỘ KHÁC" and data.records[1].location==""
+
+
+def test_common_source_headers_are_suggested_without_a_preset(tmp_path):
+    quy_duong=tmp_path/"quy-duong.xlsx"; wb=Workbook(); ws=wb.active; ws.title="Nguồn"
+    ws.append(["Bảng theo dõi"]); ws.append(["Ghi chú"]); ws.append([None]); ws.append([None])
+    for col,value in {1:"STT",4:"Tên hộ",5:"Ngày tháng năm sinh",10:"tờ bản đồ",11:"số thửa"}.items():
+        ws.cell(5,col,value); ws.merge_cells(start_row=5,start_column=col,end_row=6,end_column=col)
+    ws["F5"]="CCCD"; ws.merge_cells("F5:G5"); ws["F6"]="SỐ"; ws["G6"]="NGÀY CẤP"
+    ws["L5"]="Diện tích đất (m2)"; ws.merge_cells("L5:O5")
+    for cell,value in {"L6":"Diện tích giao (m2)","M6":"Đã thu hồi","N6":"Đã chuyển nhượng","O6":"Nhận chuyển nhượng"}.items():
+        ws[cell]=value
+    wb.save(quy_duong); wb.close()
+    info=workbook_info(quy_duong)
+    assert (info["header_row"],info["depth"])==(5,2)
+    assert info["suggestions"]=={"household_index":"A","owner":"D","sheet":"J","parcel":"K","area":"L",
+                                 "location":"","identity":"F","birth_date":"E"}
+
+    cam_dong=tmp_path/"cam-dong.xlsx"; wb=Workbook(); ws=wb.active; ws.title="Nguồn"
+    ws.append(["STT","Tên hộ","CCCD","Ngày sinh",None,None,"Vị trí/ Xứ đồng","Số Thửa","Tờ bản đồ","DT"])
+    wb.save(cam_dong); wb.close()
+    info=workbook_info(cam_dong,"Nguồn",1,1)
+    assert info["suggestions"]["sheet"]=="I" and info["suggestions"]["parcel"]=="H"
+    assert info["suggestions"]["area"]=="J" and info["suggestions"]["location"]=="G"
+
+
+def test_merged_stt_group_uses_first_named_person_as_head(tmp_path):
+    path=tmp_path/"merged-stt.xlsx"; wb=Workbook(); ws=wb.active; ws.title="Nguồn"
+    ws.append(["STT hộ","Tên hộ","Tờ","Thửa","Diện tích","Giấy tờ"])
+    ws.append([1,None,None,None,None,None]); ws.append([None,"CHỦ HỘ",10,100,200,"030064013684"])
+    ws.append([None,None,10,101,300,None]); ws.merge_cells("A2:A4")
+    wb.save(path); wb.close()
+    data=inspect_workbook(path,"Nguồn",1,1,ColumnMapping(owner="B",sheet="C",parcel="D",area="E",
+                          location="",identity="F",household_index="A"),require_identity=True)
+    assert len(data.valid_records)==2
+    assert all((record.owner,record.owner_row,record.identity)==("CHỦ HỘ",3,"030064013684") for record in data.records)
+    assert data.records[0].head.is_head and data.records[0].head.source_row==3
+
+
+def test_rows_without_both_land_identifiers_are_skipped(tmp_path):
+    path=tmp_path/"skip-non-parcels.xlsx"; wb=Workbook(); ws=wb.active; ws.title="Nguồn"
+    ws.append(["STT hộ","Tên hộ","Tờ","Thửa","Diện tích","Giấy tờ","Xứ đồng"])
+    ws.append([1,"CHỦ HỘ",None,None,None,"030064013684",None])
+    ws.append([None,None,None,None,"=SUM(E4:E5)",None,"Tổng"])
+    ws.append([None,None,10,None,50,None,"Dòng thiếu thửa"])
+    ws.append([None,None,10,100,None,None,"Đồng A"])
+    ws.append([None,None,10,101,75,None,"Đồng B"])
+    wb.save(path); wb.close()
+    data=inspect_workbook(path,"Nguồn",1,1,ColumnMapping(owner="B",sheet="C",parcel="D",area="E",
+                          location="G",identity="F",household_index="A"),require_identity=True)
+    assert [record.source_row for record in data.records]==[5,6]
+    assert [record.source_row for record in data.valid_records]==[6]
+    assert any("Thiếu diện tích" in error for error in data.records[0].errors)
+    assert data.summary_rows==[3] and data.name_only_rows==[2,4]
 
 
 def test_optional_excel_row_range_and_blank_backward_compatibility(tmp_path):
@@ -422,7 +474,7 @@ def test_validation_log_without_valid_rows(tmp_path):
     result=export_inspection(data,tmp_path/"reports")
     assert result["txt"].is_file() and result["xlsx"].is_file()
     assert not list(tmp_path.rglob("*.docx"))
-    text=result["txt"].read_text(encoding="utf-8-sig"); assert "K2" in text and "H3" in text
+    text=result["txt"].read_text(encoding="utf-8-sig"); assert "K2" in text and "H3" not in text
 
 
 def test_log_write_error_stops_before_next_file(tmp_path,service,config,monkeypatch):

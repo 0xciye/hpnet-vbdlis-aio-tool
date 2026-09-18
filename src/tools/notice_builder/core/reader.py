@@ -25,7 +25,11 @@ def folded(value):
 
 def is_summary(value):
     # Only complete labels, never a prefix that could match a person's name.
-    return folded(value).rstrip(" :.;…：") in {"tong dt", "tong cong", "cong", "tong dien tich"}
+    return folded(value).rstrip(" :.;…：") in {"tong", "tong dt", "tong cong", "cong", "tong dien tich"}
+
+
+def is_formula(value):
+    return isinstance(value, str) and value.lstrip().startswith("=")
 
 
 def cell_problem(source, cached, address, label):
@@ -81,7 +85,9 @@ def workbook_info(path, sheet_name=None, header_row=None, depth=2):
             candidates = []
             for number in range(1, min(ws.max_row, 30) + 1):
                 texts = [folded(c.value) for c in ws[number]]
-                score = sum(any(key in t for key in ("ten ho", "ho ten", "to bd", "thua", "dien tich", "dt bd")) for t in texts)
+                score = sum(any(key in t for key in ("ten ho", "ho ten", "to bd", "to ban do", "so thua", "thua", "dien tich", "dt bd")) for t in texts)
+                if any(m.min_row == number and m.max_row == number + 1 for m in ws.merged_cells.ranges):
+                    score += 2
                 candidates.append((score, -number))
             header_row = -max(candidates)[1]
             depth = 2 if any(m.min_row == header_row and m.max_row == header_row + 1 for m in ws.merged_cells.ranges) else 1
@@ -99,14 +105,26 @@ def workbook_info(path, sheet_name=None, header_row=None, depth=2):
         for col in range(1, ws.max_column + 1):
             labels = list(dict.fromkeys(header_value(r, col) for r in range(header_row, header_row + depth)))
             headers[get_column_letter(col)] = " / ".join(v for v in labels if v) or "[Không có tiêu đề]"
+        def suggest(aliases):
+            for alias in aliases:
+                matches = [col for col, label in headers.items() if folded(label) == alias]
+                if len(matches) == 1:
+                    return matches[0]
+                matches = [col for col, label in headers.items() if alias in folded(label)]
+                if len(matches) == 1:
+                    return matches[0]
+            return ""
+
         suggestions = {}
         for field_name, aliases in {"household_index": ("stt", "so tt", "stt ho", "so thu tu"),
-                                   "owner": ("ten ho", "ho va ten", "ho ten"), "sheet": ("to bd moi", "to ban do moi"),
-                                   "parcel": ("thua bd moi", "thua ban do moi"), "area": ("dt bd", "dien tich ban do"),
-                                   "location": ("xu dong", "vi tri",), "identity": ("cccd", "cmnd", "giay to nhan than", "so dinh danh"),
+                                   "owner": ("ten ho", "ho va ten", "ho ten"),
+                                   "sheet": ("to bd moi", "to ban do moi", "to ban do", "so to", "to bd"),
+                                   "parcel": ("thua bd moi", "thua ban do moi", "so thua", "thua"),
+                                   "area": ("dt bd", "dien tich ban do", "dt", "dien tich giao", "dien tich dat"),
+                                   "location": ("xu dong", "vi tri",),
+                                   "identity": ("giay to nhan than", "so dinh danh", "cccd / so", "cccd", "cmnd"),
                                    "birth_date": ("ngay sinh", "ngay thang nam sinh", "nam sinh")}.items():
-            matches = [col for col, label in headers.items() if any(a in folded(label) for a in aliases)]
-            suggestions[field_name] = matches[0] if len(matches) == 1 else ""
+            suggestions[field_name] = suggest(aliases)
         return {"source": str(Path(path).resolve()), "sheets": names, "sheet": ws.title, "rows": ws.max_row, "columns": ws.max_column,
                 "header_row": header_row, "depth": depth, "headers": headers, "suggestions": suggestions}
     except (OSError, ValueError) as exc:
@@ -199,7 +217,9 @@ def inspect_workbook(path, sheet_name, header_row, depth, mapping, *, require_id
                     maximum_household = max(maximum_household, int(identifier(marker)))
                 except ValueError:
                     unresolved_household = True
-            if is_summary(owner):
+            summary_label = next((clean(value(key)) for key in ("owner", "location")
+                                  if key in indices and is_summary(value(key))), "")
+            if summary_label:
                 if selected: summaries.append(number)
                 continue
             if marker_issue:
@@ -264,6 +284,9 @@ def inspect_workbook(path, sheet_name, header_row, depth, mapping, *, require_id
                         fmt = source_cells[indices["identity"]].number_format
                         if re.fullmatch(r"0+", fmt):
                             member_identity = member_identity.zfill(len(fmt))
+                if not current_owner:
+                    current_owner, owner_row, owner_problem = owner, number, ""
+                    current_identity, identity_row, identity_problem = member_identity, number, problem("identity", "giấy tờ nhân thân")
                 person_key=(folded(owner),member_identity.replace(" ",""))
                 if not any((folded(person.name),person.cccd.replace(" ",""))==person_key for person in current_people):
                     current_people.append(Person(
@@ -275,8 +298,12 @@ def inspect_workbook(path, sheet_name, header_row, depth, mapping, *, require_id
                     ))
             if not selected:
                 continue
-            if not any(clean(source_cells[indices[k]].value) for k in ("sheet", "parcel", "area")):
-                name_only.append(number); continue
+            has_sheet = clean(source_cells[indices["sheet"]].value)
+            has_parcel = clean(source_cells[indices["parcel"]].value)
+            if not (has_sheet and has_parcel):
+                if is_formula(source_cells[indices["area"]].value): summaries.append(number)
+                else: name_only.append(number)
+                continue
             errors = []
             if household_problem:
                 errors.append(household_problem + " Không xác định được chủ hộ; không kế thừa tên của hộ phía trên.")

@@ -420,7 +420,7 @@ class MainWindow(QMainWindow):
         duplicates=sum(bool(r.duplicate_rows) for r in result.records); invalid=sum(bool(r.errors) and not r.duplicate_rows for r in result.records)
         selected=(f" | Phạm vi: dòng {result.selected_start_row}–{result.selected_end_row}" if result.selected_start_row is not None else " | Phạm vi: toàn bộ dữ liệu")
         self.summary.setText(f"Tổng dòng Excel: {result.total_rows}{selected} | Dòng thửa: {len(result.records)} | Có thể tạo: {len(result.valid_records)} | Trùng: {duplicates} | Thiếu/sai dữ liệu: {invalid}\n"
-                             f"Bỏ qua: {len(result.summary_rows)} dòng tổng, {len(result.blank_rows)} dòng trống, {len(result.name_only_rows)} dòng không có thửa. Nhấp đúp dòng để xem chi tiết.")
+                             f"Bỏ qua: {len(result.summary_rows)} dòng tổng/cộng dồn, {len(result.blank_rows)} dòng trống, {len(result.name_only_rows)} dòng không đủ tờ và thửa. Nhấp đúp dòng để xem chi tiết.")
         self.table.setRowCount(len(result.records)); self.preview_choice.clear()
         for index,r in enumerate(result.records):
             detail=" ".join(r.errors) or ("Trùng các dòng: "+", ".join(map(str,r.duplicate_rows)) if r.duplicate_rows else "Đủ dữ liệu; chưa cấp số")
