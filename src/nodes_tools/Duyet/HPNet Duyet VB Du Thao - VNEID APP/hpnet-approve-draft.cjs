@@ -104,9 +104,11 @@ function getRecordId(record) {
   return String(record?.VanbanDiId ?? record?.VanBanDiId ?? record?.ID ?? record?.Id ?? "").trim();
 }
 
-function exactCandidate(record, exactTitle, expectedStatus) {
-  return getRecordId(record)
-    && normalizeText(record?.TrichYeu) === normalizeText(exactTitle)
+function matchingCandidate(record, titleFilter, expectedStatus) {
+  const normalizedFilter = normalizeText(titleFilter);
+  return Boolean(normalizedFilter)
+    && getRecordId(record)
+    && normalizeText(record?.TrichYeu).includes(normalizedFilter)
     && normalizeText(record?.TinhTrangXuly) === normalizeText(expectedStatus);
 }
 
@@ -115,9 +117,9 @@ function normalizeTitles(value) {
   return [...new Set(values.map((item) => String(item ?? "").normalize("NFC").trim()).filter(Boolean))];
 }
 
-function selectCandidates(records, exactTitles, expectedStatus) {
-  return exactTitles.flatMap((exactTitle) => records.filter((record) => exactCandidate(record, exactTitle, expectedStatus)).map((record) => ({
-    id: getRecordId(record), exactTitle,
+function selectCandidates(records, titleFilters, expectedStatus) {
+  return titleFilters.flatMap((titleFilter) => records.filter((record) => matchingCandidate(record, titleFilter, expectedStatus)).map((record) => ({
+    id: getRecordId(record), titleFilter,
     title: String(record.TrichYeu ?? "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim(),
     status: String(record.TinhTrangXuly ?? "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim(),
     createDate: String(record.CreateDate ?? ""),
@@ -129,9 +131,9 @@ function runSelfTest() {
   const submitter = "  Nguyễn   Văn A ";
   const expectedStatus = expectedStatusFor(submitter);
   const good = { VanbanDiId: "abc", TrichYeu: `  ${title.toLowerCase()}  `, TinhTrangXuly: "Đang trình [NGUYỄN VĂN A] duyệt" };
-  if (!exactCandidate(good, title, expectedStatus)) throw new Error("Self-test: không nhận đúng trích yếu/tình trạng động.");
-  if (exactCandidate({ ...good, TrichYeu: `${title} 1` }, title, expectedStatus)) throw new Error("Self-test: nhận nhầm trích yếu gần giống.");
-  if (exactCandidate({ ...good, TinhTrangXuly: "Đã duyệt" }, title, expectedStatus)) throw new Error("Self-test: nhận nhầm văn bản đã duyệt.");
+  if (!matchingCandidate(good, "KẾT QUẢ XÁC NHẬN", expectedStatus)) throw new Error("Self-test: không nhận trích yếu có chứa cụm từ.");
+  if (matchingCandidate(good, "KẾT QUẢ CẤP GIẤY", expectedStatus)) throw new Error("Self-test: nhận nhầm trích yếu không chứa cụm từ.");
+  if (matchingCandidate({ ...good, TinhTrangXuly: "Đã duyệt" }, title, expectedStatus)) throw new Error("Self-test: nhận nhầm văn bản đã duyệt.");
   if (normalizePersonName("  Nguyễn   Văn A ") !== normalizePersonName("nguyễn văn a")) throw new Error("Self-test: chuẩn hóa tên không đúng.");
   if (findUniqueNormalizedPerson(["Trần Thị B", "Nguyễn Văn A"], " nguyễn  văn a ").index !== 1) throw new Error("Self-test: không match đúng tên động.");
   if (!String((() => { try { findUniqueNormalizedPerson(["Nguyễn Văn A"], "Người Không Có"); } catch (error) { return error.message; } return ""; })()).includes("Không tìm thấy")) throw new Error("Self-test: tên không tồn tại không dừng an toàn.");
@@ -142,8 +144,8 @@ function runSelfTest() {
   if (!csvCell("=HYPERLINK(1)").startsWith("'=")) throw new Error("Self-test: CSV chưa chặn công thức Excel.");
   if (normalizeTitles(`${title}\n${title}\n`).length !== 1) throw new Error("Self-test: chuẩn hóa nhiều trích yếu không đúng.");
   const secondTitle = "Bản nháp Thông báo xác nhận 2";
-  const selected = selectCandidates([good, { ...good, VanbanDiId: "def", TrichYeu: secondTitle }], [title, secondTitle], expectedStatus);
-  if (selected.length !== 2 || selected[1].exactTitle !== secondTitle) throw new Error("Self-test: không lọc đúng nhiều trích yếu.");
+  const selected = selectCandidates([good, { ...good, VanbanDiId: "def", TrichYeu: secondTitle }], ["KẾT QUẢ XÁC NHẬN", "xác nhận 2"], expectedStatus);
+  if (selected.length !== 2 || selected[1].titleFilter !== "xác nhận 2") throw new Error("Self-test: không lọc đúng nhiều cụm từ trích yếu.");
   console.log("NODE_SELF_TEST_OK");
 }
 
@@ -204,8 +206,8 @@ async function ensureLoggedIn(page, context, log) {
   }
 }
 
-async function findRecordById(context, id, exactTitle, { skipFullScan = false } = {}) {
-  const byTitle = await queryRecords(context, { key: exactTitle, allPages: true, pageSize: 100, targetId: id });
+async function findRecordById(context, id, titleFilter, { skipFullScan = false } = {}) {
+  const byTitle = await queryRecords(context, { key: titleFilter, allPages: true, pageSize: 100, targetId: id });
   let record = byTitle.find((item) => getRecordId(item) === id);
   if (record) return record;
   // Sau khi chuyển duyệt, văn bản thường rời khỏi danh sách đang xử lý.
@@ -216,9 +218,9 @@ async function findRecordById(context, id, exactTitle, { skipFullScan = false } 
   return all.find((item) => getRecordId(item) === id) || null;
 }
 
-async function waitForStatusChange(context, id, exactTitle, expectedStatus, attempts = 15) {
+async function waitForStatusChange(context, id, titleFilter, expectedStatus, attempts = 15) {
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
-    const record = await findRecordById(context, id, exactTitle, { skipFullScan: true });
+    const record = await findRecordById(context, id, titleFilter, { skipFullScan: true });
     if (!record) return { changed: true, newStatus: "Không còn trong danh sách đang xử lý" };
     const newStatus = String(record.TinhTrangXuly ?? "").trim();
     if (normalizeText(newStatus) !== normalizeText(expectedStatus)) return { changed: true, newStatus };
@@ -228,11 +230,11 @@ async function waitForStatusChange(context, id, exactTitle, expectedStatus, atte
   return { changed: false, newStatus: expectedStatus };
 }
 
-async function approveOne(page, context, candidate, exactTitle, expectedStatus, nextReviewer, log) {
+async function approveOne(page, context, candidate, titleFilter, expectedStatus, nextReviewer, log) {
   const id = String(candidate.id);
-  const current = await findRecordById(context, id, exactTitle);
+  const current = await findRecordById(context, id, titleFilter);
   if (!current) return { result: "BỎ QUA", newStatus: "Không còn trong danh sách", note: "Văn bản không còn tồn tại trong danh sách trước khi duyệt." };
-  if (normalizeText(current.TrichYeu) !== normalizeText(exactTitle)) {
+  if (normalizeText(current.TrichYeu) !== normalizeText(candidate.title ?? titleFilter)) {
     return { result: "BỎ QUA", newStatus: current.TinhTrangXuly, note: "Trích yếu đã thay đổi; không duyệt." };
   }
   if (normalizeText(current.TinhTrangXuly) !== normalizeText(expectedStatus)) {
@@ -278,7 +280,7 @@ async function approveOne(page, context, candidate, exactTitle, expectedStatus, 
   if (/lỗi|không thể|vui lòng|thất bại/i.test(normalizeText(dialogText))) {
     throw new Error(`HPNet báo lỗi: ${dialogText}`);
   }
-  const verification = await waitForStatusChange(context, id, exactTitle, expectedStatus);
+  const verification = await waitForStatusChange(context, id, titleFilter, expectedStatus);
   if (!verification.changed) {
     throw new Error("Đã bấm duyệt nhưng tình trạng chưa đổi. Công cụ dừng để không bấm lặp lại văn bản này.");
   }
@@ -295,8 +297,8 @@ async function main() {
   const config = JSON.parse(cleanJsonText(await fsp.readFile(configPath, "utf8")));
   const mode = String(config.mode ?? "scan").toLowerCase();
   if (!new Set(["scan", "approve"]).has(mode)) throw new Error("Chế độ không hợp lệ.");
-  const exactTitles = normalizeTitles(config.exactTitles ?? config.exactTitle);
-  if (!exactTitles.length) throw new Error("Trích yếu đang trống.");
+  const titleFilters = normalizeTitles(config.titleFilters ?? config.titleFilter ?? config.exactTitles ?? config.exactTitle);
+  if (!titleFilters.length) throw new Error("Trích yếu đang trống.");
   const submitter = String(config.submitter ?? "").replace(/\s+/g, " ").trim();
   const nextReviewer = String(config.nextReviewer ?? "").replace(/\s+/g, " ").trim();
   if (!normalizePersonName(submitter)) throw new Error("Vui lòng nhập Người trình duyệt hiện tại.");
@@ -337,7 +339,7 @@ async function main() {
   let fatalError = null;
   try {
     log(`Chế độ: ${mode === "scan" ? "CHỈ QUÉT - KHÔNG DUYỆT" : "DUYỆT CÁC MỤC ĐÃ XÁC NHẬN"}`);
-    log(`Trích yếu khớp chính xác (${exactTitles.length}): ${exactTitles.join(" | ")}`);
+    log(`Cụm từ trích yếu cần chứa (${titleFilters.length}): ${titleFilters.join(" | ")}`);
     log(`Người trình duyệt hiện tại: ${submitter}`);
     log(`Tình trạng bắt buộc: ${expectedStatus}`);
     log(`Người nhận chuyển tiếp: ${nextReviewer}`);
@@ -349,17 +351,17 @@ async function main() {
       pageSize: 100,
       onPage: (done, total) => log(`Đã kiểm tra ${done}/${total} văn bản...`),
     });
-    const candidates = selectCandidates(records, exactTitles, expectedStatus);
+    const candidates = selectCandidates(records, titleFilters, expectedStatus);
     const unique = [];
     const seen = new Set();
     for (const item of candidates) {
       if (!seen.has(item.id)) { seen.add(item.id); unique.push(item); }
     }
-    log(`Tìm thấy ${unique.length} văn bản khớp chính xác cả trích yếu và tình trạng.`);
+    log(`Tìm thấy ${unique.length} văn bản có chứa cụm từ trích yếu và đúng tình trạng.`);
 
     if (mode === "scan") {
       const report = {
-        createdAt: new Date().toISOString(), exactTitle: exactTitles.join("\n"), exactTitles, expectedStatus,
+        createdAt: new Date().toISOString(), titleFilter: titleFilters.join("\n"), titleFilters, expectedStatus,
         submitter, nextReviewer, totalRecordsScanned: records.length,
         candidateCount: unique.length, candidates: unique,
       };
@@ -374,15 +376,17 @@ async function main() {
       console.log(`SCAN_REPORT=${scanReportPath}`);
     } else {
       const report = JSON.parse(cleanJsonText(await fsp.readFile(scanReportPath, "utf8")));
-      const reportTitles = normalizeTitles(report.exactTitles ?? report.exactTitle);
-      if (reportTitles.length !== exactTitles.length || reportTitles.some((title, index) => normalizeText(title) !== normalizeText(exactTitles[index]))
+      const reportFilters = normalizeTitles(report.titleFilters ?? report.titleFilter ?? report.exactTitles ?? report.exactTitle);
+      if (reportFilters.length !== titleFilters.length || reportFilters.some((title, index) => normalizeText(title) !== normalizeText(titleFilters[index]))
         || normalizeText(report.expectedStatus) !== normalizeText(expectedStatus)
         || normalizePersonName(report.submitter) !== normalizePersonName(submitter)
         || normalizePersonName(report.nextReviewer) !== normalizePersonName(nextReviewer)) {
         throw new Error("Kết quả quét không còn khớp cấu hình hiện tại. Hãy quét lại trước khi duyệt.");
       }
       const approvedIds = new Set((report.candidates || []).map((item) => String(item.id)));
-      const approvedCandidates = unique.filter((item) => approvedIds.has(item.id));
+      const currentlyEligibleIds = new Set(unique.map((item) => item.id));
+      // Dùng lại trích yếu đã lưu ở lần quét để phát hiện thay đổi trước khi bấm duyệt.
+      const approvedCandidates = (report.candidates || []).filter((item) => currentlyEligibleIds.has(String(item.id)));
       log(`Số mục đã xác nhận ở lần quét: ${approvedIds.size}. Số mục vẫn đủ điều kiện lúc này: ${approvedCandidates.length}.`);
       let completed = 0;
       const approvalDurations = [];
@@ -390,7 +394,7 @@ async function main() {
         const candidate = approvedCandidates[index];
         log(`(${index + 1}/${approvedCandidates.length}) Kiểm tra lại ${candidate.id}`);
         const approvalStartedAt = Date.now();
-        const result = await approveOne(page, context, candidate, candidate.exactTitle, expectedStatus, nextReviewer, log);
+        const result = await approveOne(page, context, candidate, candidate.titleFilter ?? candidate.exactTitle ?? candidate.title, expectedStatus, nextReviewer, log);
         const approvalSeconds = (Date.now() - approvalStartedAt) / 1000;
         approvalDurations.push(approvalSeconds);
         resultRows.push([new Date().toISOString(), resultRows.length + 1, candidate.id, candidate.title, candidate.status, submitter, nextReviewer, result.matchedReviewer || "", result.result, result.newStatus, result.note]);

@@ -19,6 +19,15 @@ function contextFor(pages) {
 }
 const page = (records, total = records.length) => ({ Result: 'OK', Records: records, TotalRecordCount: total });
 (async () => {
+  const expectedStatus = 'Đang trình [Nguyễn Văn A] duyệt';
+  const matchingRecords = [
+    { VanbanDiId: 'one', TrichYeu: 'Bản nháp Dự Thảo 89 - hồ sơ 1', TinhTrangXuly: expectedStatus },
+    { VanbanDiId: 'two', TrichYeu: 'Thông báo đợt 2', TinhTrangXuly: expectedStatus },
+  ];
+  assert.equal(sandbox.matchingCandidate(matchingRecords[0], 'dự thảo 89', expectedStatus), true);
+  assert.equal(sandbox.matchingCandidate(matchingRecords[0], 'dự thảo 90', expectedStatus), false);
+  assert.deepEqual(Array.from(sandbox.selectCandidates(matchingRecords, ['Dự Thảo 89', 'đợt 2'], expectedStatus), item => item.id), ['one', 'two']);
+
   let ctx = contextFor([page([record('wanted')], 500)]);
   assert.equal((await sandbox.findRecordById(ctx, 'wanted', 'title')).VanbanDiId, 'wanted');
   assert.equal(ctx.calls.length, 1);
@@ -52,13 +61,16 @@ const page = (records, total = records.length) => ({ Result: 'OK', Records: reco
   };
   sandbox.selectPersonExact = async () => 'Reviewer';
   ctx = contextFor([page([record('wanted')]), page([record('wanted', 'done')])]);
-  assert.equal((await sandbox.approveOne(browser, ctx, {id:'wanted'}, 'title', 'pending', 'Reviewer', () => {})).result, 'ĐÃ DUYỆT');
+  assert.equal((await sandbox.approveOne(browser, ctx, {id:'wanted', title:'title'}, 'title', 'pending', 'Reviewer', () => {})).result, 'ĐÃ DUYỆT');
   assert.equal(sends, 1);
   ctx = contextFor([page([record('wanted', 'done')])]);
-  assert.equal((await sandbox.approveOne(browser, ctx, {id:'wanted'}, 'title', 'pending', 'Reviewer', () => {})).result, 'BỎ QUA');
+  assert.equal((await sandbox.approveOne(browser, ctx, {id:'wanted', title:'title'}, 'title', 'pending', 'Reviewer', () => {})).result, 'BỎ QUA');
   assert.equal(sends, 1);
+  ctx = contextFor([page([{...record('wanted'), TrichYeu:'title đã đổi'}])]);
+  assert.equal((await sandbox.approveOne(browser, ctx, {id:'wanted', title:'title'}, 'title', 'pending', 'Reviewer', () => {})).result, 'BỎ QUA');
+  assert.equal(sends, 1, 'changed title must be skipped before opening approval UI');
   ctx = contextFor([page([record('wanted')]), ...Array.from({length:15}, () => page([record('wanted')]))]);
-  await assert.rejects(() => sandbox.approveOne(browser, ctx, {id:'wanted'}, 'title', 'pending', 'Reviewer', () => {}), /tình trạng chưa đổi/);
+  await assert.rejects(() => sandbox.approveOne(browser, ctx, {id:'wanted', title:'title'}, 'title', 'pending', 'Reviewer', () => {}), /tình trạng chưa đổi/);
   assert.equal(sends, 2, 'failed confirmation must not resubmit');
   console.log('APPROVAL_WORKFLOW_TEST_OK');
 })().catch(error => { console.error(error); process.exitCode = 1; });

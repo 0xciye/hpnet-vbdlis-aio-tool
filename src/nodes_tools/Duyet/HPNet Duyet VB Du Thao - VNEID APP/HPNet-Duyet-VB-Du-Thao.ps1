@@ -128,7 +128,7 @@ if (-not $savedConfig) {
     [ordered]@{
         profileName = ''
         mode = 'scan'
-        exactTitle = ''
+        titleFilter = ''
         submitter = ''
         nextReviewer = ''
         listPageSize = 100
@@ -224,9 +224,9 @@ $saveProfileButton.FlatStyle = 'Flat'
 $group1.Controls.Add($saveProfileButton)
 
 $abstractLabel = New-Object System.Windows.Forms.Label
-$abstractLabel.Text = 'Trích yếu khớp chính xác:'
+$abstractLabel.Text = "Trích yếu có chứa:`r`n(mỗi dòng một cụm)"
 $abstractLabel.Location = New-Object System.Drawing.Point(20, 75)
-$abstractLabel.AutoSize = $true
+$abstractLabel.Size = New-Object System.Drawing.Size(175, 42)
 $abstractLabel.Font = $fontNormal
 $group1.Controls.Add($abstractLabel)
 
@@ -236,7 +236,7 @@ $abstractBox.Size = New-Object System.Drawing.Size(610, 65)
 $abstractBox.Multiline = $true
 $abstractBox.ScrollBars = 'Vertical'
 $abstractBox.Font = $fontNormal
-$abstractBox.Text = if ($savedConfig -and $savedConfig.exactTitle) { [string]$savedConfig.exactTitle } else { $defaultTitle }
+$abstractBox.Text = if ($savedConfig -and $savedConfig.titleFilter) { [string]$savedConfig.titleFilter } elseif ($savedConfig -and $savedConfig.exactTitle) { [string]$savedConfig.exactTitle } else { $defaultTitle }
 $group1.Controls.Add($abstractBox)
 
 
@@ -475,12 +475,12 @@ $nextReviewerBox.Add_TextChanged({ Update-WorkflowPreview; Invalidate-ScanResult
 Update-WorkflowPreview
 
 function Invoke-HPNetTool([string]$mode) {
-    $exactTitles = @(Get-TitleList $abstractBox.Text)
-    if ($exactTitles.Count -eq 0) {
+    $titleFilters = @(Get-TitleList $abstractBox.Text)
+    if ($titleFilters.Count -eq 0) {
         [System.Windows.Forms.MessageBox]::Show('Hãy nhập ít nhất một trích yếu, mỗi trích yếu một dòng.', 'Thiếu trích yếu', 'OK', 'Warning') | Out-Null
         return $false
     }
-    $exactTitle = $exactTitles -join "`n"
+    $titleFilter = $titleFilters -join "`n"
     $profileName = $profileBox.Text.Trim()
     $submitter = $submitterBox.Text.Trim()
     $nextReviewer = $nextReviewerBox.Text.Trim()
@@ -492,7 +492,7 @@ function Invoke-HPNetTool([string]$mode) {
         [System.Windows.Forms.MessageBox]::Show('Vui lòng nhập Người nhận chuyển tiếp.', 'Thiếu người nhận', 'OK', 'Warning') | Out-Null
         return $false
     }
-    $config = [ordered]@{ mode=$mode; profileName=$profileName; exactTitle=$exactTitle; exactTitles=$exactTitles; submitter=$submitter; nextReviewer=$nextReviewer; listPageSize=100 }
+    $config = [ordered]@{ mode=$mode; profileName=$profileName; titleFilter=$titleFilter; titleFilters=$titleFilters; submitter=$submitter; nextReviewer=$nextReviewer; listPageSize=100 }
     $config | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $configPath -Encoding UTF8
     $scanButton.Enabled = $false
     $approveButton.Enabled = $false
@@ -581,7 +581,7 @@ $scanButton.Add_Click({
             $approveButton.Text = "BƯỚC 2: CHUYỂN DUYỆT $count VĂN BẢN"
             $approveButton.Enabled = ($count -gt 0)
             Set-ApprovalButtonStyles
-            [System.Windows.Forms.MessageBox]::Show("Đã kiểm tra $($report.totalRecordsScanned) văn bản trên toàn bộ các trang.`r`nTìm thấy $count văn bản khớp chính xác.`r`n`r`nChưa có văn bản nào được chuyển duyệt.", 'Kiểm tra hoàn tất', 'OK', 'Information') | Out-Null
+            [System.Windows.Forms.MessageBox]::Show("Đã kiểm tra $($report.totalRecordsScanned) văn bản trên toàn bộ các trang.`r`nTìm thấy $count văn bản có chứa cụm từ trích yếu và đúng tình trạng.`r`n`r`nChưa có văn bản nào được chuyển duyệt.", 'Kiểm tra hoàn tất', 'OK', 'Information') | Out-Null
         } catch {
             $approveButton.Enabled = $false
             Set-ApprovalButtonStyles
@@ -597,7 +597,7 @@ $approveButton.Add_Click({
     }
     $count = [int]$report.candidateCount
     if ($count -le 0) { return }
-    $reportTitles = if ($report.exactTitles) { @($report.exactTitles) } else { @(Get-TitleList ([string]$report.exactTitle)) }
+    $reportTitles = if ($report.titleFilters) { @($report.titleFilters) } elseif ($report.titleFilter) { @(Get-TitleList ([string]$report.titleFilter)) } elseif ($report.exactTitles) { @($report.exactTitles) } else { @(Get-TitleList ([string]$report.exactTitle)) }
     $currentTitles = @(Get-TitleList $abstractBox.Text)
     $sameTitles = ($reportTitles.Count -eq $currentTitles.Count)
     if ($sameTitles) { for ($i = 0; $i -lt $reportTitles.Count; $i++) { if ($reportTitles[$i].Normalize([System.Text.NormalizationForm]::FormC).Trim() -ne $currentTitles[$i]) { $sameTitles = $false; break } } }
@@ -613,7 +613,8 @@ $approveButton.Add_Click({
         return
     }
     $expectedStatus = "Đang trình [$currentSubmitter] duyệt"
-    $message = "XÁC NHẬN DUYỆT THẬT TRÊN HPNET`r`n`r`nProfile: $($profileBox.Text.Trim())`r`nSố văn bản tối đa: $count`r`nTrích yếu khớp chính xác:`r`n$($report.exactTitle)`r`n`r`nNgười trình duyệt: $currentSubmitter`r`nTình trạng bắt buộc: $expectedStatus`r`nNgười nhận chuyển tiếp: $currentNextReviewer`r`n`r`nCông cụ sẽ kiểm tra lại từng mục, bỏ qua mục đã đổi tình trạng, rồi bấm 'Đồng ý và chuyển duyệt tiếp'. Bạn có chắc chắn tiếp tục?"
+    $reportFilterText = if ($report.titleFilter) { [string]$report.titleFilter } else { [string]$report.exactTitle }
+    $message = "XÁC NHẬN DUYỆT THẬT TRÊN HPNET`r`n`r`nProfile: $($profileBox.Text.Trim())`r`nSố văn bản tối đa: $count`r`nTrích yếu có chứa các cụm từ:`r`n$reportFilterText`r`n`r`nNgười trình duyệt: $currentSubmitter`r`nTình trạng bắt buộc: $expectedStatus`r`nNgười nhận chuyển tiếp: $currentNextReviewer`r`n`r`nCông cụ sẽ kiểm tra lại từng mục, bỏ qua mục đã đổi tình trạng, rồi bấm 'Đồng ý và chuyển duyệt tiếp'. Bạn có chắc chắn tiếp tục?"
     $answer = [System.Windows.Forms.MessageBox]::Show($message, 'XÁC NHẬN TRƯỚC KHI DUYỆT', 'YesNo', 'Warning', 'Button2')
     if ($answer -ne [System.Windows.Forms.DialogResult]::Yes) { return }
     if (Invoke-HPNetTool 'approve') {
@@ -655,7 +656,7 @@ if ($UiSelfTest) {
         finally { $bitmap.Dispose() }
     }
     $form.Dispose()
-    Write-Output 'UI_SELF_TEST_OK: nhiều trích yếu, khóa duyệt an toàn và bố cục; không mở Edge và không duyệt.'
+    Write-Output 'UI_SELF_TEST_OK: nhiều cụm từ trích yếu, khóa duyệt an toàn và bố cục; không mở Edge và không duyệt.'
     exit 0
 }
 
